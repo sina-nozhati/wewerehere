@@ -258,6 +258,7 @@
       display: flex;
       align-items: center;
       gap: 28px;
+      direction: rtl;
     }
     .marquee__item::after {
       content: '';
@@ -1139,12 +1140,12 @@
       100% { transform: translate3d(132vw, var(--endY, 44vh), 0); opacity: 0; }
     }
     @keyframes fishWobble {
-      from { transform: rotate(87deg) translateY(-3px); }
-      to   { transform: rotate(93deg) translateY(3px); }
+      from { transform: rotate(87deg) scaleX(-1) translateY(-3px); }
+      to   { transform: rotate(93deg) scaleX(-1) translateY(3px); }
     }
     @keyframes fishWobbleRev {
-      from { transform: scaleX(-1) rotate(87deg) translateY(-3px); }
-      to   { transform: scaleX(-1) rotate(93deg) translateY(3px); }
+      from { transform: rotate(87deg) scaleX(-1) translateY(-3px); }
+      to   { transform: rotate(93deg) scaleX(-1) translateY(3px); }
     }
 
     /* ---- gothic ornament divider ---- */
@@ -1313,39 +1314,34 @@
        HERO
        ============================================ -->
   <section class="hero" id="hero">
-    <p class="hero__eyebrow">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-      یک رویداد موسیقی
-    </p>
     <h1 class="hero__title">
       <span>ما اینجا</span>
       <span>بودیم</span>
     </h1>
-    <p class="hero__subtitle">شبی که فقط موسیقی نبود — یک تجربه بود. یک خاطره. یک یادگاری.</p>
     <div class="ornament" aria-hidden="true">
       <span class="ornament__line"></span>
       <svg class="ornament__glyph" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2v20M4 6l8 4 8-4M4 18l8-4 8 4"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
       <span class="ornament__line"></span>
     </div>
-    <p class="hero__date">۱۴۰۵ شهریور ۳</p>
+    <p class="hero__date">۳ شهریور ۱۴۰۵</p>
     <p class="hero__capacity" id="capacity-badge">ظرفیت محدود — فقط ۵۰ نفر</p>
 
     <div class="countdown" role="timer" aria-label="شمارش معکوس تا رویداد">
       <div class="countdown__item">
-        <span class="countdown__number" id="countdown-days">--</span>
-        <span class="countdown__label">روز</span>
-      </div>
-      <div class="countdown__item">
-        <span class="countdown__number" id="countdown-hours">--</span>
-        <span class="countdown__label">ساعت</span>
+        <span class="countdown__number" id="countdown-seconds">--</span>
+        <span class="countdown__label">ثانیه</span>
       </div>
       <div class="countdown__item">
         <span class="countdown__number" id="countdown-minutes">--</span>
         <span class="countdown__label">دقیقه</span>
       </div>
       <div class="countdown__item">
-        <span class="countdown__number" id="countdown-seconds">--</span>
-        <span class="countdown__label">ثانیه</span>
+        <span class="countdown__number" id="countdown-hours">--</span>
+        <span class="countdown__label">ساعت</span>
+      </div>
+      <div class="countdown__item">
+        <span class="countdown__number" id="countdown-days">--</span>
+        <span class="countdown__label">روز</span>
       </div>
     </div>
 
@@ -1359,84 +1355,6 @@
     <div class="marquee__track" id="marquee-track"></div>
   </div>
 
-  <!-- ============================================
-       EXPERIENCE
-       ============================================ -->
-  <section class="experience" id="experience">
-    <div class="container">
-      <p class="section-label reveal">تجربه</p>
-      <h2 class="section-title reveal">این فقط یک اجرا نیست</h2>
-      <p class="section-subtitle reveal">یک خاطره، یک یادگاری فیزیکی و یک یادگاری دیجیتال.</p>
-      <div class="ornament reveal" aria-hidden="true">
-        <span class="ornament__line"></span>
-        <svg class="ornament__glyph" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2v20M4 6l8 4 8-4M4 18l8-4 8 4"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
-        <span class="ornament__line"></span>
-      </div>
-
-      <div class="experience__grid reveal">
-        <div class="experience__item">
-          <div class="experience__item-number">۰۱</div>
-          <h3 class="experience__item-title">تیکت شخصی</h3>
-          <p class="experience__item-text">تیکتی به نام خودت، با شماره سریال اختصاصی ۴ رقمی. طراحی شده برای اینکه نگهش داری.</p>
-        </div>
-        <div class="experience__item">
-          <div class="experience__item-number">۰۲</div>
-          <h3 class="experience__item-title">پاکت دست‌ساز</h3>
-          <p class="experience__item-text">هر تیکت داخل یک پاکت کاغذی دست‌ساز با اسم و شماره سریال تو قرار می‌گیره.</p>
-        </div>
-        <div class="experience__item">
-          <div class="experience__item-number">۰۳</div>
-          <h3 class="experience__item-title">تعامل در اجرا</h3>
-          <p class="experience__item-text">تو فقط تماشاگر نیستی؛ بخشی از اجرا هستی. با گروهت، با صدات، با حضورت.</p>
-          <div class="group-tags">
-            <span class="group-tag">گروه A</span>
-            <span class="group-tag">گروه B</span>
-          </div>
-        </div>
-        <div class="experience__item">
-          <div class="experience__item-number">۰۴</div>
-          <h3 class="experience__item-title">یادگاری دیجیتال</h3>
-          <p class="experience__item-text">بعد از اجرا، با شماره سریالت به عکس‌ها و ویدیوهای اون شب دسترسی پیدا کن.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div class="divider"></div>
-
-  <!-- ============================================
-       TICKET PREVIEW
-       ============================================ -->
-  <section class="ticket-section" id="ticket">
-    <div class="container">
-      <p class="section-label reveal">تیکت</p>
-      <h2 class="section-title reveal">مدرک اون شب</h2>
-      <p class="section-subtitle reveal">تیکتی که بعد از ثبت‌نام دریافت می‌کنی، دقیقاً شبیه همین است.</p>
-
-      <div class="ticket-stage reveal">
-        <p class="ticket-stage__label">گروه A</p>
-        <div class="gothic-frame">
-          <span class="gothic-frame__corner gothic-frame__corner--tl"></span>
-          <span class="gothic-frame__corner gothic-frame__corner--tr"></span>
-          <span class="gothic-frame__corner gothic-frame__corner--bl"></span>
-          <span class="gothic-frame__corner gothic-frame__corner--br"></span>
-          <div class="ticket-art" id="ticket-sample-a" role="img" aria-label="نمونه بلیط گروه A"></div>
-        </div>
-      </div>
-      <div class="ticket-stage reveal">
-        <p class="ticket-stage__label">گروه B</p>
-        <div class="gothic-frame">
-          <span class="gothic-frame__corner gothic-frame__corner--tl"></span>
-          <span class="gothic-frame__corner gothic-frame__corner--tr"></span>
-          <span class="gothic-frame__corner gothic-frame__corner--bl"></span>
-          <span class="gothic-frame__corner gothic-frame__corner--br"></span>
-          <div class="ticket-art" id="ticket-sample-b" role="img" aria-label="نمونه بلیط گروه B"></div>
-        </div>
-      </div>
-      <p class="ticket-stage__note">بعد از ثبت‌نام و تایید، بلیطت دقیقاً همین طرح است — با شماره و سریال خودت.</p>
-    </div>
-  </section>
-
   <div class="divider"></div>
 
   <!-- ============================================
@@ -1446,7 +1364,6 @@
     <div class="container">
       <p class="section-label reveal">ثبت‌نام</p>
       <h2 class="section-title reveal">جای تو اینجا خالیه</h2>
-      <p class="section-subtitle reveal">فقط ۵۰ جا. اطلاعاتت رو وارد کن، به کارت واریز کن و رسید رو آپلود کن — بعد از تایید، تیکت‌هات آماده می‌شه.</p>
       <div class="ornament reveal" aria-hidden="true">
         <span class="ornament__line"></span>
         <svg class="ornament__glyph" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2v20M4 6l8 4 8-4M4 18l8-4 8 4"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
@@ -1577,7 +1494,7 @@
     <div class="container">
       <p class="section-label reveal">بعد از اجرا</p>
       <h2 class="section-title reveal">خاطره‌ات اینجاست</h2>
-      <p class="section-subtitle reveal">شماره سریال ۴ رقمی تیکتت رو وارد کن تا به عکس‌ها و ویدیوهای اون شب دسترسی پیدا کنی.</p>
+      <p class="section-subtitle reveal">شماره سریالتو وارد کن</p>
       <div class="ornament reveal" aria-hidden="true">
         <span class="ornament__line"></span>
         <svg class="ornament__glyph" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2v20M4 6l8 4 8-4M4 18l8-4 8 4"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
@@ -1714,7 +1631,7 @@
     (function initMarquee() {
       var track = document.getElementById('marquee-track');
       if (!track) return;
-      var items = ['ما اینجا بودیم', '۳ شهریور ۱۴۰۵', 'فقط ۵۰ نفر', 'یک شب، یک خاطره'];
+      var items = ['ما اینجا بودیم', '۳ شهریور ۱۴۰۵', 'فقط ۵۰ نفر'];
       var SPEED = 70; // px per second
 
       function itemHtml() {
@@ -2057,10 +1974,8 @@
         .then(function (svg) { if (inner) inner.innerHTML = svg; })
         .catch(function () { /* fish stays hidden if the artwork fails to load */ });
 
-      // Horizontal swims in both directions: right-to-left half the time,
-      // left-to-right (fish--rev) the other half.
+      // Always right-to-left, looping continuously.
       function cruise() {
-        var rev = Math.random() < 0.5;
         fish.classList.remove('fish--cruise', 'fish--rev');
         void fish.offsetWidth; // restart the animation
         var startY = 12 + Math.random() * 42;                        // 12–54vh
@@ -2068,15 +1983,15 @@
         fish.style.width = (90 + Math.random() * 70) + 'px';
         fish.style.setProperty('--startY', startY.toFixed(1) + 'vh');
         fish.style.setProperty('--endY', endY.toFixed(1) + 'vh');
-        fish.style.setProperty('--dur', (12 + Math.random() * 5).toFixed(1) + 's');
-        fish.classList.add(rev ? 'fish--rev' : 'fish--cruise', 'is-swimming');
+        fish.style.setProperty('--dur', (9 + Math.random() * 4).toFixed(1) + 's');
+        fish.classList.add('fish--cruise', 'is-swimming');
         var dur = parseFloat(fish.style.getPropertyValue('--dur')) * 1000;
         setTimeout(function () {
           fish.classList.remove('is-swimming', 'fish--cruise', 'fish--rev');
+          setTimeout(cruise, 300);
         }, dur + 200);
       }
       setTimeout(cruise, 1500);
-      setInterval(cruise, 45000 + Math.random() * 30000);
     })();
 
     // ---- Sample tickets A & B ------------------------------------------------

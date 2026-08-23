@@ -327,7 +327,8 @@
     }
     .ticket-stage__label::after { background: linear-gradient(90deg, rgba(184, 172, 205, 0.5), transparent); }
 
-    .ticket-art svg {
+    .ticket-art svg,
+    .ticket-art img {
       display: block;
       width: 100%;
       height: auto;
@@ -396,7 +397,7 @@
         padding: 0 !important;
       }
       .ticket .gothic-frame::before { display: none !important; }
-      .ticket .ticket-art svg { background: #f1ecdf !important; box-shadow: none !important; }
+      .ticket .ticket-art svg, .ticket .ticket-art img { background: #f1ecdf !important; box-shadow: none !important; }
     }
   </style>
 </head>
@@ -494,10 +495,6 @@
       var stage = document.createElement('div');
       stage.className = 'ticket';
 
-      var label = document.createElement('p');
-      label.className = 'ticket-stage__label';
-      label.textContent = 'گروه ' + t.group;
-
       var frame = document.createElement('div');
       frame.className = 'gothic-frame';
       frame.innerHTML =
@@ -516,7 +513,6 @@
       btn.textContent = 'دانلود / چاپ تیکت';
       actions.appendChild(btn);
 
-      stage.appendChild(label);
       stage.appendChild(frame);
       stage.appendChild(actions);
 
@@ -526,7 +522,22 @@
         no: String(t.number),
         code: String(t.serial),
         name: String(t.name)
-      }).then(function () { return stage; });
+      })
+        .then(function () {
+          // The preview must be pixel-identical to the downloaded file, so we
+          // render the SVG to a PNG right away and show THAT image — not the
+          // live SVG (whose on-page CSS cascade can differ from the exported one).
+          var ready = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+          return ready.then(function () { return svgToPngDataUrl(art.querySelector('svg'), 4); });
+        })
+        .then(function (dataUrl) {
+          var img = document.createElement('img');
+          img.src = dataUrl;
+          img.alt = 'بلیط ' + t.name;
+          art.innerHTML = '';
+          art.appendChild(img);
+          return stage;
+        });
     }
 
     function orderHtml(o) {
@@ -609,11 +620,54 @@
 
     input.addEventListener('input', function () { errorEl.classList.remove('visible'); });
 
-    // ---- print handler (same as landing) ----
+    // ---- render an SVG element to a PNG data URL (shared by preview + download) ----
+    function svgToPngDataUrl(svgEl, scale) {
+      return new Promise(function (resolve, reject) {
+        if (!svgEl) return reject(new Error('no svg'));
+        var vb = (svgEl.getAttribute('viewBox') || '0 0 362 128').split(/\s+/).map(Number);
+        var w = vb[2] || 362;
+        var h = vb[3] || 128;
+        var clone = svgEl.cloneNode(true);
+        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        var svgData = new XMLSerializer().serializeToString(clone);
+        var svg64 = 'data:image/svg+xml;charset=utf-8;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+        var img = new Image();
+        img.onload = function () {
+          var canvas = document.createElement('canvas');
+          canvas.width = w * (scale || 4);
+          canvas.height = h * (scale || 4);
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = reject;
+        img.src = svg64;
+      });
+    }
+
+    // ---- download handler: reuses the exact PNG already shown in the preview ----
     document.addEventListener('click', function (e) {
       var btn2 = e.target.closest('[data-print]');
       if (!btn2) return;
       var card = btn2.closest('.ticket');
+      var img = card.querySelector('.ticket-art img');
+      if (img && img.src) {
+        fetch(img.src)
+          .then(function (r) { return r.blob(); })
+          .then(function (blob) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'ticket-' + btn2.getAttribute('data-print') + '.png';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+          });
+      }
+
       document.querySelectorAll('.ticket').forEach(function (t) { t.classList.remove('ticket--print'); });
       card.classList.add('ticket--print');
       var cleanup = function () { card.classList.remove('ticket--print'); };
