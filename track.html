@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پیگیری سفارش — ما اینجا بودیم</title>
+  <meta name="description" content="پیگیری وضعیت پرداخت و دریافت بلیط‌های رویداد ما اینجا بودیم — با شماره تماس.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=JetBrains+Mono:wght@400;600;700&family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --color-primary: #FFFFFF;
+      --color-secondary: #B8B8C0;
+      --color-bg: #0A0A0B;
+      --color-text: #FAFAFA;
+      --color-surface: #141416;
+      --color-surface-light: #1E1E22;
+      --color-muted: #7A7A85;
+      --color-border: #2A2A2E;
+      --color-border-light: #3A3A3F;
+      --color-accent: #D43F5A;
+      --color-accent-soft: #E86B82;
+      --color-success: #5EC98B;
+      --color-warning: #F5C542;
+      --color-danger: #FF5A5A;
+      --font: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Vazirmatn', monospace;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+      --glow-accent: 0 0 24px rgba(212, 63, 90, 0.35);
+      --transition-base: 200ms ease;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      color: var(--color-text);
+      line-height: 1.7;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      position: relative;
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse 130% 70% at 50% -12%, #1b1424 0%, transparent 58%),
+        radial-gradient(ellipse 90% 55% at 50% 115%, #1c0f15 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 12% 45%, #141020 0%, transparent 60%),
+        #070609;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.045;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.5) 100%);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    .container { max-width: 640px; margin: 0 auto; padding: 0 24px; }
+
+    /* ---- header ---- */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 22px 24px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .topbar__brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 1.05rem;
+    }
+    .topbar__brand svg { color: var(--color-accent); }
+    .topbar__link {
+      color: var(--color-secondary);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: color var(--transition-base);
+    }
+    .topbar__link:hover { color: var(--color-accent); }
+
+    /* ---- hero ---- */
+    .hero {
+      padding: 64px 0 32px;
+      text-align: center;
+    }
+    .hero__eyebrow {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--color-secondary);
+      margin-bottom: 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .hero__eyebrow svg { color: var(--color-accent); }
+    .hero__title {
+      font-size: clamp(2.2rem, 7vw, 3.6rem);
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 14px;
+    }
+    .hero__subtitle {
+      font-size: 1rem;
+      color: var(--color-secondary);
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    /* ---- lookup form ---- */
+    .lookup { max-width: 420px; margin: 36px auto 0; }
+    .lookup__group { display: flex; }
+    .lookup__input {
+      flex: 1;
+      background: var(--color-surface);
+      padding: 15px 16px;
+      border: 1px solid var(--color-border);
+      border-left: none;
+      border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: 0.05em;
+      color: var(--color-text);
+      text-align: center;
+      direction: ltr;
+      transition: border-color var(--transition-base), background var(--transition-base), box-shadow var(--transition-base);
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .lookup__input::placeholder { color: var(--color-muted); font-weight: 400; font-size: 0.85rem; letter-spacing: 0; }
+    .lookup__input:focus { border-color: var(--color-border-light); outline: none; background: var(--color-surface-light); box-shadow: 0 0 0 2px var(--color-accent-soft); }
+    .lookup__btn {
+      padding: 0 26px;
+      min-height: 52px;
+      border: 1px solid var(--color-primary);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      background: var(--color-primary);
+      color: var(--color-bg);
+      font-family: var(--font);
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background var(--transition-base), color var(--transition-base);
+      white-space: nowrap;
+    }
+    .lookup__btn:hover { background: transparent; color: var(--color-primary); }
+    .lookup__btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+    .lookup__error { color: var(--color-danger); font-size: 0.8rem; text-align: center; margin-top: 12px; display: none; }
+    .lookup__error.visible { display: block; }
+    .lookup__hint { font-size: 0.78rem; color: var(--color-muted); text-align: center; margin-top: 12px; }
+
+    @media (max-width: 480px) {
+      .lookup__group { flex-direction: column; }
+      .lookup__input { border-left: 1px solid var(--color-border); border-bottom: none; border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+      .lookup__btn { border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+    }
+
+    /* ---- results ---- */
+    .results { margin-top: 44px; display: none; }
+    .results.visible { display: block; animation: fadeInUp 0.5s ease forwards; }
+
+    .order {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .order__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .order__meta { font-size: 0.78rem; color: var(--color-muted); }
+    .order__names { font-size: 0.95rem; font-weight: 700; color: var(--color-primary); margin-bottom: 4px; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 700;
+      border: 1px solid;
+    }
+    .badge--pending { background: rgba(245,197,66,0.12); color: var(--color-warning); border-color: var(--color-warning); }
+    .badge--approved { background: rgba(94,201,139,0.12); color: var(--color-success); border-color: var(--color-success); }
+    .badge--rejected { background: rgba(255,90,90,0.12); color: var(--color-danger); border-color: var(--color-danger); }
+
+    .receipt {
+      border: 1px dashed var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-bg);
+      padding: 14px 16px;
+      margin-top: 12px;
+    }
+    .receipt__label { font-size: 0.7rem; font-weight: 700; color: var(--color-muted); margin-bottom: 6px; }
+    .receipt__text { font-size: 0.85rem; color: var(--color-secondary); white-space: pre-wrap; }
+    .receipt__img { max-width: 100%; max-height: 220px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); display: block; }
+
+    .notice {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      padding: 18px 20px;
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: var(--color-secondary);
+    }
+    .notice--pending { border-color: var(--color-warning); color: var(--color-warning); }
+    .notice--rejected { border-color: var(--color-danger); color: var(--color-danger); }
+
+    .empty {
+      text-align: center;
+      border: 1px dashed var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 40px 24px;
+      color: var(--color-muted);
+    }
+
+    /* ---- tickets ---- */
+    .tickets-block { margin-top: 34px; }
+    .tickets-block__title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--color-primary);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .tickets-block__sub { font-size: 0.82rem; color: var(--color-muted); text-align: center; margin-bottom: 24px; }
+
+    .tickets-list { display: grid; gap: 30px; max-width: 720px; margin: 0 auto; }
+
+    .ticket { position: relative; }
+
+    /* gothic display frame for the printed ticket */
+    .gothic-frame {
+      position: relative;
+      padding: 18px;
+      background:
+        radial-gradient(ellipse 95% 75% at 50% 26%, rgba(104, 82, 128, 0.16), transparent 68%),
+        linear-gradient(180deg, #131016, #0b0a0e);
+      border: 1px solid #322a40;
+      box-shadow:
+        inset 0 0 70px rgba(0, 0, 0, 0.75),
+        0 24px 60px rgba(0, 0, 0, 0.55),
+        0 0 0 1px rgba(212, 63, 90, 0.12);
+    }
+    .gothic-frame::before {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border: 1px solid rgba(184, 172, 205, 0.28);
+      pointer-events: none;
+    }
+    .gothic-frame__corner {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      z-index: 2;
+      pointer-events: none;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56' fill='none'%3E%3Cpath d='M52 2 H16 a14 14 0 0 0 -14 14 V54' stroke='rgba(196,184,214,0.6)' stroke-width='1.6'/%3E%3Cpath d='M52 2 H16 a14 14 0 0 0 -14 14 V54' stroke='rgba(212,63,90,0.55)' stroke-width='1' transform='translate(3 3)'/%3E%3Ccircle cx='52' cy='2' r='2.6' fill='rgba(212,63,90,0.8)'/%3E%3C/svg%3E") no-repeat center / contain;
+      opacity: 0.9;
+    }
+    .gothic-frame__corner--tl { top: 2px; left: 2px; }
+    .gothic-frame__corner--tr { top: 2px; right: 2px; transform: scaleX(-1); }
+    .gothic-frame__corner--bl { bottom: 2px; left: 2px; transform: scaleY(-1); }
+    .gothic-frame__corner--br { bottom: 2px; right: 2px; transform: scale(-1); }
+
+    .ticket-stage__label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 14px;
+      font-family: 'Cinzel', 'Vazirmatn', serif;
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      color: var(--color-secondary);
+      text-transform: uppercase;
+    }
+    .ticket-stage__label::before, .ticket-stage__label::after {
+      content: '';
+      height: 1px;
+      width: 44px;
+      background: linear-gradient(90deg, transparent, rgba(184, 172, 205, 0.5));
+    }
+    .ticket-stage__label::after { background: linear-gradient(90deg, rgba(184, 172, 205, 0.5), transparent); }
+
+    .ticket-art svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: #f1ecdf;
+      box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6);
+    }
+    .ticket__actions { display: flex; justify-content: center; margin-top: 16px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 13px 26px;
+      min-height: 44px;
+      border: 2px solid var(--color-primary);
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--color-primary);
+      font-family: var(--font);
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background var(--transition-base), color var(--transition-base);
+      text-decoration: none;
+    }
+    .btn:hover { background: var(--color-primary); color: var(--color-bg); }
+    .btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+    .btn--filled { background: var(--color-primary); color: var(--color-bg); }
+    .btn--filled:hover { background: transparent; color: var(--color-primary); }
+    .btn--small { padding: 10px 18px; min-height: 38px; font-size: 0.8rem; }
+    .btn--accent { background: var(--color-accent); color: var(--color-primary); border-color: var(--color-accent); box-shadow: var(--glow-accent); }
+    .btn--accent:hover { background: var(--color-accent-soft); border-color: var(--color-accent-soft); color: var(--color-primary); }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .footer { padding: 40px 0; text-align: center; border-top: 1px solid var(--color-border); margin-top: 64px; }
+    .footer__text { font-size: 0.8rem; color: var(--color-muted); }
+    .footer__text a { color: var(--color-secondary); text-decoration: none; transition: color var(--transition-base); }
+    .footer__text a:hover { color: var(--color-accent); }
+
+    @media (max-width: 520px) {
+      .ticket__meta { flex-direction: column; }
+    }
+
+    @media print {
+      body { background: #fff !important; }
+      body::before, body::after { display: none !important; }
+      .topbar, .hero, .lookup, .order, .tickets-block__title, .tickets-block__sub, .ticket-stage__label, .ticket__actions, .footer { display: none !important; }
+      .ticket, .ticket .gothic-frame {
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+      }
+      .ticket .gothic-frame::before { display: none !important; }
+      .ticket .ticket-art svg { background: #f1ecdf !important; box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="topbar__brand" href="/">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" aria-hidden="true">
+        <rect x="9" y="2" width="6" height="11" />
+        <path d="M5 10v1a7 7 0 0 0 14 0v-1" />
+        <line x1="12" y1="18" x2="12" y2="22" />
+        <line x1="8" y1="22" x2="16" y2="22" />
+      </svg>
+      ما اینجا بودیم
+    </a>
+    <a class="topbar__link" href="/">بازگشت به صفحه اصلی</a>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <p class="hero__eyebrow">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        پیگیری سفارش
+      </p>
+      <h1 class="hero__title">سفارشت کجاست؟</h1>
+      <p class="hero__subtitle">شماره تماسی که باهاش ثبت‌نام کردی رو وارد کن تا وضعیت پرداخت و بلیط‌هات رو ببینی. اگه مرورگرت رو بستی هم نگران نباش — همه‌چیز اینجاست.</p>
+
+      <form class="lookup" id="lookup-form" novalidate>
+        <div class="lookup__group">
+          <input class="lookup__input" type="text" id="lookup-phone" placeholder="۰۹۱۲۱۲۳۴۵۶۷" required inputmode="tel" dir="ltr" aria-label="شماره تماس" autocomplete="tel">
+          <button type="submit" class="lookup__btn" id="lookup-btn">
+            <span id="lookup-btn-text">پیگیری</span>
+            <span class="spinner" id="lookup-spinner" style="display: none;"></span>
+          </button>
+        </div>
+        <p class="lookup__error" id="lookup-error">لطفاً شماره تماس معتبر وارد کن.</p>
+        <p class="lookup__hint">با همین شماره، بعد از تایید ادمین به بلیط‌هات هم دسترسی داری.</p>
+      </form>
+    </section>
+
+    <section class="results" id="results" aria-live="polite"></section>
+  </main>
+
+  <footer class="footer">
+    <p class="footer__text">ما اینجا بودیم — <a href="/">ثبت‌نام</a> · <a href="/#access">دسترسی بعد از اجرا</a></p>
+  </footer>
+
+  <script src="/tickets.js"></script>
+  <script>
+    var FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+    var AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+
+    function toPersian(n) {
+      return String(n).replace(/\d/g, function (d) { return FA_DIGITS[d]; });
+    }
+    function normalizeDigits(s) {
+      return String(s)
+        .replace(/[۰-۹]/g, function (d) { return FA_DIGITS.indexOf(d); })
+        .replace(/[٠-٩]/g, function (d) { return AR_DIGITS.indexOf(d); });
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    var STATUS_LABEL = {
+      pending: 'در انتظار تایید',
+      approved: 'تایید شده',
+      rejected: 'رد شده'
+    };
+    var STATUS_CLASS = {
+      pending: 'badge--pending',
+      approved: 'badge--approved',
+      rejected: 'badge--rejected'
+    };
+
+    var form = document.getElementById('lookup-form');
+    var input = document.getElementById('lookup-phone');
+    var btn = document.getElementById('lookup-btn');
+    var btnText = document.getElementById('lookup-btn-text');
+    var spinner = document.getElementById('lookup-spinner');
+    var errorEl = document.getElementById('lookup-error');
+    var results = document.getElementById('results');
+
+    function fmtDate(iso) {
+      var d = new Date(iso);
+      if (isNaN(d)) return iso;
+      return d.toLocaleString('fa-IR');
+    }
+
+    // Builds the real designed ticket (A/B) with the buyer's number + serial,
+    // mounted on a gothic display backdrop. Returns a Promise of a DOM node.
+    function ticketHtml(t) {
+      var stage = document.createElement('div');
+      stage.className = 'ticket';
+
+      var label = document.createElement('p');
+      label.className = 'ticket-stage__label';
+      label.textContent = 'گروه ' + t.group;
+
+      var frame = document.createElement('div');
+      frame.className = 'gothic-frame';
+      frame.innerHTML =
+        '<span class="gothic-frame__corner gothic-frame__corner--tl"></span>' +
+        '<span class="gothic-frame__corner gothic-frame__corner--tr"></span>' +
+        '<span class="gothic-frame__corner gothic-frame__corner--bl"></span>' +
+        '<span class="gothic-frame__corner gothic-frame__corner--br"></span>' +
+        '<div class="ticket-art" data-slot="1"></div>';
+
+      var actions = document.createElement('div');
+      actions.className = 'ticket__actions';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn--outline btn--small';
+      btn.setAttribute('data-print', String(t.serial));
+      btn.textContent = 'دانلود / چاپ تیکت';
+      actions.appendChild(btn);
+
+      stage.appendChild(label);
+      stage.appendChild(frame);
+      stage.appendChild(actions);
+
+      var art = frame.querySelector('[data-slot="1"]');
+      return renderTicketArt(art, {
+        group: t.group,
+        no: String(t.number),
+        code: String(t.serial),
+        name: String(t.name)
+      }).then(function () { return stage; });
+    }
+
+    function orderHtml(o) {
+      var receipt = '';
+      if (o.receiptText) {
+        receipt += '<div class="receipt"><div class="receipt__label">رسید متنی</div><div class="receipt__text">' + escapeHtml(o.receiptText) + '</div></div>';
+      }
+      if (o.receiptImageUrl) {
+        receipt += '<div class="receipt"><div class="receipt__label">تصویر رسید</div><img class="receipt__img" src="' + o.receiptImageUrl + '" alt="تصویر رسید پرداخت"></div>';
+      }
+      var note = '';
+      if (o.status === 'rejected' && o.adminNote) {
+        note = '<div class="notice notice--rejected">' + escapeHtml(o.adminNote) + '</div>';
+      }
+      return '<div class="order">' +
+        '<div class="order__head">' +
+          '<div>' +
+            '<div class="order__names">' + o.names.map(escapeHtml).join('، ') + '</div>' +
+            '<div class="order__meta">ثبت‌شده در ' + fmtDate(o.createdAt) + '</div>' +
+          '</div>' +
+          '<span class="badge ' + STATUS_CLASS[o.status] + '">' + STATUS_LABEL[o.status] + '</span>' +
+        '</div>' +
+        receipt +
+        note +
+      '</div>';
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var phone = normalizeDigits(input.value).replace(/\s/g, '');
+      if (!/^\d{10,11}$/.test(phone)) {
+        errorEl.classList.add('visible');
+        return;
+      }
+      errorEl.classList.remove('visible');
+      btnText.style.display = 'none';
+      spinner.style.display = 'block';
+      btn.disabled = true;
+      results.classList.remove('visible');
+
+      fetch('/api/orders/track?phone=' + encodeURIComponent(phone))
+        .then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (j) {
+            if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+            return j;
+          });
+        })
+        .then(function (res) {
+          if (!res.orders.length && !res.tickets.length) {
+            results.innerHTML = '<div class="empty">برای این شماره سفارشی پیدا نشد.<br>اگه هنوز ثبت‌نام نکردی، <a href="/#register" style="color:var(--color-primary);">از اینجا شروع کن</a>.</div>';
+            results.classList.add('visible');
+            results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+          }
+          var html = '';
+          res.orders.forEach(function (o) { html += orderHtml(o); });
+          Promise.all(res.tickets.map(ticketHtml)).then(function (cards) {
+            if (cards.length) {
+              html += '<div class="tickets-block">' +
+                '<h2 class="tickets-block__title">بلیط‌های تو آماده‌ست ♥</h2>' +
+                '<p class="tickets-block__sub">تیکت‌هات رو ذخیره کن — شماره سریال، کلید خاطره‌های اون شبه.</p>' +
+                '<div class="tickets-list">' + cards.map(function (c) { return c.outerHTML; }).join('') + '</div>' +
+              '</div>';
+            }
+            results.innerHTML = html;
+            results.classList.add('visible');
+            results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        })
+        .catch(function (err) {
+          results.innerHTML = '<div class="empty">خطا در ارتباط با سرور: ' + escapeHtml(err.message) + '</div>';
+          results.classList.add('visible');
+        })
+        .finally(function () {
+          btnText.style.display = '';
+          spinner.style.display = 'none';
+          btn.disabled = false;
+        });
+    });
+
+    input.addEventListener('input', function () { errorEl.classList.remove('visible'); });
+
+    // ---- print handler (same as landing) ----
+    document.addEventListener('click', function (e) {
+      var btn2 = e.target.closest('[data-print]');
+      if (!btn2) return;
+      var card = btn2.closest('.ticket');
+      document.querySelectorAll('.ticket').forEach(function (t) { t.classList.remove('ticket--print'); });
+      card.classList.add('ticket--print');
+      var cleanup = function () { card.classList.remove('ticket--print'); };
+      window.addEventListener('afterprint', cleanup, { once: true });
+      setTimeout(function () { window.print(); }, 60);
+      setTimeout(cleanup, 2000);
+    });
+  </script>
+</body>
+</html>

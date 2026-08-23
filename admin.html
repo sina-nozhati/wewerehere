@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پنل مدیریت — ما اینجا بودیم</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a0a0b; --text: #fafafa; --muted: #7a7a85; --border: #2a2a2e; --border-light: #3a3a3f;
+      --surface: #141416; --surface-2: #1e1e22; --danger: #ff5a5a; --ok: #5ec98b;
+      --warning: #f5c542; --accent: #d43f5a; --accent-soft: #e86b82;
+      --font-mono: 'JetBrains Mono', 'Vazirmatn', monospace;
+      --radius-sm: 4px; --radius-md: 8px; --radius-full: 9999px;
+      --glow-accent: 0 0 24px rgba(212, 63, 90, 0.35);
+    }
+    body {
+      font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.7;
+      min-height: 100vh; padding: 32px 20px;
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    h1 { font-weight: 800; font-size: 1.6rem; margin-bottom: 6px; }
+    h2 { font-weight: 800; font-size: 1.15rem; margin: 36px 0 14px; border-top: 1px solid var(--border); padding-top: 24px; }
+    .muted { color: var(--muted); font-size: 0.85rem; }
+    .ok { color: var(--ok); font-size: 0.85rem; }
+
+    .card { border: 1px solid var(--border); background: var(--surface); padding: 24px; border-radius: var(--radius-md); }
+    label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 7px; }
+    input, select {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 12px 14px; color: var(--text); font-family: inherit; font-size: 0.95rem;
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--border-light); box-shadow: 0 0 0 2px var(--accent-soft); }
+    textarea {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 12px 14px; color: var(--text); font-family: inherit; font-size: 0.95rem; resize: vertical;
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    textarea:focus { outline: none; border-color: var(--border-light); box-shadow: 0 0 0 2px var(--accent-soft); }
+    input[type="file"] { padding: 10px; cursor: pointer; }
+    input[type="file"]::file-selector-button {
+      background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+      padding: 8px 14px; margin-left: 12px; font-family: inherit; cursor: pointer;
+    }
+    select option { background: var(--surface); color: var(--text); }
+
+    button {
+      background: #fff; color: #000; border: 2px solid #fff; padding: 11px 22px;
+      font-family: inherit; font-weight: 700; font-size: 0.88rem; cursor: pointer; border-radius: var(--radius-md);
+      transition: background .2s ease, color .2s ease; min-height: 44px;
+    }
+    button:hover { background: transparent; color: #fff; }
+    button.ghost { background: transparent; color: #fff; }
+    button.ghost:hover { background: #fff; color: #000; }
+    button.small { padding: 6px 14px; min-height: 34px; font-size: 0.78rem; }
+    button.ok { background: var(--ok); color: #000; border-color: var(--ok); }
+    button.ok:hover { background: transparent; color: var(--ok); }
+    button.danger { background: transparent; color: var(--danger); border-color: var(--danger); font-size: 0.78rem; padding: 6px 14px; min-height: 34px; }
+    button.danger:hover { background: var(--danger); color: #000; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    .error { color: var(--danger); font-size: 0.85rem; margin-top: 12px; }
+    .status { color: var(--muted); font-size: 0.85rem; margin-top: 12px; }
+    .status.err { color: var(--danger); }
+    .status.ok { color: var(--ok); }
+
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+    .spacer { flex: 1; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { text-align: right; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--muted); font-weight: 700; font-size: 0.75rem; white-space: nowrap; }
+    .serial { direction: ltr; text-align: left; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+    .group-badge { display: inline-block; background: #fff; color: #000; font-weight: 700; padding: 1px 9px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; margin-top: 18px; }
+    .media-card { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-md); overflow: hidden; }
+    .media-card img, .media-card video { width: 100%; height: 120px; object-fit: cover; display: block; background: #000; }
+    .media-card .meta { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .media-card .cap { font-size: 0.8rem; color: var(--muted); word-break: break-word; }
+
+    /* ---- orders ---- */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      font-size: 0.72rem;
+      font-weight: 700;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+    .badge--pending { background: rgba(245,197,66,0.12); color: var(--warning); border-color: var(--warning); }
+    .badge--approved { background: rgba(94,201,139,0.12); color: var(--ok); border-color: var(--ok); }
+    .badge--rejected { background: rgba(255,90,90,0.12); color: var(--danger); border-color: var(--danger); }
+
+    .orders-list { display: grid; gap: 16px; margin-top: 18px; }
+    .order-card {
+      border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-md);
+      padding: 20px; transition: border-color .2s ease;
+    }
+    .order-card.is-pending { border-color: rgba(245,197,66,0.45); }
+    .order-card__head {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .order-card__names { font-weight: 800; color: var(--text); font-size: 1rem; }
+    .order-card__meta { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .order-card__meta .serial { font-size: 0.78rem; }
+    .order-card__receipt {
+      border: 1px dashed var(--border); border-radius: var(--radius-sm); background: var(--bg);
+      padding: 12px 14px; margin: 12px 0; font-size: 0.85rem; color: var(--muted);
+    }
+    .order-card__receipt strong { color: var(--muted); font-size: 0.72rem; display: block; margin-bottom: 4px; }
+    .order-card__receipt .txt { white-space: pre-wrap; color: var(--text); }
+    .order-card__receipt img { max-width: 100%; max-height: 200px; border-radius: var(--radius-sm); border: 1px solid var(--border); display: block; }
+    .order-card__note {
+      border: 1px solid var(--danger); color: var(--danger); border-radius: var(--radius-sm);
+      padding: 10px 14px; font-size: 0.85rem; margin: 12px 0;
+    }
+    .order-card__actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .order-card__actions .spacer { flex: 1; }
+
+    .filter { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+    .filter button {
+      background: transparent; color: var(--muted); border: 1px solid var(--border);
+      padding: 7px 16px; min-height: 36px; font-size: 0.78rem; border-radius: var(--radius-full);
+    }
+    .filter button:hover { color: var(--text); border-color: var(--border-light); background: var(--surface-2); }
+    .filter button.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: var(--glow-accent); }
+
+    .empty-note { color: var(--muted); font-size: 0.85rem; padding: 24px 0; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-md); }
+
+    #login-view { max-width: 380px; margin: 12vh auto 0; }
+    #login-view form { display: flex; flex-direction: column; gap: 14px; }
+    [hidden] { display: none !important; }
+
+    @media (max-width: 600px) {
+      table { font-size: 0.8rem; }
+      th, td { padding: 8px 6px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- Login -->
+    <div id="login-view">
+      <div class="card">
+        <h1>پنل مدیریت</h1>
+        <p class="muted" style="margin-bottom:20px;">ما اینجا بودیم — دسترسی خصوصی</p>
+        <form id="login-form">
+          <div>
+            <label for="admin-password">رمز عبور</label>
+            <input type="password" id="admin-password" autocomplete="current-password">
+          </div>
+          <button type="submit" id="login-btn">ورود</button>
+        </form>
+        <p class="error" id="login-error" hidden></p>
+      </div>
+    </div>
+
+    <!-- Admin -->
+    <div id="admin-view" hidden>
+      <div class="toolbar">
+        <h1 style="border:0;padding:0;margin:0;">پنل مدیریت</h1>
+        <span class="spacer"></span>
+        <button class="ghost" id="logout">خروج</button>
+      </div>
+
+      <!-- Tickets -->
+      <h2>بلیط‌ها</h2>
+      <div class="toolbar">
+        <button class="ghost" id="refresh-tickets">تازه‌سازی</button>
+        <button class="ghost" id="export-csv">خروجی CSV (لیست ورود)</button>
+        <span class="spacer"></span>
+        <button id="add-ticket-btn">افزودن بلیط</button>
+        <span class="muted" id="ticket-count"></span>
+      </div>
+
+      <div class="card" id="ticket-form" hidden>
+        <form id="ticket-form-inner" novalidate>
+          <input type="hidden" id="tf-id">
+          <div class="form-grid">
+            <div>
+              <label for="tf-name">نام</label>
+              <input type="text" id="tf-name" placeholder="مثال: علی رضایی">
+            </div>
+            <div>
+              <label for="tf-phone">تلفن</label>
+              <input type="text" id="tf-phone" dir="ltr" placeholder="09123456789">
+            </div>
+            <div>
+              <label for="tf-serial">شماره سریال (خالی = رندوم)</label>
+              <input type="text" id="tf-serial" dir="ltr" maxlength="4" inputmode="numeric" placeholder="—">
+            </div>
+            <div>
+              <label for="tf-group">گروه</label>
+              <select id="tf-group">
+                <option value="">خودکار</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+              </select>
+            </div>
+          </div>
+          <div class="toolbar" style="margin-top:14px; margin-bottom:0;">
+            <button type="submit" id="tf-save">افزودن</button>
+            <button type="button" class="ghost" id="tf-cancel">لغو</button>
+            <span class="status" id="tf-status"></span>
+          </div>
+        </form>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table id="tickets-table">
+          <thead>
+            <tr><th>سریال</th><th>نام</th><th>تلفن</th><th>گروه</th><th>زمان ثبت</th><th>عملیات</th></tr>
+          </thead>
+          <tbody id="tickets-body"><tr><td colspan="6" class="muted">در حال بارگذاری…</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Orders (payment review) -->
+      <h2>سفارش‌ها و رسیدها</h2>
+      <div class="toolbar">
+        <div class="filter" id="orders-filter" role="tablist" aria-label="فیلتر وضعیت سفارش">
+          <button type="button" data-status="pending">در انتظار</button>
+          <button type="button" data-status="approved">تایید شده</button>
+          <button type="button" data-status="rejected">رد شده</button>
+          <button type="button" class="active" data-status="all">همه</button>
+        </div>
+        <span class="spacer"></span>
+        <button class="ghost" id="refresh-orders">تازه‌سازی</button>
+      </div>
+      <div class="orders-list" id="orders-list">
+        <p class="empty-note">در حال بارگذاری…</p>
+      </div>
+
+      <!-- Payment settings -->
+      <h2>پرداخت — مشخصات کارت</h2>
+      <div class="card">
+        <form id="settings-form">
+          <div class="form-grid">
+            <div>
+              <label for="set-card-number">شماره کارت</label>
+              <input type="text" id="set-card-number" dir="ltr" inputmode="numeric" placeholder="6037991234567890">
+            </div>
+            <div>
+              <label for="set-card-holder">نام دارنده کارت</label>
+              <input type="text" id="set-card-holder" placeholder="مثال: هیمن شوکتی">
+            </div>
+            <div>
+              <label for="set-bank-name">نام بانک</label>
+              <input type="text" id="set-bank-name" placeholder="مثال: ملت">
+            </div>
+            <div>
+              <label for="set-ticket-price">قیمت هر بلیط (تومان)</label>
+              <input type="text" id="set-ticket-price" dir="ltr" inputmode="numeric" placeholder="935000">
+            </div>
+          </div>
+          <div class="toolbar" style="margin-top:16px; margin-bottom:0;">
+            <button type="submit" id="settings-save">ذخیره</button>
+            <span class="status" id="settings-status"></span>
+          </div>
+        </form>
+      </div>
+
+      <!-- Media upload -->
+      <h2>آپلود مدیا (عکس / ویدیو)</h2>
+      <div class="card">
+        <form id="upload-form">
+          <div style="margin-bottom:14px;">
+            <label for="media-file">فایل‌ها</label>
+            <input type="file" id="media-file" multiple accept="image/*,video/*">
+          </div>
+          <div style="margin-bottom:16px;">
+            <label for="media-caption">توضیح (اختیاری)</label>
+            <input type="text" id="media-caption" placeholder="مثلاً: پشت‌صحنه">
+          </div>
+          <button type="submit" id="upload-btn">آپلود</button>
+        </form>
+        <p class="status" id="upload-status"></p>
+      </div>
+      <div class="media-grid" id="media-list"></div>
+    </div>
+
+  </div>
+
+  <script>
+    var TOKEN = sessionStorage.getItem('wwh_token') || null;
+    var FA = '۰۱۲۳۴۵۶۷۸۹';
+    var cachedTickets = [];
+
+    function toFa(s) { return String(s).replace(/\d/g, function (d) { return FA[d]; }); }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN }; }
+
+    function api(path, opts) {
+      opts = opts || {};
+      opts.headers = opts.headers || {};
+      if (TOKEN) opts.headers['Authorization'] = 'Bearer ' + TOKEN;
+      return fetch(path, opts).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (r.status === 401) throw new Error('unauthorized');
+          if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+          return j;
+        });
+      });
+    }
+
+    // ---- views -------------------------------------------------------------
+    var loginView = document.getElementById('login-view');
+    var adminView = document.getElementById('admin-view');
+    function showAdmin() { loginView.hidden = true; adminView.hidden = false; loadTickets(); loadMedia(); loadOrders(); loadSettings(); }
+    function showLogin() { adminView.hidden = true; loginView.hidden = false; }
+
+    // ---- login -------------------------------------------------------------
+    document.getElementById('login-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var pw = document.getElementById('admin-password').value;
+      var btn = document.getElementById('login-btn');
+      var err = document.getElementById('login-error');
+      btn.disabled = true; err.hidden = true;
+      api('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) })
+        .then(function (res) { TOKEN = res.token; sessionStorage.setItem('wwh_token', TOKEN); showAdmin(); })
+        .catch(function (e2) { err.textContent = 'ورود ناموفق: ' + e2.message; err.hidden = false; })
+        .finally(function () { btn.disabled = false; });
+    });
+    document.getElementById('logout').addEventListener('click', function () {
+      sessionStorage.removeItem('wwh_token'); TOKEN = null; showLogin();
+    });
+
+    // ---- tickets CRUD ------------------------------------------------------
+    var ticketForm = document.getElementById('ticket-form');
+    var tfId = document.getElementById('tf-id');
+    var tfName = document.getElementById('tf-name');
+    var tfPhone = document.getElementById('tf-phone');
+    var tfSerial = document.getElementById('tf-serial');
+    var tfGroup = document.getElementById('tf-group');
+    var tfSave = document.getElementById('tf-save');
+    var tfStatus = document.getElementById('tf-status');
+
+    function loadTickets() {
+      api('/api/admin/tickets').then(function (res) {
+        cachedTickets = res.tickets;
+        var body = document.getElementById('tickets-body');
+        document.getElementById('ticket-count').textContent = 'مجموع: ' + toFa(res.tickets.length) + ' بلیط';
+        if (!res.tickets.length) {
+          body.innerHTML = '<tr><td colspan="6" class="muted">هنوز بلیطی ثبت نشده.</td></tr>';
+          return;
+        }
+        body.innerHTML = res.tickets.map(function (t) {
+          var d = new Date(t.created_at);
+          var time = isNaN(d) ? t.created_at : d.toLocaleString('fa-IR');
+          return '<tr>' +
+            '<td class="serial">' + t.serial + '</td>' +
+            '<td>' + escapeHtml(t.name) + '</td>' +
+            '<td class="serial">' + escapeHtml(t.phone) + '</td>' +
+            '<td><span class="group-badge">' + t.group_name + '</span></td>' +
+            '<td class="muted">' + time + '</td>' +
+            '<td><div class="actions">' +
+              '<button class="small ghost" data-edit="' + t.id + '">ویرایش</button>' +
+              '<button class="danger" data-del="' + t.id + '">حذف</button>' +
+            '</div></td>' +
+            '</tr>';
+        }).join('');
+      }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
+    }
+
+    function openTicketForm(t) {
+      tfId.value = t ? t.id : '';
+      tfName.value = t ? t.name : '';
+      tfPhone.value = t ? t.phone : '';
+      tfSerial.value = t ? t.serial : '';
+      tfGroup.value = t ? t.group_name : '';
+      tfSave.textContent = t ? 'ذخیره تغییرات' : 'افزودن';
+      setStatus(tfStatus, '', '');
+      ticketForm.hidden = false;
+      tfName.focus();
+    }
+
+    function setStatus(el, text, kind) {
+      el.textContent = text;
+      el.className = 'status' + (kind ? ' ' + kind : '');
+    }
+
+    document.getElementById('add-ticket-btn').addEventListener('click', function () { openTicketForm(null); });
+    document.getElementById('tf-cancel').addEventListener('click', function () { ticketForm.hidden = true; });
+    document.getElementById('refresh-tickets').addEventListener('click', loadTickets);
+
+    document.getElementById('ticket-form-inner').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var id = tfId.value;
+      var payload = {
+        name: tfName.value.trim(),
+        phone: tfPhone.value.trim(),
+        serial: tfSerial.value.trim(),
+        group: tfGroup.value
+      };
+      var method = id ? 'PUT' : 'POST';
+      var path = '/api/admin/tickets' + (id ? '?id=' + id : '');
+      setStatus(tfStatus, 'در حال ذخیره…', '');
+      api(path, { method: method, headers: authHeaders(), body: JSON.stringify(payload) })
+        .then(function () {
+          ticketForm.hidden = true;
+          loadTickets();
+        })
+        .catch(function (e2) { setStatus(tfStatus, 'خطا: ' + e2.message, 'err'); });
+    });
+
+    document.getElementById('tickets-body').addEventListener('click', function (e) {
+      var delBtn = e.target.closest('[data-del]');
+      var editBtn = e.target.closest('[data-edit]');
+      if (delBtn) {
+        if (!confirm('این بلیط حذف شود؟')) return;
+        api('/api/admin/tickets?id=' + delBtn.getAttribute('data-del'), { method: 'DELETE' })
+          .then(loadTickets)
+          .catch(function (e2) { alert('خطا: ' + e2.message); });
+      } else if (editBtn) {
+        var id = editBtn.getAttribute('data-edit');
+        var t = cachedTickets.find(function (x) { return String(x.id) === String(id); });
+        if (t) openTicketForm(t);
+      }
+    });
+
+    // ---- CSV export --------------------------------------------------------
+    document.getElementById('export-csv').addEventListener('click', function () {
+      var rows = [['serial', 'name', 'phone', 'group', 'created_at']];
+      cachedTickets.forEach(function (t) { rows.push([t.serial, t.name, t.phone, t.group_name, t.created_at]); });
+      var csv = '\uFEFF' + rows.map(function (r) {
+        return r.map(function (cell) {
+          var v = String(cell == null ? '' : cell);
+          return '"' + v.replace(/"/g, '""') + '"';
+        }).join(',');
+      }).join('\r\n');
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'wewerehere-attendees.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    // ---- orders (payment review) -------------------------------------------
+    // Default to 'all' so approved/rejected orders STAY visible after approving
+    // and after pressing تازه‌سازی — reviewed requests are never lost from view.
+    var ordersFilter = 'all';
+
+    function fmtDate(iso) {
+      var d = new Date(iso);
+      return isNaN(d) ? iso : d.toLocaleString('fa-IR');
+    }
+
+    function statusLabel(s) {
+      return s === 'pending' ? 'در انتظار تایید' : s === 'approved' ? 'تایید شده' : 'رد شده';
+    }
+    function statusClass(s) {
+      return s === 'pending' ? 'badge--pending' : s === 'approved' ? 'badge--approved' : 'badge--rejected';
+    }
+
+    function loadOrders() {
+      api('/api/admin/orders?status=' + encodeURIComponent(ordersFilter)).then(function (res) {
+        var list = document.getElementById('orders-list');
+        if (!res.orders.length) {
+          list.innerHTML = '<p class="empty-note">سفارشی با این وضعیت پیدا نشد.</p>';
+          return;
+        }
+        list.innerHTML = res.orders.map(function (o) {
+          var receipt = '';
+          if (o.receiptText) {
+            receipt += '<div class="order-card__receipt"><strong>رسید متنی</strong><div class="txt">' + escapeHtml(o.receiptText) + '</div></div>';
+          }
+          if (o.receiptImageUrl) {
+            receipt += '<div class="order-card__receipt"><strong>تصویر رسید</strong><img src="' + o.receiptImageUrl + '" alt="تصویر رسید پرداخت" loading="lazy"></div>';
+          }
+          var note = '';
+          if (o.status === 'rejected' && o.adminNote) {
+            note = '<div class="order-card__note">' + escapeHtml(o.adminNote) + '</div>';
+          }
+          var actions = '';
+          if (o.status === 'pending') {
+            actions =
+              '<button class="ok" data-approve="' + o.id + '">تایید و صدور بلیط</button>' +
+              '<button class="danger" data-reject="' + o.id + '">رد</button>';
+          } else {
+            actions = '<span class="badge ' + statusClass(o.status) + '">' + statusLabel(o.status) + '</span>';
+          }
+          return '<div class="order-card ' + (o.status === 'pending' ? 'is-pending' : '') + '" data-id="' + o.id + '">' +
+            '<div class="order-card__head">' +
+              '<div>' +
+                '<div class="order-card__names">' + o.names.map(escapeHtml).join('، ') + '</div>' +
+                '<div class="order-card__meta">' +
+                  '<span class="serial">' + escapeHtml(o.phone) + '</span> · ثبت: ' + fmtDate(o.createdAt) +
+                  (o.reviewedAt ? ' · بررسی: ' + fmtDate(o.reviewedAt) : '') +
+                '</div>' +
+              '</div>' +
+              '<span class="badge ' + statusClass(o.status) + '">' + statusLabel(o.status) + '</span>' +
+            '</div>' +
+            receipt + note +
+            '<div class="order-card__actions">' + actions + '</div>' +
+          '</div>';
+        }).join('');
+      }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
+    }
+
+    document.getElementById('orders-filter').addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-status]');
+      if (!btn) return;
+      ordersFilter = btn.getAttribute('data-status');
+      this.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+      loadOrders();
+    });
+    document.getElementById('refresh-orders').addEventListener('click', loadOrders);
+
+    document.getElementById('orders-list').addEventListener('click', function (e) {
+      var approveBtn = e.target.closest('[data-approve]');
+      var rejectBtn = e.target.closest('[data-reject]');
+      if (approveBtn) {
+        var id = approveBtn.getAttribute('data-approve');
+        if (!confirm('تایید این سفارش و صدور بلیط‌ها؟')) return;
+        approveBtn.disabled = true;
+        api('/api/admin/orders/approve?id=' + id, { method: 'POST', headers: authHeaders() })
+          .then(function () { loadOrders(); loadTickets(); })
+          .catch(function (e2) { alert('خطا: ' + e2.message); approveBtn.disabled = false; });
+      } else if (rejectBtn) {
+        var rid = rejectBtn.getAttribute('data-reject');
+        var note = prompt('دلیل رد (اختیاری):', '');
+        if (note === null) return;
+        api('/api/admin/orders/reject?id=' + rid, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ note: note }) })
+          .then(loadOrders)
+          .catch(function (e2) { alert('خطا: ' + e2.message); });
+      }
+    });
+
+    // ---- payment settings (card shown on the landing page) -------------------
+    function loadSettings() {
+      api('/api/admin/settings').then(function (s) {
+        document.getElementById('set-card-number').value = s.card_number || '';
+        document.getElementById('set-card-holder').value = s.card_holder || '';
+        document.getElementById('set-bank-name').value = s.bank_name || '';
+        document.getElementById('set-ticket-price').value = s.ticket_price || '';
+      }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
+    }
+    document.getElementById('settings-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var st = document.getElementById('settings-status');
+      setStatus(st, 'در حال ذخیره…', '');
+      api('/api/admin/settings', {
+        method: 'PUT', headers: authHeaders(),
+        body: JSON.stringify({
+          card_number: document.getElementById('set-card-number').value.trim(),
+          card_holder: document.getElementById('set-card-holder').value.trim(),
+          bank_name: document.getElementById('set-bank-name').value.trim(),
+          ticket_price: document.getElementById('set-ticket-price').value.trim()
+        })
+      }).then(function () { setStatus(st, 'ذخیره شد — از همین حالا روی صفحه اصلی نمایش داده میشود.', 'ok'); })
+        .catch(function (e2) { setStatus(st, 'خطا: ' + e2.message, 'err'); });
+    });
+
+    // ---- media -------------------------------------------------------------
+    function loadMedia() {
+      api('/api/admin/media').then(function (res) {
+        var list = document.getElementById('media-list');
+        if (!res.media.length) { list.innerHTML = '<p class="muted">هنوز مدیایی آپلود نشده.</p>'; return; }
+        list.innerHTML = res.media.map(function (m) {
+          var mediaTag = m.mime.indexOf('video/') === 0
+            ? '<video src="' + m.url + '" controls preload="metadata"></video>'
+            : '<img src="' + m.url + '" alt="' + escapeHtml(m.caption || m.original_name) + '" loading="lazy">';
+          return '<div class="media-card" data-id="' + m.id + '" data-caption="' + escapeHtml(m.caption || '') + '">' + mediaTag +
+            '<div class="meta">' +
+            '<span class="cap">' + (m.caption ? escapeHtml(m.caption) : escapeHtml(m.original_name)) + '</span>' +
+            '<div class="actions">' +
+              '<button class="small ghost" data-edit-caption="' + m.id + '">ویرایش توضیح</button>' +
+              '<button class="danger" data-delete="' + m.id + '">حذف</button>' +
+            '</div>' +
+            '</div></div>';
+        }).join('');
+      }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
+    }
+
+    document.getElementById('upload-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var files = document.getElementById('media-file').files;
+      var caption = document.getElementById('media-caption').value.trim();
+      var status = document.getElementById('upload-status');
+      var btn = document.getElementById('upload-btn');
+      if (!files.length) { setStatus(status, 'یک فایل انتخاب کن.', 'err'); return; }
+      btn.disabled = true;
+      setStatus(status, 'در حال آپلود ' + toFa(files.length) + ' فایل…', '');
+      var chain = Promise.resolve();
+      var ok = 0;
+      Array.from(files).forEach(function (file) {
+        chain = chain.then(function () {
+          return readAsBase64(file).then(function (b64) {
+            return api('/api/admin/media', {
+              method: 'POST', headers: authHeaders(),
+              body: JSON.stringify({ filename: file.name, mime: file.type || guessMime(file.name), data: b64, caption: caption })
+            }).then(function () { ok++; });
+          });
+        });
+      });
+      chain.then(function () {
+        setStatus(status, 'آپلود شد: ' + toFa(ok) + ' فایل.', 'ok');
+        document.getElementById('media-file').value = '';
+        document.getElementById('media-caption').value = '';
+        loadMedia();
+      }).catch(function (e2) { setStatus(status, 'خطا: ' + e2.message, 'err'); })
+        .finally(function () { btn.disabled = false; });
+    });
+
+    function readAsBase64(file) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function () { var s = String(reader.result); resolve(s.slice(s.indexOf(',') + 1)); };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+    function guessMime(name) {
+      var ext = name.split('.').pop().toLowerCase();
+      var map = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml', mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime' };
+      return map[ext] || 'application/octet-stream';
+    }
+
+    document.getElementById('media-list').addEventListener('click', function (e) {
+      var delBtn = e.target.closest('[data-delete]');
+      var editBtn = e.target.closest('[data-edit-caption]');
+      if (delBtn) {
+        if (!confirm('حذف این مدیا؟')) return;
+        api('/api/admin/media?id=' + delBtn.getAttribute('data-delete'), { method: 'DELETE' })
+          .then(loadMedia)
+          .catch(function (e2) { alert('خطا: ' + e2.message); });
+      } else if (editBtn) {
+        var card = editBtn.closest('.media-card');
+        var id = card.getAttribute('data-id');
+        var current = card.getAttribute('data-caption');
+        var newCap = prompt('توضیح جدید:', current);
+        if (newCap === null) return;
+        api('/api/admin/media?id=' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ caption: newCap }) })
+          .then(loadMedia)
+          .catch(function (e2) { alert('خطا: ' + e2.message); });
+      }
+    });
+
+    // ---- boot --------------------------------------------------------------
+    if (TOKEN) {
+      api('/api/admin/tickets').then(showAdmin).catch(function () { showLogin(); });
+    } else {
+      showLogin();
+    }
+  </script>
+</body>
+</html>

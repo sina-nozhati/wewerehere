@@ -1,0 +1,11 @@
+{
+  "name": "wewerehere",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ما اینجا بودیم — micro event experience landing page + backend",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node --disable-warning=ExperimentalWarning server.js",
+    "start": "node --disable-warning=ExperimentalWarning server.js"
+  }
+}

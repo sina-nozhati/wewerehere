@@ -1,0 +1,15 @@
+# runtime data — keep on the server, back it up, do not commit
+data.sqlite
+uploads/
+
+# local env / secrets
+.env
+.env.*
+
+# node
+node_modules/
+
+# scratch / editor / agent dirs
+_*
+.*
+!.gitignore
