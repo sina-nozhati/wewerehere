@@ -1,0 +1,366 @@
+/* Full-page loader — edge-to-edge mist, dust, embers (no boxed scene) */
+
+html.wwh-loading {
+  overflow: hidden;
+}
+
+html.wwh-loading body {
+  overflow: hidden;
+}
+
+.wwh-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 130% 70% at 50% -12%, #1b1424 0%, transparent 58%),
+    radial-gradient(ellipse 90% 55% at 50% 115%, #1c0f15 0%, transparent 60%),
+    #070609;
+  transition: opacity 0.55s cubic-bezier(0.23, 1, 0.32, 1), visibility 0.55s;
+}
+
+.wwh-loader.is-exit {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.wwh-loader.is-done {
+  display: none !important;
+}
+
+/* Atmosphere fills viewport — never a square “card” */
+.wwh-loader__atmo {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.wwh-loader__moon {
+  position: absolute;
+  top: 6vh;
+  left: 50%;
+  width: clamp(200px, 38vw, 360px);
+  height: clamp(200px, 38vw, 360px);
+  margin-left: calc(clamp(200px, 38vw, 360px) / -2);
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #f4f1f8 0%, #d9d3e2 22%, #b9b0c6 48%, #6f647f 100%);
+  opacity: 0.17;
+  filter: blur(1px);
+  box-shadow: 0 0 120px 40px rgba(214, 205, 231, 0.12);
+  animation: wwhLoaderMoon 3.6s ease-in-out infinite;
+}
+
+@keyframes wwhLoaderMoon {
+  0%,
+  100% {
+    opacity: 0.14;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.22;
+    transform: scale(1.02);
+  }
+}
+
+.wwh-loader__mist {
+  position: absolute;
+  left: -45%;
+  width: 190%;
+  height: 100%;
+  top: 0;
+  opacity: 0.45;
+  background:
+    radial-gradient(ellipse 55% 34% at 22% 22%, rgba(190, 178, 210, 0.07), transparent 72%),
+    radial-gradient(ellipse 50% 30% at 78% 68%, rgba(190, 178, 210, 0.06), transparent 70%),
+    radial-gradient(ellipse 48% 28% at 48% 92%, rgba(212, 63, 90, 0.1), transparent 68%);
+  animation: wwhLoaderMist 42s linear infinite alternate;
+  will-change: transform;
+}
+
+.wwh-loader__mist--2 {
+  animation-duration: 56s;
+  animation-delay: -14s;
+  opacity: 0.32;
+}
+
+@keyframes wwhLoaderMist {
+  from {
+    transform: translateX(-3%) translateY(0);
+  }
+  to {
+    transform: translateX(3%) translateY(-1.5%);
+  }
+}
+
+.wwh-loader__haze {
+  position: absolute;
+  inset: 0;
+  opacity: 0.65;
+  background:
+    radial-gradient(ellipse 55% 38% at 50% 100%, rgba(212, 63, 90, 0.2), transparent 72%),
+    radial-gradient(ellipse 40% 30% at 15% 88%, rgba(212, 63, 90, 0.14), transparent 70%),
+    radial-gradient(ellipse 40% 30% at 85% 90%, rgba(180, 40, 60, 0.12), transparent 68%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg fill='%23D43F5A' opacity='0.22'%3E%3Ccircle cx='20' cy='170' r='0.9'/%3E%3Ccircle cx='80' cy='188' r='0.7'/%3E%3Ccircle cx='140' cy='176' r='1'/%3E%3Ccircle cx='180' cy='190' r='0.8'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: auto, auto, auto, 200px 200px;
+  animation: wwhLoaderHazeDrift 36s linear infinite alternate;
+}
+
+@keyframes wwhLoaderHazeDrift {
+  from {
+    background-position: 0 0, 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 0 0, 0 0, 0 0, 100px -60px;
+  }
+}
+
+.wwh-loader__embers {
+  position: absolute;
+  inset: 0;
+}
+
+.wwh-loader__ember {
+  position: absolute;
+  bottom: -8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 228, 235, 0.95) 0%, rgba(212, 63, 90, 0.8) 50%, transparent 72%);
+  box-shadow: 0 0 10px 2px rgba(212, 63, 90, 0.5);
+  animation: wwhLoaderEmber 5.5s linear infinite;
+  opacity: 0;
+}
+
+.wwh-loader__ember:nth-child(1) {
+  left: 12%;
+  animation-delay: 0s;
+}
+.wwh-loader__ember:nth-child(2) {
+  left: 28%;
+  animation-delay: 0.7s;
+}
+.wwh-loader__ember:nth-child(3) {
+  left: 44%;
+  animation-delay: 1.4s;
+}
+.wwh-loader__ember:nth-child(4) {
+  left: 58%;
+  animation-delay: 2.1s;
+}
+.wwh-loader__ember:nth-child(5) {
+  left: 72%;
+  animation-delay: 2.8s;
+}
+.wwh-loader__ember:nth-child(6) {
+  left: 86%;
+  animation-delay: 3.5s;
+}
+.wwh-loader__ember:nth-child(7) {
+  left: 36%;
+  animation-delay: 4.2s;
+}
+
+@keyframes wwhLoaderEmber {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(-105vh);
+    opacity: 0;
+  }
+}
+
+/* Center stack — typography only, no background box */
+.wwh-loader__focus {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 24px;
+  max-width: min(360px, 92vw);
+  animation: wwhLoaderFocusIn 520ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes wwhLoaderFocusIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wwh-loader__title {
+  margin: 8px 0 10px;
+  font-size: clamp(1.65rem, 8vw, 2.15rem);
+  font-weight: 900;
+  color: var(--color-primary);
+  line-height: 1.08;
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.08);
+}
+
+.wwh-loader__title span {
+  display: block;
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+  transform: translateY(8px);
+  animation: wwhLoaderWordIn 560ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+.wwh-loader__title span:nth-child(1) {
+  animation-delay: 360ms;
+}
+
+.wwh-loader__title span:nth-child(2) {
+  color: var(--color-accent-soft);
+  animation-delay: 540ms;
+}
+
+@keyframes wwhLoaderWordIn {
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    transform: translateY(0);
+  }
+}
+
+.wwh-loader__sigil {
+  width: 56px;
+  height: 56px;
+  color: var(--color-accent);
+  filter: drop-shadow(0 0 12px rgba(212, 63, 90, 0.35));
+}
+
+.wwh-loader__sigil svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.wwh-loader__sigil-ring,
+.wwh-loader__sigil-mark {
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 190;
+  stroke-dashoffset: 190;
+  animation: wwhLoaderDraw 760ms cubic-bezier(0.23, 1, 0.32, 1) 80ms forwards;
+}
+
+.wwh-loader__sigil-mark {
+  stroke-dasharray: 130;
+  stroke-dashoffset: 130;
+  animation-delay: 180ms;
+}
+
+.wwh-loader__sigil-core {
+  fill: currentColor;
+  opacity: 0;
+  transform-origin: center;
+  animation: wwhLoaderCoreIn 280ms cubic-bezier(0.23, 1, 0.32, 1) 650ms forwards;
+}
+
+@keyframes wwhLoaderDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes wwhLoaderCoreIn {
+  from {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.wwh-loader__rule {
+  width: 72px;
+  height: 1px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  background: rgba(212, 63, 90, 0.18);
+}
+
+.wwh-loader__rule span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--color-accent);
+  transform: translateX(100%);
+  animation: wwhLoaderRuleIn 480ms cubic-bezier(0.23, 1, 0.32, 1) 720ms forwards;
+}
+
+@keyframes wwhLoaderRuleIn {
+  to {
+    transform: translateX(0);
+  }
+}
+
+.wwh-loader__caption {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--color-accent-soft);
+  font-family: var(--font-gothic, 'Cinzel', serif);
+  opacity: 0;
+  animation: wwhLoaderCaptionIn 420ms ease-out 820ms forwards;
+}
+
+@keyframes wwhLoaderCaptionIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wwh-loader__focus,
+  .wwh-loader__moon,
+  .wwh-loader__mist,
+  .wwh-loader__haze,
+  .wwh-loader__ember,
+  .wwh-loader__title span,
+  .wwh-loader__sigil-ring,
+  .wwh-loader__sigil-mark,
+  .wwh-loader__sigil-core,
+  .wwh-loader__rule span,
+  .wwh-loader__caption {
+    animation: none;
+  }
+  .wwh-loader__moon {
+    opacity: 0.18;
+  }
+  .wwh-loader__title span,
+  .wwh-loader__sigil-core,
+  .wwh-loader__caption {
+    opacity: 1;
+    clip-path: none;
+    transform: none;
+  }
+  .wwh-loader__sigil-ring,
+  .wwh-loader__sigil-mark {
+    stroke-dashoffset: 0;
+  }
+  .wwh-loader__rule span {
+    transform: none;
+  }
+}

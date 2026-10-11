@@ -44,11 +44,31 @@ The registration section is now a **3-step flow** (single page, no page reload):
 
 ## Hero
 - Accent heart SVG in the eyebrow (cute touch)
-- Secondary CTA: `پیگیری سفارش` → `/track` (outline, small)
+- Secondary CTA: `پیگیری بلیط` → `/track` (outline, small)
+
+## Hero Re-UI (mobile-first)
+
+- Scroll progress: `#scroll-progress` (accent red, RTL `scaleX`, [`assets/wwh-scroll.js`](assets/wwh-scroll.js))
+- Column: `.hero__stack` `max-width: min(360px, …)` — ornament, date block, countdown grid, capacity pill, CTAs share one edge
+- Typography: tagline ≥1.5rem; subline 1rem; countdown numbers `clamp(1.9rem, 9vw, 2.6rem)`; labels ≥0.8125rem; body ≥16px
+- Schedule: [`assets/wwh-datetime.js`](assets/wwh-datetime.js) — tagline ordinal+month; subline `ساعت HH:MM · شهر`; episode chip only (no duplicate title)
+- Countdown DOM order (RTL): روز → ساعت → دقیقه → ثانیه; past event → `#countdown-status` «رویداد برگزار شد»
+- Capacity `.hero-capacity`: default accent border tint; `.is-low` (≤10) filled accent; `.sold-out` muted; `role="status"` atomic message
+- CTAs: one primary `btn--filled` (56px); secondary pair in `.hero__cta-secondary` grid; mild `.btn--glow`
+- Loader: `#wwh-loader` + [`assets/wwh-loader.js`](assets/wwh-loader.js); `wwh:loader-arm-spotlight` (~900ms) then fade; spotlight on first hero target before overlay lifts; `wwh:loader-done` after fade
+- Stage spotlight: [`assets/wwh-spotlight.js`](assets/wwh-spotlight.js) — title → tagline → capacity+register; longer dwell on first two stops
+
+## Dynamic landing (`assets/wwh-landing.js` + `GET /api/landing`)
+- Hero date `#hero-date`, venue `#hero-venue`, capacity badge, footer `#footer-meta`
+- Setlist rendered into `#setlist-list` from `event.setlist[]` (`title`, `artist`, `duration`)
+- `salesStatus !== 'open'` → `#sales-closed-banner`, disabled registration CTAs
+- Marquee text derived from featured event + remaining capacity
 
 ## Footer
-- `.footer__nav` with links: ثبتنام / پیگیری سفارش / دسترسی بعد از اجرا
-- Footer mark (mic icon) recolored to accent
+- Shared chrome: [`assets/wwh-chrome.js`](assets/wwh-chrome.js) + [`assets/wwh-shell.css`](assets/wwh-shell.css) — mount `#wwh-footer-mount` on public pages
+- `.footer__nav` links: اپیزودها / ثبت‌نام / ست لیست / پیگیری بلیط / پشتیبانی (`/support`) / دسترسی بعد از اجرا
+- `#footer-meta` from `wwh-landing.js` on `/`; other pages via `/api/landing` in chrome
+- Footer mark (mic icon) recolored to accent; mobile 2-column nav grid
 
 ## Gothic Atmosphere (added 2026-08-21)
 

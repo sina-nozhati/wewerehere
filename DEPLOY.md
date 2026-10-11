@@ -1,33 +1,41 @@
-# پلن استقرار (Deploy) — «ما اینجا بودیم»
+# پلن استقرار (Deploy) — WE WERE HERE
 
-اپ یک سرور Node صفر-وابستگی است (فقط ماژول داخلی `node:sqlite`) — همان کدی که روی سیستم خودتان اجرا میشود، روی سرور هم اجرا میشود. زیر اسکریپت build یا نصب پکیج نیست؛ پوشهی پروژه را بردارید، محیط را ست کنید و Node را اجرا کنید.
+بک‌اند اصلی **Python (FastAPI + uvicorn)** است. سرور Node (`server.js`) فقط برای سازگاری قدیمی نگه داشته شده؛ در production از `npm start` (uvicorn) استفاده کنید.
 
 ---
 
 ## ۱) نیازمندی‌های سرور (VPS / دبیان یا اوبونتو)
 
 ```
-Node.js >= 22.5   (ماژول node:sqlite داخلی؛ در Node 22.5+ بدون flag کار می‌کند)
+Python >= 3.11
 Nginx
 certbot (اختیاری ولی توصیه‌شده برای HTTPS)
 ```
 
-نصب Node (با nvm روی یوزر غیر root):
+نصب وابستگی‌ها روی سرور:
 
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt-get install -y nodejs
-node -v   # باید >= 22.5 باشد
+cd /opt/wewerehere
+python3 -m venv .venv
+.venv/bin/pip install -r backend/requirements.txt
 ```
 
-چون وابستگیای وجود ندارد، از `npm install` صرف‌نظر میکنیم؛ فقط پوشهی پروژه را کپی کنید:
+**خروجی PNG بلیت (CairoSVG):** روی لینوکس معمولاً با `pip install cairosvg` کافی است. روی ویندوز برای dev اگر دانلود بلیت SVG برمی‌گردد، [GTK3 runtime](https://github.com/nickvidal/gtk3-runtime/releases) یا نصب وابستگی‌های Cairo را بررسی کنید؛ فرانت `track.html` در صورت SVG سرور، PNG سمت مرورگر تولید می‌کند.
+
+مهاجرت از دیتابیس Node (یک‌بار):
+
+```bash
+.venv/bin/python backend/scripts/migrate_legacy.py
+```
+
+کپی پروژه:
 
 ```bash
 # از دستگاه خودتان (با rsync یا scp):
 rsync -av --exclude 'data.sqlite' --exclude 'uploads' ./ user@SERVER:/opt/wewerehere/
 ```
 
-> `data.sqlite` و `uploads/` دادهی زنده هستند؛ اگر پروژه از قبل روی سرور داده دارد، آنها را **جابهجا نکنید/نسوزانید**.
+> `data.sqlite`، `storage/` و `uploads/` (legacy) دادهی زنده هستند؛ اگر پروژه از قبل روی سرور داده دارد، آنها را **جابهجا نکنید/نسوزانید**.
 
 ---
 
@@ -56,7 +64,7 @@ Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=/opt/wewerehere
-ExecStart=/usr/bin/node server.js
+ExecStart=/opt/wewerehere/.venv/bin/python -m uvicorn app.main:app --app-dir /opt/wewerehere/backend --host 127.0.0.1 --port 5173
 Restart=on-failure
 RestartSec=2
 Environment=NODE_ENV=production
@@ -69,7 +77,7 @@ Environment=CAPACITY=50
 # Environment=PAYMENT_CARD_HOLDER=نام
 # Environment=PAYMENT_BANK_NAME=بانک
 # برای آپلود مدیا، یوزر باید روی پوشه پروژه دسترسی نوشتن داشته باشد:
-ReadWritePaths=/opt/wewerehere/uploads /opt/wewerehere/data.sqlite
+ReadWritePaths=/opt/wewerehere/storage /opt/wewerehere/uploads /opt/wewerehere/data.sqlite
 
 [Install]
 WantedBy=multi-user.target
@@ -122,24 +130,40 @@ sudo certbot --nginx -d example.com -d www.example.com
 
 ---
 
-## ۵) بکاپ (مهم) — `data.sqlite` و `uploads/`
+## ۵) بکاپ (مهم) — `data.sqlite`، `storage/` و `uploads/`
 
 یک کرون روی سرور (هر شب مثلاً):
 
 ```
-30 3 * * *  tar -czf /backup/wewerehere-$(date +\%F).tgz -C /opt/wewerehere data.sqlite uploads && find /backup -name 'wewerehere-*.tgz' -mtime +14 -delete
+30 3 * * *  tar -czf /backup/wewerehere-$(date +\%F).tgz -C /opt/wewerehere data.sqlite storage uploads && find /backup -name 'wewerehere-*.tgz' -mtime +14 -delete
 ```
 
-بلیطها، سفارشها و رسیدها همه در این دو مسیر هستند؛ بدون بکاپ، حذف سرور = حذف دادهها.
+بلیطها، سفارشها و رسیدها در دیتابیس و پوشه‌های `storage/` (و در صورت legacy، `uploads/`) هستند؛ بدون بکاپ، حذف سرور = حذف دادهها.
+
+قبل از هر `wwh-deploy update` هم یک بکاپ timestamp‌شده در `BACKUP_DIR` (پیش‌فرض `/var/backups/wewerehere`) ساخته می‌شود.
 
 ---
 
 ## ۶) ارتقا (deploy جدید)
 
+**روش توصیه‌شده روی VPS (git):**
+
 ```bash
-sudo rsync -av --delete --exclude data.sqlite --exclude uploads ./ user@server:/opt/wewerehere/
-ssh user@server 'sudo systemctl restart wewerehere'
+sudo wwh-deploy update
 ```
+
+نصب یک‌بار اسکریپت و پیکربندی: [`docs/DEPLOY_VPS.md`](docs/DEPLOY_VPS.md).
+
+**rsync از دستگاه توسعه** (فقط اگر git روی سرور ندارید):
+
+```bash
+rsync -av --delete \
+  --exclude data.sqlite --exclude storage --exclude uploads --exclude .venv --exclude .env \
+  ./ user@server:/opt/wewerehere/
+ssh user@server 'sudo wwh-deploy update --no-git'
+```
+
+دادهٔ زنده (`data.sqlite`, `storage/`, `uploads/`) را هرگز با `--delete` یا `git clean` روی سرور حذف نکنید.
 
 ---
 

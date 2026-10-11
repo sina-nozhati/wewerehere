@@ -2,8 +2,15 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0A0A0B">
+  <meta name="color-scheme" content="dark">
   <title>سوم شهریور — ما اینجا بودیم</title>
+  <link rel="stylesheet" href="/assets/wwh-theme.css">
+  <link rel="stylesheet" href="/assets/wwh-shell.css">
+  <link rel="stylesheet" href="/assets/wwh-hero.css">
+  <link rel="stylesheet" href="/assets/wwh-atmosphere.css">
+  <link rel="stylesheet" href="/assets/wwh-loader.css">
   <meta name="description" content="ما اینجا بودیم — رویداد موسیقی سوم شهریور. ثبت‌نام کنید و تیکت اختصاصی خود را دریافت کنید.">
 
   <!-- Persian font: Vazirmatn (variable 100-900) — full Persian glyph coverage -->
@@ -84,7 +91,9 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
+      *:not(.atmosphere-exempt):not(.atmosphere-exempt *):not(.hero-spotlight),
+      *:not(.atmosphere-exempt):not(.atmosphere-exempt *)::before,
+      *:not(.atmosphere-exempt):not(.atmosphere-exempt *)::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
@@ -109,7 +118,7 @@
        HERO
        ============================================ */
     .hero {
-      min-height: 100vh;
+      min-height: 100svh;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -216,7 +225,7 @@
       transition: border-color 200ms ease, transform 200ms ease;
       cursor: default;
     }
-    .countdown__item:hover { border-color: var(--color-secondary); transform: translateY(-3px); }
+    /* countdown hover → wwh-hero.css */
 
     .countdown__number {
       font-size: clamp(2.1rem, 5.5vw, 3.2rem);
@@ -291,7 +300,7 @@
       line-height: 1.2;
       color: var(--color-primary);
       text-align: center;
-      margin-bottom: 14px;
+      margin-bottom: 28px;
     }
     .section-subtitle {
       font-size: 1rem;
@@ -893,14 +902,21 @@
       margin-top: 28px;
       text-align: right;
     }
-    .gallery__item { border: 1px solid var(--color-border); background: var(--color-surface); border-radius: var(--radius-md); overflow: hidden; }
-    .gallery__item img, .gallery__item video {
+    .gallery__item { border: 1px solid var(--color-border); background: var(--color-surface); border-radius: var(--radius-md); overflow: hidden; position: relative; }
+    .gallery__item img, .gallery__item video, .gallery__item canvas {
       width: 100%;
       max-height: 320px;
       object-fit: cover;
       display: block;
       background: #000;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-user-drag: none;
     }
+    .gallery__item img, .gallery__item canvas { pointer-events: none; }
+    .gallery__item--photo { cursor: pointer; }
+    .gallery__item--photo:hover { border-color: var(--color-border-light); }
     .gallery__caption {
       display: block;
       padding: 10px 12px;
@@ -908,79 +924,89 @@
       color: var(--color-secondary);
       text-align: center;
     }
-    @media (max-width: 520px) { .gallery { grid-template-columns: 1fr; } }
 
-    /* ============================================
-       FOOTER
-       ============================================ */
-    .footer { padding: 52px 0; text-align: center; border-top: 1px solid var(--color-border); }
-    .footer__mark { color: var(--color-accent); margin-bottom: 18px; }
-    .footer__brand { font-size: 1.4rem; font-weight: 800; color: var(--color-primary); margin-bottom: 6px; }
-    .footer__text { font-size: 0.82rem; color: var(--color-muted); }
-    .footer__nav { display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; margin-top: 22px; }
-    .footer__nav a {
-      color: var(--color-secondary); text-decoration: none; font-size: 0.85rem; font-weight: 600;
-      transition: color var(--transition-base);
-    }
-    .footer__nav a:hover { color: var(--color-accent); }
-
-    /* ============================================
-       BUTTONS
-       ============================================ */
-    .btn {
-      display: inline-flex;
+    /* ---- photo viewer (lightbox) ---- */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: none;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      padding: 15px 34px;
-      min-height: 48px;
-      border: 2px solid var(--color-primary);
-      border-radius: var(--radius-md);
-      background: transparent;
+      background: rgba(4, 3, 5, 0.95);
+      backdrop-filter: blur(6px);
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-user-drag: none;
+    }
+    .lightbox.open { display: flex; animation: fadeIn 0.25s ease; }
+    .lightbox__stage {
+      max-width: min(92vw, 1080px);
+      max-height: 84vh;
+      padding: 34px 8px 0;
+    }
+    .lightbox__stage canvas {
+      max-width: 92vw;
+      max-height: 74vh;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+      background: #000;
+      box-shadow: 0 14px 60px rgba(0, 0, 0, 0.65);
+    }
+    .lightbox__caption {
+      margin-top: 16px;
+      text-align: center;
+      font-size: 0.88rem;
+      color: var(--color-secondary);
+      padding: 0 10px;
+    }
+    .lightbox__count {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.14em;
+      color: var(--color-muted);
+    }
+    .lightbox__btn {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.07);
       color: var(--color-primary);
-      font-family: var(--font);
-      font-weight: 700;
-      font-size: 0.95rem;
+      font-size: 1.5rem;
+      line-height: 1;
       cursor: pointer;
-      transition: background 200ms ease, color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
-      text-decoration: none;
-      position: relative;
-      overflow: hidden;
+      transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-user-drag: none;
     }
-    .btn:hover { background: var(--color-primary); color: var(--color-bg); }
-    .btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-    .btn--filled { background: var(--color-primary); color: var(--color-bg); }
-    .btn--filled:hover { background: transparent; color: var(--color-primary); }
-    .btn--accent {
-      background: var(--color-accent);
-      color: var(--color-primary);
-      border-color: var(--color-accent);
-      box-shadow: var(--glow-accent);
+    .lightbox__btn:hover { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
+    .lightbox__btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+    .lightbox__prev { top: 50%; right: 18px; transform: translateY(-50%); }
+    .lightbox__next { top: 50%; left: 18px; transform: translateY(-50%); }
+    .lightbox__close { top: 16px; left: 50%; transform: translateX(-50%); width: 40px; height: 40px; }
+    @media (max-width: 520px) {
+      .lightbox__prev { right: 8px; }
+      .lightbox__next { left: 8px; }
+      .lightbox__close { top: 10px; }
     }
-    .btn--accent:hover { background: var(--color-accent-soft); border-color: var(--color-accent-soft); color: var(--color-primary); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(212, 63, 90, 0.4); }
-    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
-    .btn:disabled:hover { background: var(--color-primary); color: var(--color-bg); }
-    .btn--outline:disabled:hover { background: transparent; color: var(--color-primary); }
+
+    @media (max-width: 520px) { .gallery { grid-template-columns: 1fr; } }
 
     .form__back { margin-top: 10px; }
-
-    .btn--shine::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      right: -60%;
-      width: 40%;
-      height: 100%;
-      background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
-      transform: skewX(-20deg);
-      transition: right 0.6s ease;
-    }
-    .btn--shine:hover::after { right: 120%; }
-    .btn--accent.btn--shine::after {
-      background: linear-gradient(100deg, transparent, rgba(255,255,255,0.28), transparent);
-    }
-
-    .btn--small { padding: 10px 20px; min-height: 40px; font-size: 0.82rem; }
+    .btn--disabled-link { opacity: 0.45; pointer-events: none; }
 
     /* ============================================
        SPINNER / ANIMATIONS
@@ -1011,7 +1037,6 @@
        GOTHIC ATMOSPHERE — moon, mist, bats, embers, fish
        ============================================ */
     .moon {
-      position: fixed;
       top: 6vh;
       left: 50%;
       width: clamp(220px, 34vw, 420px);
@@ -1019,9 +1044,8 @@
       margin-left: calc(clamp(220px, 34vw, 420px) / -2);
       border-radius: 50%;
       background: radial-gradient(circle at 38% 34%, #f4f1f8 0%, #d9d3e2 22%, #b9b0c6 48%, #6f647f 100%);
-      opacity: 0.15;
+      opacity: 0.18;
       filter: blur(1px);
-      z-index: 0;
       pointer-events: none;
       box-shadow: 0 0 120px 40px rgba(214, 205, 231, 0.16), 0 0 300px 120px rgba(120, 100, 160, 0.09);
       animation: moonPulse 9s ease-in-out infinite;
@@ -1032,18 +1056,17 @@
     }
 
     .mist {
-      position: fixed;
       left: -40%;
       width: 180%;
       height: 100vh;
       top: 0;
       pointer-events: none;
-      z-index: 1;
-      opacity: 0.5;
+      opacity: 0.55;
       background:
-        radial-gradient(ellipse 55% 34% at 20% 18%, rgba(190, 178, 210, 0.06), transparent 70%),
-        radial-gradient(ellipse 50% 30% at 78% 74%, rgba(190, 178, 210, 0.05), transparent 70%),
-        radial-gradient(ellipse 45% 26% at 45% 92%, rgba(212, 63, 90, 0.045), transparent 70%);
+        radial-gradient(ellipse 55% 34% at 20% 18%, rgba(190, 178, 210, 0.08), transparent 70%),
+        radial-gradient(ellipse 50% 30% at 78% 74%, rgba(190, 178, 210, 0.06), transparent 70%),
+        radial-gradient(ellipse 45% 26% at 45% 92%, rgba(212, 63, 90, 0.12), transparent 70%),
+        radial-gradient(ellipse 38% 22% at 70% 95%, rgba(212, 63, 90, 0.08), transparent 68%);
       animation: mistDrift 38s linear infinite alternate;
       will-change: transform;
     }
@@ -1053,7 +1076,7 @@
       to { transform: translateX(4%) translateY(-1.5%); }
     }
 
-    #bats { position: fixed; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+    #bats { inset: 0; pointer-events: none; overflow: hidden; }
     .bat {
       position: absolute;
       width: 46px;
@@ -1082,7 +1105,7 @@
       100% { transform: translate3d(-16vw, 5vh, 0) rotate(-6deg) scale(0.95); opacity: 0; }
     }
 
-    #embers { position: fixed; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+    #embers { inset: 0; pointer-events: none; overflow: hidden; }
     .ember {
       position: absolute;
       bottom: -12px;
@@ -1103,49 +1126,77 @@
       100% { transform: translate3d(var(--drift, 0px), -108vh, 0); opacity: 0; }
     }
 
-    /* ---- the fish: main element of the site ---- */
+    /* ---- fish: rAF paths (see wwh-fish.js) ---- */
     .fish {
-      position: fixed;
       left: 0;
       top: 0;
-      z-index: 4;
-      pointer-events: none;
       opacity: 0;
-      width: 150px;
+      width: 78px;
+      position: relative;
       will-change: transform, opacity;
+      filter: blur(0.35px);
+      touch-action: manipulation;
     }
-    .fish__inner { width: 100%; will-change: transform; }
+    .fish__inner {
+      width: 100%;
+      will-change: transform;
+      animation: fishWobbleL var(--wobble-dur, 2s) ease-in-out infinite alternate;
+    }
     .fish svg { width: 100%; height: auto; display: block; overflow: visible; }
-    .fish svg path { fill: rgba(243, 240, 250, 0.92); }
-    .fish.is-swimming { opacity: 1; }
-    /* periodic swim: roughly half the trips drift RIGHT→LEFT, the other half
-       LEFT→RIGHT. The fish art points downward, so rotate(≈90deg) lays it
-       horizontally with the head facing left; for the reverse direction the
-       art is mirrored (scaleX(-1) + rotate(≈90deg)), so the head faces right
-       and the belly stays down — never upside-down in either direction. */
-    .fish.fish--cruise { animation: fishCruise var(--dur, 14s) cubic-bezier(0.42, 0, 0.58, 1) forwards; }
-    .fish.fish--cruise .fish__inner { animation: fishWobble 1.35s ease-in-out infinite alternate; }
-    .fish.fish--rev { animation: fishRev var(--dur, 14s) cubic-bezier(0.42, 0, 0.58, 1) forwards; }
-    .fish.fish--rev .fish__inner { animation: fishWobbleRev 1.35s ease-in-out infinite alternate; }
-    @keyframes fishCruise {
-      0%   { transform: translate3d(132vw, var(--startY, 30vh), 0); opacity: 0; }
-      5%   { opacity: 1; }
-      55%  { transform: translate3d(46vw, calc((var(--startY, 30vh) + var(--endY, 44vh)) / 2 - 4vh), 0); }
-      100% { transform: translate3d(-32vw, var(--endY, 44vh), 0); opacity: 0; }
+    .fish svg path { fill: rgba(210, 202, 228, 0.52); pointer-events: none; transition: fill 0.35s ease; }
+    .fish.is-swimming {
+      opacity: var(--fish-opacity, 0.4);
+      transition: opacity 0.4s ease, filter 0.4s ease;
     }
-    @keyframes fishRev {
-      0%   { transform: translate3d(-32vw, var(--startY, 30vh), 0); opacity: 0; }
-      5%   { opacity: 1; }
-      55%  { transform: translate3d(46vw, calc((var(--startY, 30vh) + var(--endY, 44vh)) / 2 - 4vh), 0); }
-      100% { transform: translate3d(132vw, var(--endY, 44vh), 0); opacity: 0; }
+    .fish.fish--bold svg path {
+      fill: rgba(235, 228, 248, 0.78);
     }
-    @keyframes fishWobble {
-      from { transform: rotate(87deg) scaleX(-1) translateY(-3px); }
-      to   { transform: rotate(93deg) scaleX(-1) translateY(3px); }
+    .fish__hint {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 6px);
+      transform: translateX(-50%) scale(0.92);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      line-height: 1.35;
+      white-space: nowrap;
+      color: #f8f4fc;
+      background: rgba(14, 9, 20, 0.82);
+      border: 1px solid rgba(212, 63, 90, 0.55);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
     }
-    @keyframes fishWobbleRev {
-      from { transform: rotate(87deg) scaleX(-1) translateY(-3px); }
-      to   { transform: rotate(93deg) scaleX(-1) translateY(3px); }
+    .fish.fish--hint .fish__hint {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+    .fish.fish--face-left .fish__inner {
+      animation-name: fishWobbleL;
+    }
+    .fish.fish--face-right .fish__inner {
+      animation-name: fishWobbleR;
+    }
+    .fish.fish--flinch .fish__inner {
+      animation: fishFlinch 0.32s ease-in-out 3 !important;
+    }
+    .fish.fish--glow {
+      filter: blur(0.35px) drop-shadow(0 0 10px rgba(212, 63, 90, 0.55));
+    }
+    @keyframes fishWobbleL {
+      from { transform: rotate(88deg) scaleX(-1) translate3d(-2px, -2px, 0); }
+      to { transform: rotate(92deg) scaleX(-1) translate3d(2px, 3px, 0); }
+    }
+    @keyframes fishWobbleR {
+      from { transform: rotate(-92deg) translate3d(-2px, -2px, 0); }
+      to { transform: rotate(-88deg) translate3d(2px, 3px, 0); }
+    }
+    @keyframes fishFlinch {
+      0%, 100% { transform: scale(1); }
+      40% { transform: scale(1.14); }
+      70% { transform: scale(0.92); }
     }
 
     /* ---- gothic ornament divider ---- */
@@ -1233,6 +1284,104 @@
     }
 
     /* ============================================
+       SETLIST
+       ============================================ */
+    .setlist { padding: 88px 0; }
+    @media (max-width: 768px) { .setlist { padding: 60px 0; } }
+
+    .setlist__frame { max-width: 660px; margin: 0 auto; }
+
+    .setlist__list { list-style: none; }
+    .setlist__row {
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      align-items: center;
+      gap: 6px 14px;
+      padding: 10px 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.055);
+      transition: background var(--transition-base);
+    }
+    .setlist__row:last-of-type { border-bottom: none; }
+    /* setlist row hover → wwh-theme.css */
+    .setlist__info { min-width: 0; }
+    .setlist__no {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--color-muted);
+      transition: color var(--transition-base);
+    }
+    .setlist__title {
+      display: block;
+      font-size: 0.96rem;
+      font-weight: 700;
+      line-height: 1.45;
+      color: var(--color-primary);
+      direction: ltr;
+      text-align: right;
+    }
+    .setlist__artist {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--color-muted);
+      direction: ltr;
+      text-align: right;
+    }
+    .setlist__end {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 9px;
+    }
+    .setlist__time {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--color-secondary);
+      font-variant-numeric: tabular-nums;
+      direction: ltr;
+      min-width: 36px;
+      text-align: left;
+    }
+    .setlist__total {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 8px;
+      padding: 14px 6px 4px;
+      border-top: 1px dashed rgba(184, 172, 205, 0.28);
+    }
+    .setlist__total-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--color-secondary);
+    }
+    .setlist__total-label svg { color: var(--color-accent); }
+    .setlist__total-count { color: var(--color-muted); font-weight: 600; font-size: 0.75rem; }
+    .setlist__total-time {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: var(--color-primary);
+      direction: ltr;
+      font-variant-numeric: tabular-nums;
+    }
+
+    @media (max-width: 480px) {
+      .setlist__row { grid-template-columns: 28px 1fr auto; gap: 4px 10px; }
+      .setlist__title { font-size: 0.88rem; }
+      .setlist__total { flex-direction: column; align-items: flex-start; gap: 6px; }
+    }
+
+    /* ============================================
        RESPONSIVE
        ============================================ */
     @media (max-width: 768px) {
@@ -1250,105 +1399,130 @@
       .countdown__number { font-size: 1.9rem; }
     }
 
-    /* ============================================
-       PRINT — single ticket, white paper
-       ============================================ */
-    @media print {
-      body { background: #fff !important; color: #000; }
-      body::before, body::after { display: none !important; }
-      body * { visibility: hidden; }
 
-      .ticket--print, .ticket--print * { visibility: visible; }
-
-      .ticket--print {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        margin: 0 auto;
-        max-width: 480px;
-        border: 1px solid #000;
-        background: #fff;
-        color: #000;
-        transform: none !important;
-        box-shadow: none !important;
-      }
-      .ticket--print .ticket__event,
-      .ticket--print .ticket__name,
-      .ticket--print .ticket__serial,
-      .ticket--print .ticket__stub-serial {
-        color: #000 !important;
-        text-shadow: none !important;
-      }
-      .ticket--print .ticket__group { background: #000 !important; color: #fff !important; }
-      .ticket--print .ticket__watermark { color: #000 !important; opacity: 0.06 !important; }
-      .ticket--print .ticket__label,
-      .ticket--print .ticket__value,
-      .ticket--print .ticket__stub-text { color: #333 !important; }
-      .ticket--print .ticket__stub { background: #f0f0f0 !important; }
-      .ticket--print .ticket__stub::before,
-      .ticket--print .ticket__stub::after { background: #fff !important; }
-      .ticket--print .ticket__barcode {
-        background: repeating-linear-gradient(
-          90deg, #000 0 2px, transparent 2px 5px, #000 5px 6px,
-          transparent 6px 9px, #000 9px 12px, transparent 12px 14px
-        ) !important;
-        opacity: 1 !important;
-      }
-    }
   </style>
 </head>
 <body>
+  <script>document.documentElement.classList.add('wwh-loading');</script>
+
+  <div class="wwh-loader" id="wwh-loader" role="status" aria-live="polite" aria-label="در حال بارگذاری">
+    <div class="wwh-loader__atmo" aria-hidden="true">
+      <div class="wwh-loader__moon"></div>
+      <div class="wwh-loader__mist wwh-loader__mist--1"></div>
+      <div class="wwh-loader__mist wwh-loader__mist--2"></div>
+      <div class="wwh-loader__haze"></div>
+      <div class="wwh-loader__embers">
+        <span class="wwh-loader__ember"></span>
+        <span class="wwh-loader__ember"></span>
+        <span class="wwh-loader__ember"></span>
+        <span class="wwh-loader__ember"></span>
+        <span class="wwh-loader__ember"></span>
+        <span class="wwh-loader__ember"></span>
+        <span class="wwh-loader__ember"></span>
+      </div>
+    </div>
+    <div class="wwh-loader__focus">
+      <div class="wwh-loader__sigil" aria-hidden="true">
+        <svg viewBox="0 0 72 72" fill="none">
+          <circle class="wwh-loader__sigil-ring" cx="36" cy="36" r="27"></circle>
+          <path class="wwh-loader__sigil-mark" d="M36 12v48M19 23l17 9 17-9M19 49l17-9 17 9"></path>
+          <circle class="wwh-loader__sigil-core" cx="36" cy="36" r="4"></circle>
+        </svg>
+      </div>
+      <p class="wwh-loader__title" aria-hidden="true">
+        <span>ما اینجا</span>
+        <span>بودیم</span>
+      </p>
+      <div class="wwh-loader__rule" aria-hidden="true"><span></span></div>
+      <p class="wwh-loader__caption" aria-hidden="true">WE WERE HERE</p>
+      <span class="sr-only">در حال بارگذاری</span>
+    </div>
+  </div>
+  <script src="/assets/wwh-loader.js"></script>
+
+  <div id="wwh-topbar-mount"></div>
 
   <!-- ============================================
-       GOTHIC ATMOSPHERE (moon / mist / embers / bats / fish)
+       GOTHIC ATMOSPHERE (moon / mist / embers / fish)
        ============================================ -->
-  <div class="moon" aria-hidden="true"></div>
-  <div class="mist mist--1" aria-hidden="true"></div>
-  <div class="mist mist--2" aria-hidden="true"></div>
-  <div id="embers" aria-hidden="true"></div>
-  <div id="bats" aria-hidden="true"></div>
-  <div class="fish" id="fish" aria-hidden="true"><div class="fish__inner"></div></div>
+  <div class="wwh-fish-layer atmosphere-exempt" aria-hidden="true">
+    <div class="fish" data-fish="a" tabindex="0" role="button" aria-label="ماهی"><div class="fish__inner"></div></div>
+    <div class="fish" data-fish="b" tabindex="0" role="button" aria-label="ماهی"><div class="fish__inner"></div></div>
+  </div>
+  <div class="atmosphere-exempt" aria-hidden="true">
+    <div class="moon"></div>
+    <div class="mist mist--1"></div>
+    <div class="mist mist--2"></div>
+    <div class="atmosphere-dust"></div>
+    <div id="embers"></div>
+  </div>
 
   <!-- ============================================
        HERO
        ============================================ -->
+  <div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
+
   <section class="hero" id="hero">
     <h1 class="hero__title">
       <span>ما اینجا</span>
       <span>بودیم</span>
     </h1>
-    <div class="ornament" aria-hidden="true">
-      <span class="ornament__line"></span>
-      <svg class="ornament__glyph" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2v20M4 6l8 4 8-4M4 18l8-4 8 4"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
-      <span class="ornament__line"></span>
-    </div>
-    <p class="hero__date">۳ شهریور ۱۴۰۵</p>
-    <p class="hero__capacity" id="capacity-badge">ظرفیت محدود — فقط ۵۰ نفر</p>
+    <div class="hero__stack" id="hero-meta-card" aria-live="polite">
+      <div class="hero__gothic-art" aria-hidden="true">
+        <svg viewBox="0 0 360 420" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 40 C80 8 120 24 180 12" stroke="currentColor" stroke-width="0.6" opacity="0.5"/>
+          <path d="M352 48 C280 16 240 32 180 20" stroke="currentColor" stroke-width="0.6" opacity="0.45"/>
+          <path d="M12 380 C90 400 140 388 200 404" stroke="currentColor" stroke-width="0.5" opacity="0.35"/>
+          <path d="M348 372 C270 392 220 380 160 396" stroke="currentColor" stroke-width="0.5" opacity="0.35"/>
+          <circle cx="180" cy="210" r="120" stroke="currentColor" stroke-width="0.35" opacity="0.12"/>
+        </svg>
+      </div>
+      <div class="ornament hero__ornament" aria-hidden="true">
+        <span class="ornament__line"></span>
+        <svg class="ornament__glyph" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2v20M4 6l8 4 8-4M4 18l8-4 8 4"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
+        <span class="ornament__line"></span>
+      </div>
 
-    <div class="countdown" role="timer" aria-label="شمارش معکوس تا رویداد">
-      <div class="countdown__item">
-        <span class="countdown__number" id="countdown-seconds">--</span>
-        <span class="countdown__label">ثانیه</span>
+      <div class="hero__date-block">
+        <span class="hero__episode-chip" id="hero-event-title" hidden></span>
+        <p class="hero__tagline" id="hero-jalali-tagline">به‌زودی</p>
+        <p class="hero__subline" id="hero-date">تاریخ رویداد از پنل مدیریت</p>
+        <span id="hero-city" class="sr-only"></span>
+        <span id="hero-venue" class="sr-only"></span>
+        <span id="hero-location" class="sr-only" hidden></span>
       </div>
-      <div class="countdown__item">
-        <span class="countdown__number" id="countdown-minutes">--</span>
-        <span class="countdown__label">دقیقه</span>
-      </div>
-      <div class="countdown__item">
-        <span class="countdown__number" id="countdown-hours">--</span>
-        <span class="countdown__label">ساعت</span>
-      </div>
-      <div class="countdown__item">
-        <span class="countdown__number" id="countdown-days">--</span>
-        <span class="countdown__label">روز</span>
-      </div>
-    </div>
 
-    <div class="hero__cta">
-      <a href="#register" class="btn btn--filled btn--shine">ثبت‌نام و دریافت تیکت</a>
-      <a href="/track" class="btn btn--outline btn--small">پیگیری سفارش</a>
+      <p class="hero__countdown-status" id="countdown-status" hidden>رویداد برگزار شد</p>
+      <div class="countdown hero__countdown" id="hero-countdown" role="timer" aria-label="شمارش معکوس تا رویداد">
+        <div class="countdown__item">
+          <span class="countdown__number" id="countdown-days">--</span>
+          <span class="countdown__label">روز</span>
+        </div>
+        <div class="countdown__item">
+          <span class="countdown__number" id="countdown-hours">--</span>
+          <span class="countdown__label">ساعت</span>
+        </div>
+        <div class="countdown__item">
+          <span class="countdown__number" id="countdown-minutes">--</span>
+          <span class="countdown__label">دقیقه</span>
+        </div>
+        <div class="countdown__item">
+          <span class="countdown__number" id="countdown-seconds" aria-hidden="true">--</span>
+          <span class="countdown__label" aria-hidden="true">ثانیه</span>
+        </div>
+      </div>
+
+      <p class="hero-capacity" id="capacity-badge" role="status" aria-atomic="true">ظرفیت محدود</p>
+
+      <div class="hero__cta">
+        <a href="#register" class="btn btn--filled btn--shine btn--glow" id="hero-register-cta">ثبت‌نام و دریافت تیکت</a>
+        <div class="hero__cta-secondary">
+          <a href="/track" class="btn btn--outline btn--small btn--secondary-hero">پیگیری بلیط</a>
+          <a href="/support" class="btn btn--outline btn--small btn--secondary-hero">پشتیبانی</a>
+        </div>
+      </div>
     </div>
+    <div class="hero-spotlight" id="hero-spotlight" hidden aria-hidden="true"></div>
   </section>
 
   <div class="marquee" aria-hidden="true">
@@ -1364,6 +1538,7 @@
     <div class="container">
       <p class="section-label reveal">ثبت‌نام</p>
       <h2 class="section-title reveal">جای تو اینجا خالیه</h2>
+      <p class="sales-banner" id="sales-closed-banner" hidden role="status">فروش بلیت برای این رویداد فعلاً بسته است — برای سوال به پشتیبانی پیام بده.</p>
       <div class="ornament reveal" aria-hidden="true">
         <span class="ornament__line"></span>
         <svg class="ornament__glyph" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2v20M4 6l8 4 8-4M4 18l8-4 8 4"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
@@ -1381,8 +1556,8 @@
       <form class="form reveal" id="registration-form" novalidate>
         <div class="form__group">
           <label class="form__label" for="reg-phone">شماره تماس</label>
-          <input class="form__input" type="tel" id="reg-phone" name="phone" placeholder="۰۹۱۲۱۲۳۴۵۶۷" required autocomplete="tel" inputmode="tel" dir="ltr">
-          <p class="form__error" id="error-phone">لطفاً شماره تماس معتبر وارد کنید</p>
+          <input class="form__input" type="tel" id="reg-phone" name="phone" data-wwh-phone placeholder="09123456789" required autocomplete="tel" dir="ltr">
+          <p class="form__error" id="error-phone">شماره باید دقیقاً به صورت 09123456789 (۱۱ رقم) باشد.</p>
         </div>
 
         <div class="form__group">
@@ -1477,9 +1652,48 @@
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
         </div>
         <h3 class="section-title" style="margin-bottom: 6px;">در انتظار تایید</h3>
-        <p class="result__note">رسیدت ثبت شد. به محض تایید ادمین، تیکت‌هات فعال می‌شن. برای پیگیری، شماره‌ات رو در صفحه پیگیری وارد کن.</p>
+        <p class="result__note">رسیدت ثبت شد. به محض تایید ادمین، تیکت‌هات فعال می‌شن. برای پیگیری بلیط، شماره‌ات رو در صفحه پیگیری بلیط وارد کن.</p>
         <div class="result__actions">
-          <a href="/track" class="btn btn--filled btn--shine">پیگیری سفارش</a>
+          <a href="/track" class="btn btn--filled btn--shine" id="pending-track-link">پیگیری بلیط</a>
+          <a href="/support" class="btn btn--outline btn--small" id="pending-support-link">پشتیبانی</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ============================================
+       SETLIST
+       ============================================ -->
+  <section class="setlist" id="setlist">
+    <div class="container">
+      <p class="section-label reveal">موسیقی این شب</p>
+      <h2 class="section-title reveal">ست لیست</h2>
+      <p class="section-subtitle reveal" id="setlist-subtitle">شانزده قطعه — از راک و متال تا قطعه‌های فارسی؛ همون ترتیبی که اون شب اجرا می‌شه.</p>
+      <div class="ornament reveal" aria-hidden="true">
+        <span class="ornament__line"></span>
+        <svg class="ornament__glyph" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2v20M4 6l8 4 8-4M4 18l8-4 8 4"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
+        <span class="ornament__line"></span>
+      </div>
+
+      <div class="setlist__frame reveal">
+        <div class="gothic-frame">
+          <span class="gothic-frame__corner gothic-frame__corner--tl"></span>
+          <span class="gothic-frame__corner gothic-frame__corner--tr"></span>
+          <span class="gothic-frame__corner gothic-frame__corner--bl"></span>
+          <span class="gothic-frame__corner gothic-frame__corner--br"></span>
+
+          <ol class="setlist__list" id="setlist-list" aria-live="polite"></ol>
+
+          <div class="setlist__total">
+            <span class="setlist__total-label">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              <span>مدت کل</span>
+              <span class="setlist__total-count" id="setlist-total-count">· ۱۶ قطعه</span>
+            </span>
+            <span class="setlist__total-time" id="setlist-total-time">01:04:43</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1515,26 +1729,7 @@
     </div>
   </section>
 
-  <!-- ============================================
-       FOOTER
-       ============================================ -->
-  <footer class="footer">
-    <div class="container">
-      <svg class="footer__mark" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" aria-hidden="true">
-        <rect x="9" y="2" width="6" height="11" />
-        <path d="M5 10v1a7 7 0 0 0 14 0v-1" />
-        <line x1="12" y1="18" x2="12" y2="22" />
-        <line x1="8" y1="22" x2="16" y2="22" />
-      </svg>
-      <p class="footer__brand">ما اینجا بودیم</p>
-      <p class="footer__text">سوم شهریور ۱۴۰۵ — فقط ۵۰ نفر</p>
-      <nav class="footer__nav" aria-label="دسترسی سریع">
-        <a href="#register">ثبت‌نام</a>
-        <a href="/track">پیگیری سفارش</a>
-        <a href="#access">دسترسی بعد از اجرا</a>
-      </nav>
-    </div>
-  </footer>
+  <div id="wwh-footer-mount"></div>
 
   <!-- ============================================
        JAVASCRIPT
@@ -1565,21 +1760,51 @@
       });
     }
 
+  </script>
+  <script src="/assets/wwh-phone.js"></script>
+  <script src="/assets/wwh-datetime.js"></script>
+  <script src="/assets/wwh-chrome.js"></script>
+  <script src="/assets/wwh-landing.js"></script>
+  <script src="/assets/wwh-scroll.js"></script>
+  <script src="/assets/wwh-spotlight.js"></script>
+  <script src="/assets/wwh-fish.js"></script>
+  <script>
     // ---- Countdown ---------------------------------------------------------
     (function initCountdown() {
-      var EVENT_DATE = new Date('2026-08-25T19:00:00+03:30');
+      function eventDate() { return window.__wwhEventAt || new Date('2026-08-25T17:00:00+03:30'); }
       var daysEl = document.getElementById('countdown-days');
       var hoursEl = document.getElementById('countdown-hours');
       var minutesEl = document.getElementById('countdown-minutes');
       var secondsEl = document.getElementById('countdown-seconds');
+      var statusEl = document.getElementById('countdown-status');
+      var countdownRoot = document.getElementById('hero-countdown');
+      var tickId = null;
+      var ended = false;
+
+      function setPastState() {
+        if (ended) return;
+        ended = true;
+        if (statusEl) statusEl.hidden = false;
+        if (countdownRoot) countdownRoot.classList.add('countdown--past');
+        if (daysEl) daysEl.textContent = '—';
+        if (hoursEl) hoursEl.textContent = '—';
+        if (minutesEl) minutesEl.textContent = '—';
+        if (secondsEl) secondsEl.textContent = '—';
+        if (tickId) {
+          clearInterval(tickId);
+          tickId = null;
+        }
+      }
 
       function update() {
-        var diff = EVENT_DATE - new Date();
+        var diff = eventDate() - new Date();
         if (diff <= 0) {
-          daysEl.textContent = '۰۰'; hoursEl.textContent = '۰۰';
-          minutesEl.textContent = '۰۰'; secondsEl.textContent = '۰۰';
+          setPastState();
           return;
         }
+        ended = false;
+        if (statusEl) statusEl.hidden = true;
+        if (countdownRoot) countdownRoot.classList.remove('countdown--past');
         var days = Math.floor(diff / 86400000);
         var hours = Math.floor((diff % 86400000) / 3600000);
         var minutes = Math.floor((diff % 3600000) / 60000);
@@ -1591,80 +1816,11 @@
       }
 
       update();
-      setInterval(update, 1000);
-    })();
-
-    // ---- Live remaining tickets ---------------------------------------------
-    (function initCapacity() {
-      var badge = document.getElementById('capacity-badge');
-      var stepButtons = [document.getElementById('reg-next'), document.getElementById('pay-submit')];
-
-      function setDisabled(disabled) {
-        stepButtons.forEach(function (b) { if (b) b.disabled = disabled; });
-      }
-
-      function refresh() {
-        fetch('/api/capacity')
-          .then(function (r) { return r.json(); })
-          .then(function (c) {
-            var remaining = Math.max(0, Number(c.remaining) || 0);
-            window.remainingTickets = remaining;
-            if (window.applyCapacity) window.applyCapacity(remaining);
-            if (remaining <= 0) {
-              badge.textContent = 'بلیط‌ها تمام شد — ظرفیت تکمیل';
-              badge.classList.add('sold-out');
-              setDisabled(true);
-            } else {
-              badge.textContent = 'فقط ' + toPersian(remaining) + ' بلیط باقی مانده';
-              badge.classList.remove('sold-out');
-              setDisabled(false);
-            }
-          })
-          .catch(function () { /* keep static text if the API fails */ });
-      }
-
-      refresh();
-      window.refreshCapacity = refresh;
-    })();
-
-    // ---- Seamless marquee ----------------------------------------------------
-    (function initMarquee() {
-      var track = document.getElementById('marquee-track');
-      if (!track) return;
-      var items = ['ما اینجا بودیم', '۳ شهریور ۱۴۰۵', 'فقط ۵۰ نفر'];
-      var SPEED = 70; // px per second
-
-      function itemHtml() {
-        return items.map(function (t) {
-          return '<span class="marquee__item">' + t + '</span>';
-        }).join('');
-      }
-
-      function build() {
-        var probe = document.createElement('div');
-        probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;width:max-content;display:flex;';
-        probe.innerHTML = itemHtml();
-        document.body.appendChild(probe);
-        var setWidth = probe.scrollWidth || 600;
-        document.body.removeChild(probe);
-
-        var copies = Math.max(2, Math.ceil((window.innerWidth * 1.5) / setWidth));
-        var inner = '';
-        for (var i = 0; i < copies; i++) inner += itemHtml();
-
-        track.innerHTML =
-          '<div class="marquee__group">' + inner + '</div>' +
-          '<div class="marquee__group">' + inner + '</div>';
-
-        var groupWidth = track.scrollWidth / 2;
-        track.style.animationDuration = Math.max(20, groupWidth / SPEED) + 's';
-      }
-
-      build();
-      var resizeTimer;
-      window.addEventListener('resize', function () {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(build, 200);
+      tickId = setInterval(update, 1000);
+      window.addEventListener('wwh:event-ready', function () {
+        ended = false;
+        update();
+        if (!tickId) tickId = setInterval(update, 1000);
       });
     })();
 
@@ -1753,13 +1909,16 @@
         renderNameFields();
       }
 
+      var landingApplyCapacity = window.applyCapacity;
       window.applyCapacity = function (n) {
+        if (typeof landingApplyCapacity === 'function') landingApplyCapacity(n);
         available = Math.max(0, Number(n) || 0);
         setQuantity(quantity);
       };
 
       qtyMinus.addEventListener('click', function () { setQuantity(quantity - 1); });
       qtyPlus.addEventListener('click', function () { setQuantity(quantity + 1); });
+      WwhPhone.bindIranMobileInput(phoneInput);
       phoneInput.addEventListener('input', function () {
         phoneInput.classList.remove('error');
         errorPhone.classList.remove('visible');
@@ -1770,8 +1929,8 @@
       form.addEventListener('submit', function (e) {
         e.preventDefault();
 
-        var phone = normalizeDigits(phoneInput.value).replace(/\s/g, '');
-        if (!/^\d{10,11}$/.test(phone)) {
+        var phone = WwhPhone.parseIranMobile(phoneInput.value);
+        if (!phone) {
           phoneInput.classList.add('error');
           errorPhone.classList.add('visible');
           phoneInput.focus();
@@ -1796,6 +1955,9 @@
 
       // ---- payment info ----
       function loadPaymentInfo() {
+        if (typeof window.loadPaymentInfoFromCache === 'function' && window.loadPaymentInfoFromCache(quantity)) {
+          return;
+        }
         fetch('/api/payment-info')
           .then(function (r) { return r.json(); })
           .then(function (info) {
@@ -1863,7 +2025,7 @@
         }
         errorReceipt.classList.remove('visible');
 
-        var payload = { phone: collected.phone, names: collected.names, receiptText: text };
+        var payload = { phone: collected.phone, names: collected.names, receiptText: text, eventId: window.__wwhEventId };
         var chain = Promise.resolve();
         if (file) {
           chain = readAsBase64(file).then(function (b64) {
@@ -1890,6 +2052,15 @@
             });
           })
           .then(function () {
+            try { localStorage.setItem('wwh_track_phone', collected.phone); } catch (e) { /* ignore */ }
+            var trackL = document.getElementById('pending-track-link');
+            var supportL = document.getElementById('pending-support-link');
+            if (trackL && collected.phone) {
+              trackL.href = '/track?phone=' + encodeURIComponent(collected.phone);
+            }
+            if (supportL && collected.phone) {
+              supportL.href = '/support?phone=' + encodeURIComponent(collected.phone);
+            }
             window.refreshCapacity && window.refreshCapacity();
             showStep(3);
           })
@@ -1918,27 +2089,10 @@
       }
     })();
 
-    // ---- Gothic ambience: bats + embers -------------------------------------
+    // ---- Gothic ambience: embers ----------------------------------------------
     (function initGothicAmbience() {
-      var batsWrap = document.getElementById('bats');
       var embersWrap = document.getElementById('embers');
-      if (!batsWrap || !embersWrap) return;
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-      var BAT = '<svg viewBox="0 0 100 56" aria-hidden="true"><path fill="currentColor" d="M50 16 C38 4 19 2 4 11 C13 19 19 25 24 31 C15 27 7 28 1 32 C10 36 18 40 27 42 C31 46 38 52 50 59 C62 52 69 46 73 42 C82 40 90 36 99 32 C93 28 85 27 76 31 C81 25 87 19 96 11 C81 2 62 4 50 16 Z"/></svg>';
-
-      function spawnBat() {
-        var fromRight = Math.random() < 0.5;
-        var bat = document.createElement('div');
-        var roll = Math.random();
-        bat.className = 'bat' + (roll < 0.18 ? ' bat--large' : (roll > 0.85 ? ' bat--small' : ''));
-        bat.style.top = (6 + Math.random() * 70) + 'vh';
-        bat.style.animation = (fromRight ? 'batSwoopR2L' : 'batSwoopL2R') + ' ' + (9 + Math.random() * 7).toFixed(1) + 's linear forwards';
-        if (Math.random() < 0.16) bat.style.color = 'rgba(212, 63, 90, 0.9)';
-        bat.innerHTML = BAT;
-        batsWrap.appendChild(bat);
-        bat.addEventListener('animationend', function () { bat.remove(); }, { once: true });
-      }
+      if (!embersWrap) return;
 
       function spawnEmber() {
         var e = document.createElement('span');
@@ -1951,54 +2105,18 @@
         e.addEventListener('animationend', function () { e.remove(); }, { once: true });
       }
 
-      for (var i = 0; i < 7; i++) setTimeout(spawnEmber, i * 800);
+      for (var i = 0; i < 12; i++) setTimeout(spawnEmber, i * 500);
       setInterval(function () {
-        if (embersWrap.children.length < 14) spawnEmber();
-      }, 2400);
+        if (embersWrap.children.length < 22) spawnEmber();
+      }, 1600);
 
-      (function scheduleBats() {
-        spawnBat();
-        setTimeout(scheduleBats, 3200 + Math.random() * 6000);
-      })();
-    })();
-
-    // ---- The fish: main element of the site ----------------------------------
-    (function initFish() {
-      var fish = document.getElementById('fish');
-      if (!fish || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      var inner = fish.querySelector('.fish__inner');
-
-      // inject the fish artwork
-      fetch('/mahi.svg')
-        .then(function (r) { return r.text(); })
-        .then(function (svg) { if (inner) inner.innerHTML = svg; })
-        .catch(function () { /* fish stays hidden if the artwork fails to load */ });
-
-      // Always right-to-left, looping continuously.
-      function cruise() {
-        fish.classList.remove('fish--cruise', 'fish--rev');
-        void fish.offsetWidth; // restart the animation
-        var startY = 12 + Math.random() * 42;                        // 12–54vh
-        var endY = Math.min(84, startY + 12 + Math.random() * 14);   // drifts down
-        fish.style.width = (90 + Math.random() * 70) + 'px';
-        fish.style.setProperty('--startY', startY.toFixed(1) + 'vh');
-        fish.style.setProperty('--endY', endY.toFixed(1) + 'vh');
-        fish.style.setProperty('--dur', (9 + Math.random() * 4).toFixed(1) + 's');
-        fish.classList.add('fish--cruise', 'is-swimming');
-        var dur = parseFloat(fish.style.getPropertyValue('--dur')) * 1000;
-        setTimeout(function () {
-          fish.classList.remove('is-swimming', 'fish--cruise', 'fish--rev');
-          setTimeout(cruise, 300);
-        }, dur + 200);
-      }
-      setTimeout(cruise, 1500);
     })();
 
     // ---- Sample tickets A & B ------------------------------------------------
     (function loadSampleTickets() {
       var samples = [
-        { el: document.getElementById('ticket-sample-a'), ticket: { group: 'A', no: '017', code: '0427', name: 'علی رضایی' } },
-        { el: document.getElementById('ticket-sample-b'), ticket: { group: 'B', no: '018', code: '1188', name: 'مریم احمدی' } }
+        { el: document.getElementById('ticket-sample-a'), ticket: { group: 'A', no: '017', code: '0427', name: 'علی رضایی', date: 'سوم شهریور', time: '۱۷:۰۰', venue: 'بندر انزلی' } },
+        { el: document.getElementById('ticket-sample-b'), ticket: { group: 'B', no: '018', code: '1188', name: 'مریم احمدی', date: 'سوم شهریور', time: '۱۷:۰۰', venue: 'بندر انزلی' } }
       ];
       samples.forEach(function (s) {
         if (!s.el) return;
@@ -2007,22 +2125,7 @@
       });
     })();
 
-    // ---- Ticket download / print --------------------------------------------
-    document.addEventListener('click', function (e) {
-      var btn = e.target.closest('[data-print]');
-      if (!btn) return;
-      var card = btn.closest('.ticket');
-      document.querySelectorAll('.ticket').forEach(function (t) { t.classList.remove('ticket--print'); });
-      card.classList.add('ticket--print');
 
-      var cleanup = function () { card.classList.remove('ticket--print'); };
-      window.addEventListener('afterprint', cleanup, { once: true });
-      setTimeout(function () {
-        window.print();
-      }, 60);
-      // Fallback cleanup if afterprint never fires
-      setTimeout(cleanup, 2000);
-    });
 
     // ---- Post-event access + gallery ----------------------------------------
     (function initAccess() {
@@ -2067,8 +2170,127 @@
           });
       });
 
+      // ---- protected gallery ------------------------------------------------
+      // Photos render into <canvas> instead of <img>: right-click, drag and
+      // long-press offer nothing to save. Videos stay a normal player, but
+      // downloads and shortcuts (Ctrl/Cmd+S, PrintScreen, …) are blocked while
+      // media is on screen. All of this is best-effort — nothing on the open
+      // web can fully prevent recording/screenshots.
+      var PROTECTION_ON = false;
+      var photoById = {};        // url -> { bitmap, w, h } (shared with the lightbox)
+      var photoItems = [];       // photos in page order: { url, caption, canvas }
+      var lb = null;
+      var lbOpen = false;
+      var lbIdx = 0;
+
+      document.addEventListener('keydown', function (e) {
+        if (lbOpen) {
+          if (e.key === 'Escape') { closeLb(); return; }
+          if (e.key === 'ArrowLeft') { showLb(lbIdx + 1); return; }   // next in RTL
+          if (e.key === 'ArrowRight') { showLb(lbIdx - 1); return; }  // prev in RTL
+        }
+        if (!PROTECTION_ON) return;
+        if (e.key === 'PrintScreen') { e.preventDefault(); return; }
+        if (!e.ctrlKey && !e.metaKey) return;
+        var c = String(e.key || '').toLowerCase();
+        if (c === 's' || c === 'p') { e.preventDefault(); return; }        // save / print
+        if (e.shiftKey && (c === 's' || c === '3' || c === '4')) e.preventDefault(); // screen shots
+      });
+
+      gallery.addEventListener('contextmenu', function (e) {
+        if (PROTECTION_ON) e.preventDefault();
+      });
+      document.addEventListener('dragstart', function (e) {
+        if (PROTECTION_ON && e.target.closest && e.target.closest('.gallery, .lightbox')) e.preventDefault();
+      });
+
+      function makeBitmap(blob) {
+        if (window.createImageBitmap) {
+          return createImageBitmap(blob).then(function (bmp) {
+            return { bitmap: bmp, w: bmp.width, h: bmp.height };
+          });
+        }
+        return new Promise(function (resolve, reject) {
+          var img = new Image();
+          img.onload = function () { resolve({ bitmap: img, w: img.naturalWidth, h: img.naturalHeight }); };
+          img.onerror = reject;
+          img.src = URL.createObjectURL(blob);
+        });
+      }
+
+      function getLb() {
+        if (lb) return lb;
+        lb = document.createElement('div');
+        lb.className = 'lightbox';
+        lb.setAttribute('role', 'dialog');
+        lb.setAttribute('aria-modal', 'true');
+        lb.innerHTML =
+          '<button class="lightbox__btn lightbox__close" data-act="close" aria-label="بستن">✕</button>' +
+          '<button class="lightbox__btn lightbox__prev" data-act="prev" aria-label="عکس قبلی">‹</button>' +
+          '<div class="lightbox__stage"><canvas></canvas><p class="lightbox__caption"></p></div>' +
+          '<button class="lightbox__btn lightbox__next" data-act="next" aria-label="عکس بعدی">›</button>' +
+          '<span class="lightbox__count"></span>';
+        lb.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+        lb.addEventListener('click', function (e) {
+          if (e.target === lb) { closeLb(); return; }
+          var btn = e.target.closest('[data-act]');
+          if (!btn) return;
+          if (btn.getAttribute('data-act') === 'prev') showLb(lbIdx - 1);
+          else if (btn.getAttribute('data-act') === 'next') showLb(lbIdx + 1);
+          else closeLb();
+        });
+        document.body.appendChild(lb);
+        return lb;
+      }
+
+      function openLb(i) {
+        if (!photoItems.length) return;
+        getLb();
+        showLb(i);
+        lbOpen = true;
+        document.documentElement.style.overflow = 'hidden';
+      }
+
+      function showLb(i) {
+        lbIdx = (i + photoItems.length) % photoItems.length;
+        paintLb();
+        lb.classList.add('open');
+      }
+
+      function closeLb() {
+        lbOpen = false;
+        lb.classList.remove('open');
+        document.documentElement.style.overflow = '';
+      }
+
+      function paintLb() {
+        var p = photoItems[lbIdx];
+        var en = photoById[p.url];
+        var stage = getLb().querySelector('.lightbox__stage');
+        var canvas = stage.querySelector('canvas');
+        canvas.style.display = en ? 'block' : 'none';
+        if (en) {
+          canvas.width = en.w;
+          canvas.height = en.h;
+          var ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(en.bitmap, 0, 0);
+        }
+        stage.querySelector('.lightbox__caption').textContent = p.caption;
+        lb.querySelector('.lightbox__count').textContent = toPersian(lbIdx + 1) + ' / ' + toPersian(photoItems.length);
+      }
+
       function renderGallery(media) {
+        // release previously loaded bitmaps
+        Object.keys(photoById).forEach(function (k) {
+          var en = photoById[k];
+          if (en.bitmap && en.bitmap.close) en.bitmap.close();
+          delete photoById[k];
+        });
+        photoItems.length = 0;
+        PROTECTION_ON = false;
         gallery.innerHTML = '';
+
         if (!media || !media.length) {
           var p = document.createElement('p');
           p.className = 'access-result__message';
@@ -2076,14 +2298,67 @@
           gallery.appendChild(p);
           return;
         }
+        PROTECTION_ON = true;
+
         media.forEach(function (m) {
           var item = document.createElement('div');
           item.className = 'gallery__item';
-          var tag = m.mime.indexOf('video/') === 0
-            ? '<video src="' + m.url + '" controls preload="metadata"></video>'
-            : '<img src="' + m.url + '" alt="' + escapeHtml(m.caption || m.original_name) + '" loading="lazy">';
-          item.innerHTML = tag + '<span class="gallery__caption">' + escapeHtml(m.caption || m.original_name) + '</span>';
+
+          if (m.mime.indexOf('video/') === 0) {
+            // normal player, but without a download button / picture-in-picture
+            var video = document.createElement('video');
+            video.src = m.url;
+            video.controls = true;
+            video.preload = 'metadata';
+            video.setAttribute('controlslist', 'nodownload');
+            video.setAttribute('disablepictureinpicture', 'true');
+            video.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+            item.appendChild(video);
+          } else {
+            item.classList.add('gallery__item--photo');
+            item.setAttribute('role', 'button');
+            item.setAttribute('tabindex', '0');
+            item.setAttribute('aria-label', 'باز کردن عکس: ' + (m.caption || m.original_name));
+            var canvas = document.createElement('canvas');
+            var entry = { id: m.url, url: m.url, caption: m.caption || m.original_name, canvas: canvas };
+            photoItems.push(entry);
+            item.appendChild(canvas);
+            (function (entryRef) {
+              item.addEventListener('click', function () { openLb(photoItems.indexOf(entryRef)); });
+              item.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openLb(photoItems.indexOf(entryRef));
+                }
+              });
+            })(entry);
+          }
+
+          var cap = document.createElement('span');
+          cap.className = 'gallery__caption';
+          cap.textContent = m.caption || m.original_name;
+          item.appendChild(cap);
           gallery.appendChild(item);
+        });
+
+        photoItems.forEach(function (enRef) {
+          fetch(enRef.url)
+            .then(function (r) { if (!r.ok) throw new Error('load'); return r.blob(); })
+            .then(makeBitmap)
+            .then(function (entry) {
+              if (!gallery.contains(enRef.canvas)) {
+                if (entry.bitmap && entry.bitmap.close) entry.bitmap.close();
+                return;
+              }
+              photoById[enRef.id] = entry;
+              enRef.canvas.width = entry.w;
+              enRef.canvas.height = entry.h;
+              enRef.canvas.getContext('2d').drawImage(entry.bitmap, 0, 0);
+              if (lbOpen && photoItems[lbIdx] === enRef) paintLb();
+            })
+            .catch(function () {
+              enRef.canvas.parentNode.classList.remove('gallery__item--photo');
+            });
         });
       }
     })();

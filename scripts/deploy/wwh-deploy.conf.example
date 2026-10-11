@@ -1,0 +1,12 @@
+# We Were Here — deploy configuration
+# Copy to /etc/wewerehere/deploy.conf (chmod 600). Do not commit secrets here.
+
+APP_DIR=/opt/wewerehere
+SERVICE=wewerehere
+RUN_USER=www-data
+GIT_BRANCH=main
+BACKUP_DIR=/var/backups/wewerehere
+HEALTH_URL=http://127.0.0.1:5173/api/health
+
+# Set to 1 to skip backup on update (or use: wwh-deploy update --no-backup)
+SKIP_BACKUP=0

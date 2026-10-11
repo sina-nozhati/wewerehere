@@ -1,11 +1,13 @@
 {
   "name": "wewerehere",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "ما اینجا بودیم — micro event experience landing page + backend",
-  "type": "commonjs",
+  "description": "WE WERE HERE — multi-event tickets + Python backend",
   "scripts": {
-    "dev": "node --disable-warning=ExperimentalWarning server.js",
-    "start": "node --disable-warning=ExperimentalWarning server.js"
+    "dev": "python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 5173",
+    "start": "python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 5173",
+    "dev:node": "node --disable-warning=ExperimentalWarning server.js",
+    "test": "cd backend && python -m pytest -q",
+    "migrate": "python backend/scripts/migrate_legacy.py"
   }
 }

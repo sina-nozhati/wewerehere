@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0A0A0B">
+  <title>پشتیبانی — ما اینجا بودیم</title>
+  <link rel="stylesheet" href="/assets/wwh-theme.css">
+  <link rel="stylesheet" href="/assets/wwh-shell.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=JetBrains+Mono:wght@400;600&family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-bg: #0A0A0B;
+      --color-text: #FAFAFA;
+      --color-surface: #141416;
+      --color-surface-light: #1E1E22;
+      --color-border: #2A2A2E;
+      --color-muted: #7A7A85;
+      --color-accent: #D43F5A;
+      --font: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+      --radius-md: 8px;
+      --radius-lg: 16px;
+    }
+    body {
+      font-family: var(--font);
+      color: var(--color-text);
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse 130% 70% at 50% -12%, #1b1424 0%, transparent 58%),
+        #070609;
+    }
+    .session-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--color-border);
+      background: rgba(30, 30, 34, 0.95);
+      position: sticky;
+      top: calc(var(--wwh-topbar-height, 56px) + env(safe-area-inset-top, 0px));
+      z-index: 9;
+    }
+    .session-bar.visible { display: flex; }
+    .session-bar__info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .session-bar__label { font-size: 0.75rem; color: var(--color-muted); }
+    .session-bar__phone {
+      font-size: 0.95rem;
+      font-weight: 600;
+      direction: ltr;
+      text-align: center;
+      font-family: var(--font-mono);
+    }
+    .btn-change-phone {
+      flex-shrink: 0;
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid #ff2d55;
+      background: #e8193a;
+      color: #fff;
+      font-family: var(--font);
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 0 0 1px rgba(255, 45, 85, 0.35), 0 4px 14px rgba(232, 25, 58, 0.45);
+    }
+    .btn-change-phone:hover { background: #ff2d55; }
+    .container { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+    .hero__title { font-size: 1.75rem; margin-bottom: 8px; }
+    .hero__subtitle { color: var(--color-muted); font-size: 0.95rem; margin-bottom: 20px; line-height: 1.7; }
+    .lookup__input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-text);
+    }
+    .lookup__btn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 14px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: var(--color-accent);
+      color: #fff;
+      font-family: var(--font);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .lookup__hint { font-size: 0.85rem; color: var(--color-muted); margin-top: 10px; }
+    .lookup__error { color: #FF5A5A; font-size: 0.85rem; margin-top: 8px; display: none; }
+    .lookup__error.visible { display: block; }
+    .welcome {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+      margin-bottom: 16px;
+      line-height: 1.75;
+      font-size: 0.95rem;
+    }
+    .welcome strong { color: #fff; }
+    .chat-shell {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 60vh;
+    }
+    .chat-shell.visible { display: flex; }
+    .verify-panel.hidden { display: none; }
+    .chat-toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .chat-toolbar select {
+      flex: 1;
+      min-width: 160px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-text);
+      font-family: var(--font);
+    }
+    .btn-ghost {
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: transparent;
+      color: var(--color-text);
+      font-family: var(--font);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .chat-subject {
+      display: none;
+      gap: 8px;
+      flex-direction: column;
+    }
+    .chat-subject.visible { display: flex; }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 50vh;
+      padding: 12px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .msg {
+      max-width: 88%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      line-height: 1.65;
+      word-break: break-word;
+    }
+    .msg--system {
+      align-self: center;
+      background: var(--color-surface-light);
+      border: 1px dashed var(--color-border);
+      color: var(--color-muted);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+    .msg--user {
+      align-self: flex-end;
+      background: rgba(212, 63, 90, 0.22);
+      border: 1px solid rgba(212, 63, 90, 0.35);
+    }
+    .msg--admin {
+      align-self: flex-start;
+      background: #1a1a1f;
+      border: 1px solid var(--color-border);
+    }
+    .msg__meta {
+      font-size: 0.72rem;
+      color: var(--color-muted);
+      margin-top: 6px;
+    }
+    .chat-compose {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .chat-compose textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-text);
+      font-family: var(--font);
+      resize: vertical;
+    }
+    .chat-compose .lookup__btn { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <div id="wwh-topbar-mount"></div>
+
+  <div class="session-bar" id="session-bar" aria-live="polite">
+    <div class="session-bar__info">
+      <span class="session-bar__label">گفتگو با این شماره</span>
+      <span class="session-bar__phone" id="session-phone-display"></span>
+    </div>
+    <button type="button" class="btn-change-phone" id="change-phone-btn">تغییر شماره</button>
+  </div>
+
+  <main class="container">
+    <section class="verify-panel" id="verify-panel">
+      <h1 class="hero__title">پشتیبانی</h1>
+      <p class="hero__subtitle">برای شروع گفتگو شماره موبایلت را وارد کن — اگر بلیت خریده‌ای همان شمارهٔ ثبت‌نام؛ اگر نه، هر شماره‌ای که باهاش در دسترس باشی.</p>
+      <input class="lookup__input" type="tel" id="phone-input" data-wwh-phone dir="ltr" placeholder="09123456789" autocomplete="tel">
+      <button type="button" class="lookup__btn" id="verify-btn">ادامه</button>
+      <p class="lookup__error" id="verify-error"></p>
+      <p class="lookup__hint">شماره شما فقط برای تأیید هویت و پیگیری گفتگو استفاده می‌شود. در همین تب مرورگر تا زمان «تغییر شماره» یا بستن تب، نیازی به ورود دوباره نیست.</p>
+    </section>
+
+    <section class="chat-shell" id="chat-shell" aria-live="polite">
+      <div class="welcome" id="welcome-box" hidden></div>
+      <div class="chat-toolbar">
+        <select id="thread-select" aria-label="موضوع گفتگو"></select>
+        <button type="button" class="btn-ghost" id="new-thread-btn">موضوع جدید</button>
+        <button type="button" class="btn-ghost" id="refresh-btn">تازه‌سازی</button>
+      </div>
+      <div class="chat-subject" id="new-subject-box">
+        <input class="lookup__input" type="text" id="new-subject" placeholder="موضوع گفتگو" maxlength="300">
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-compose">
+        <textarea id="message-input" placeholder="پیام خود را بنویسید…" rows="3"></textarea>
+        <button type="button" class="lookup__btn" id="send-btn">ارسال</button>
+        <p class="lookup__error" id="send-error"></p>
+      </div>
+    </section>
+  </main>
+
+  <div id="wwh-footer-mount"></div>
+
+  <script src="/assets/wwh-datetime.js"></script>
+  <script src="/assets/wwh-chrome.js"></script>
+  <script src="/assets/wwh-phone.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var STORAGE_TOKEN = 'wwh_support_token';
+    var state = {
+      phone: '',
+      accessToken: '',
+      session: null,
+      tickets: [],
+      activeId: null,
+      creatingNew: false
+    };
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function fmtDate(iso) {
+      var d = new Date(iso);
+      return isNaN(d) ? '' : d.toLocaleString('fa-IR');
+    }
+    function parseApiError(j, status) {
+      if (!j) return 'خطا (' + status + ')';
+      if (status === 405) return 'متد مجاز نیست (سرور این درخواست را قبول نمی‌کند — احتمالاً npm run dev نه dev:node)';
+      if (j.error) return j.error;
+      if (typeof j.detail === 'string') return j.detail;
+      if (j.detail && typeof j.detail === 'object' && j.detail.error) return j.detail.error;
+      return 'خطا در ارتباط با سرور';
+    }
+    function apiFetch(url, opts) {
+      opts = opts || {};
+      opts.headers = opts.headers || {};
+      if (state.accessToken && !opts.headers.Authorization) {
+        opts.headers.Authorization = 'Bearer ' + state.accessToken;
+      }
+      return fetch(url, opts).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (r.status === 401) {
+            showVerify();
+            throw new Error('نشست پشتیبانی منقضی شده — دوباره شماره را تأیید کن.');
+          }
+          if (!r.ok) throw new Error(parseApiError(j, r.status));
+          return j;
+        });
+      });
+    }
+
+    var verifyPanel = document.getElementById('verify-panel');
+    var chatShell = document.getElementById('chat-shell');
+    var phoneInput = document.getElementById('phone-input');
+    var verifyError = document.getElementById('verify-error');
+    var welcomeBox = document.getElementById('welcome-box');
+    var threadSelect = document.getElementById('thread-select');
+    var newSubjectBox = document.getElementById('new-subject-box');
+    var chatMessages = document.getElementById('chat-messages');
+    var messageInput = document.getElementById('message-input');
+    var sendError = document.getElementById('send-error');
+    var sessionBar = document.getElementById('session-bar');
+    var sessionPhoneDisplay = document.getElementById('session-phone-display');
+
+    function formatPhoneDisplay(phone) {
+      var p = String(phone || '').replace(/\s/g, '');
+      if (p.length === 11) return p.slice(0, 4) + ' *** ' + p.slice(-4);
+      if (p.length === 10) return '0' + p.slice(0, 3) + ' *** ' + p.slice(-4);
+      return p;
+    }
+
+    function showVerify() {
+      state.phone = '';
+      state.accessToken = '';
+      state.session = null;
+      state.tickets = [];
+      state.activeId = null;
+      chatShell.classList.remove('visible');
+      verifyPanel.classList.remove('hidden');
+      sessionBar.classList.remove('visible');
+      phoneInput.value = '';
+      try {
+        sessionStorage.removeItem(STORAGE_TOKEN);
+      } catch (e) { /* ignore */ }
+    }
+
+    function welcomeHtml(sess) {
+      if (sess.hasEventTicket && sess.holderName) {
+        return '<strong>' + escapeHtml(sess.holderName) + '</strong> عزیز، خوش آمدی! بلیتت با این شماره ثبت شده. سوالت رو بپرس — تیم ما جواب می‌ده.';
+      }
+      return 'هنوز بلیتی با شماره شما ثبت نشده. اگر سوالی داری خوشحال می‌شیم راهنماییت کنیم — موضوع و پیامت رو بنویس.';
+    }
+
+    function enterChat(sess) {
+      state.session = sess;
+      welcomeBox.innerHTML = welcomeHtml(sess);
+      welcomeBox.hidden = false;
+      sessionPhoneDisplay.textContent = formatPhoneDisplay(sess.phone);
+      sessionBar.classList.add('visible');
+      verifyPanel.classList.add('hidden');
+      chatShell.classList.add('visible');
+      loadThreads();
+    }
+
+    function verifyPhone(phone) {
+      verifyError.classList.remove('visible');
+      return fetch('/api/support/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phone })
+      }).then(function (r) {
+        return r.json().then(function (j) {
+          if (!r.ok) throw new Error(parseApiError(j, r.status));
+          return j;
+        });
+      }).then(function (sess) {
+        state.phone = sess.phone;
+        state.accessToken = sess.accessToken || '';
+        try {
+          sessionStorage.setItem(STORAGE_TOKEN, state.accessToken);
+        } catch (e) { /* ignore */ }
+        enterChat(sess);
+      });
+    }
+
+    function renderMessages() {
+      chatMessages.innerHTML = '';
+      var t = state.tickets.find(function (x) { return x.id === state.activeId; });
+      if (!t) {
+        chatMessages.innerHTML = '<div class="msg msg--system">یک موضوع انتخاب کن یا «موضوع جدید» بزن.</div>';
+        return;
+      }
+      (t.messages || []).forEach(function (m) {
+        var role = m.role === 'admin' ? 'admin' : 'user';
+        var label = role === 'admin' ? 'پشتیبانی' : 'شما';
+        var el = document.createElement('div');
+        el.className = 'msg msg--' + role;
+        el.innerHTML = escapeHtml(m.body) +
+          '<div class="msg__meta">' + escapeHtml(label) + (m.createdAt ? ' · ' + escapeHtml(fmtDate(m.createdAt)) : '') + '</div>';
+        chatMessages.appendChild(el);
+      });
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function fillThreadSelect() {
+      var opts = state.tickets.map(function (t) {
+        var closed = t.status === 'closed' ? ' (بسته)' : '';
+        return '<option value="' + t.id + '">' + escapeHtml(t.subject) + closed + '</option>';
+      }).join('');
+      threadSelect.innerHTML = opts || '<option value="">— بدون گفتگو —</option>';
+      if (state.activeId) threadSelect.value = String(state.activeId);
+    }
+
+    function loadThreads() {
+      if (!state.phone) return;
+      return apiFetch('/api/support/tickets').then(function (res) {
+        state.tickets = res.tickets || [];
+        if (!state.activeId && state.tickets.length) {
+          state.activeId = state.tickets[0].id;
+        }
+        fillThreadSelect();
+        renderMessages();
+      }).catch(function (err) {
+        sendError.textContent = err.message;
+        sendError.classList.add('visible');
+      });
+    }
+
+    function sendMessage() {
+      sendError.classList.remove('visible');
+      var body = messageInput.value.trim();
+      if (!body) return;
+      var phone = state.phone;
+      if (state.creatingNew || !state.activeId) {
+        var subject = document.getElementById('new-subject').value.trim();
+        if (!subject) {
+          sendError.textContent = 'موضوع گفتگو را وارد کن.';
+          sendError.classList.add('visible');
+          return;
+        }
+        var payload = { subject: subject, message: body };
+        if (state.session && state.session.displayName) payload.displayName = state.session.displayName;
+        apiFetch('/api/support/tickets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(function (created) {
+          state.creatingNew = false;
+          newSubjectBox.classList.remove('visible');
+          document.getElementById('new-subject').value = '';
+          messageInput.value = '';
+          state.activeId = created.id;
+          return loadThreads();
+        }).catch(function (err) {
+          sendError.textContent = err.message;
+          sendError.classList.add('visible');
+        });
+        return;
+      }
+      apiFetch('/api/support/tickets/' + state.activeId + '/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: body })
+      }).then(function () {
+        messageInput.value = '';
+        return loadThreads();
+      }).catch(function (err) {
+        sendError.textContent = err.message;
+        sendError.classList.add('visible');
+      });
+    }
+
+    WwhPhone.bindIranMobileInput(phoneInput);
+
+    document.getElementById('verify-btn').addEventListener('click', function () {
+      var phone = WwhPhone.parseIranMobile(phoneInput.value);
+      if (!phone) {
+        verifyError.textContent = WwhPhone.INVALID_HINT;
+        verifyError.classList.add('visible');
+        return;
+      }
+      verifyPhone(phone).catch(function (err) {
+        verifyError.textContent = err.message;
+        verifyError.classList.add('visible');
+      });
+    });
+
+    document.getElementById('refresh-btn').addEventListener('click', loadThreads);
+    document.getElementById('change-phone-btn').addEventListener('click', function () {
+      if (state.accessToken) {
+        apiFetch('/api/support/logout', { method: 'POST' }).catch(function () {});
+      }
+      showVerify();
+    });
+    document.getElementById('new-thread-btn').addEventListener('click', function () {
+      state.creatingNew = true;
+      state.activeId = null;
+      newSubjectBox.classList.add('visible');
+      chatMessages.innerHTML = '<div class="msg msg--system">موضوع جدید — عنوان و اولین پیام را بنویس.</div>';
+      messageInput.focus();
+    });
+    threadSelect.addEventListener('change', function () {
+      state.creatingNew = false;
+      newSubjectBox.classList.remove('visible');
+      var v = threadSelect.value;
+      state.activeId = v ? parseInt(v, 10) : null;
+      renderMessages();
+    });
+    document.getElementById('send-btn').addEventListener('click', sendMessage);
+    messageInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    (function init() {
+      try {
+        state.accessToken = sessionStorage.getItem(STORAGE_TOKEN) || '';
+      } catch (e) { /* ignore */ }
+      if (state.accessToken) {
+        apiFetch('/api/support/me').then(function (sess) {
+          state.phone = sess.phone;
+          enterChat(sess);
+        }).catch(function () {
+          showVerify();
+        });
+        return;
+      }
+      showVerify();
+    })();
+  })();
+  </script>
+</body>
+</html>

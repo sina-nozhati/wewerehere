@@ -22,9 +22,17 @@
 
   // Map every data-field slot to the matching ticket value.
   function valueFor(field, ticket) {
-    if (field === 'name') return ticket.name;
+    if (field === 'name' || field === 'name_stub') return ticket.name;
     if (field === 'code1' || field === 'code2') return ticket.code;
     if (field === 'no1' || field === 'no2') return ticket.no;
+    if (field === 'date') return ticket.date || '';
+    if (field === 'time') return ticket.time || '';
+    if (field === 'venue') return ticket.venue || '';
+    if (field === 'city_line') {
+      if (ticket.cityLine) return ticket.cityLine;
+      var c = (ticket.city || '').trim();
+      return c ? 'Live in ' + c : '';
+    }
     return '';
   }
 
@@ -46,25 +54,35 @@
   // Write values into slots. Positions stay exactly as designed.
   function fillValues(root, ticket) {
     root.querySelectorAll('[data-field]').forEach(function (el) {
-      var v = valueFor(el.getAttribute('data-field'), ticket);
+      var field = el.getAttribute('data-field');
+      var v = valueFor(field, ticket);
       el.textContent = String(v == null ? '' : v);
     });
   }
 
-  // Long-name guard: shrink the name glyphs (font-size) only when they would
-  // overflow their designed box. Layout of every other element is untouched.
+  // Long-name guard: shrink the vertical watermark name when it would overflow.
   // maxW is in the *local* user units of that name element.
   function fitNames(root) {
-    var slots = root.querySelectorAll('[data-field="name"]');
+    var slots = root.querySelectorAll('[data-field="name"], [data-field="name_stub"]');
     if (!slots.length) return;
     slots.forEach(function (el) {
-      // Stub name is font-size ~28 (scaled ~0.31); greeting name ~10 (scaled ~0.93).
-      var fs = parseFloat(window.getComputedStyle(el).fontSize) || 10;
-      var maxW = fs > 14 ? 190 : 62; // generous boxes; only truly long names shrink
+      var field = el.getAttribute('data-field');
+      var style = el.getAttribute('style') || '';
+      var fsMatch = style.match(/font-size:\s*([\d.]+)px/);
+      var fs = fsMatch ? parseFloat(fsMatch[1]) : (parseFloat(window.getComputedStyle(el).fontSize) || 12);
+      var rotated = /rotate\s*\(\s*90/.test(el.getAttribute('transform') || '');
+      var maxW = field === 'name_stub' ? 72 : 80;
+      if (rotated) maxW = field === 'name_stub' ? 56 : 70;
       var w = 0;
       try { w = el.getBBox().width; } catch (e) { return; }
       if (fs > 8 && w > maxW * 1.02) {
-        el.setAttribute('font-size', Math.max(8, (fs * maxW / w)).toFixed(2));
+        var next = Math.max(8, (fs * maxW / w));
+        var nextPx = next.toFixed(2) + 'px';
+        if (style.indexOf('font-size') !== -1) {
+          el.setAttribute('style', style.replace(/font-size:\s*[^;]+/, 'font-size:' + nextPx));
+        } else {
+          el.setAttribute('font-size', next.toFixed(2));
+        }
       }
     });
   }

@@ -2,15 +2,18 @@
 
 > Overrides `design-system/third-shahrivar/MASTER.md` for the tracking page.
 
-**Updated:** 2026-08-21
+**Updated:** 2026-10-11
+
+## Support
+- پشتیبانی در `/support` — لینک از فرم lookup و chrome مشترک
 
 ## Purpose
 A separate page (`track.html`, served at `/track`) so buyers who close the browser
 before admin approval can recover their order + tickets by **phone number**.
 
 ## Layout
-- **Topbar** — brand link (accent mic icon) + `بازگشت به صفحه اصلی`
-- **Hero** — small accent heart eyebrow, title `سفارشت کجاست؟`, subtitle reassuring
+- **Chrome** — shared topbar + footer (`wwh-chrome.js`); no setlist on this page (setlist only on landing `/#setlist`; backup JSON in `data/setlists/third-shahrivar-track-page-snapshot.json`)
+- **Hero** — small accent heart eyebrow «پیگیری بلیط», title `بلیطت کجاست؟`, subtitle reassuring
   users that nothing is lost if they closed the browser
 - **Lookup form** — phone input (JetBrains Mono, LTR, centered) + pill button
 - **Results** — order cards + ticket cards

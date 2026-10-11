@@ -1,0 +1,194 @@
+[
+  {
+    "file": "ticket-a.svg",
+    "viewBox": "0 0 362 128",
+    "fields": {
+      "date": {
+        "x": "176.5",
+        "y": "65",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "rtl",
+        "hidden": false,
+        "font-size": "9.5px"
+      },
+      "time": {
+        "x": "112.5",
+        "y": "77.25",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "8.5px"
+      },
+      "venue": {
+        "x": "199",
+        "y": "88.75",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "rtl",
+        "hidden": false,
+        "font-size": "9px"
+      },
+      "city_line": {
+        "x": null,
+        "y": null,
+        "transform": "translate(11, 55) rotate(90)",
+        "text-anchor": "start",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "8px"
+      },
+      "name": {
+        "x": null,
+        "y": null,
+        "transform": "translate(272.5, 54.5) rotate(90)",
+        "text-anchor": "start",
+        "direction": "rtl",
+        "hidden": false,
+        "font-size": "12px"
+      },
+      "no1": {
+        "x": "73",
+        "y": "117",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "12px"
+      },
+      "code1": {
+        "x": "180",
+        "y": "117",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "9px"
+      },
+      "no2": {
+        "x": "317",
+        "y": "56.5",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "9px"
+      },
+      "code2": {
+        "x": "317",
+        "y": "71",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "9px"
+      },
+      "name_stub": {
+        "x": "318.75",
+        "y": "95",
+        "transform": null,
+        "text-anchor": "end",
+        "direction": "rtl",
+        "hidden": false,
+        "font-size": "9px"
+      }
+    }
+  },
+  {
+    "file": "ticket-b.svg",
+    "viewBox": "0 0 362 128",
+    "fields": {
+      "date": {
+        "x": "176.5",
+        "y": "65",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "rtl",
+        "hidden": false,
+        "font-size": "9.5px"
+      },
+      "time": {
+        "x": "112.5",
+        "y": "77.25",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "8.5px"
+      },
+      "venue": {
+        "x": "199",
+        "y": "88.75",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "rtl",
+        "hidden": false,
+        "font-size": "9px"
+      },
+      "city_line": {
+        "x": null,
+        "y": null,
+        "transform": "translate(11, 55) rotate(90)",
+        "text-anchor": "start",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "8px"
+      },
+      "name": {
+        "x": null,
+        "y": null,
+        "transform": "translate(272.5, 54.5) rotate(90)",
+        "text-anchor": "start",
+        "direction": "rtl",
+        "hidden": false,
+        "font-size": "12px"
+      },
+      "no1": {
+        "x": "73",
+        "y": "117",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "12px"
+      },
+      "code1": {
+        "x": "180",
+        "y": "117",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "9px"
+      },
+      "no2": {
+        "x": "317",
+        "y": "56.5",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "9px"
+      },
+      "code2": {
+        "x": "317",
+        "y": "71",
+        "transform": null,
+        "text-anchor": "start",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "9px"
+      },
+      "name_stub": {
+        "x": "318.75",
+        "y": "95",
+        "transform": null,
+        "text-anchor": "end",
+        "direction": "rtl",
+        "hidden": false,
+        "font-size": "9px"
+      }
+    }
+  }
+]

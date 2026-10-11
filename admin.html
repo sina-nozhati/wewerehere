@@ -2,11 +2,15 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0A0A0B">
+  <link rel="stylesheet" href="/assets/wwh-theme.css">
   <title>پنل مدیریت — ما اینجا بودیم</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
@@ -55,6 +59,7 @@
       transition: background .2s ease, color .2s ease; min-height: 44px;
     }
     button:hover { background: transparent; color: #fff; }
+    button:active:not(:disabled) { transform: scale(0.97); transition: transform 100ms ease-out; }
     button.ghost { background: transparent; color: #fff; }
     button.ghost:hover { background: #fff; color: #000; }
     button.small { padding: 6px 14px; min-height: 34px; font-size: 0.78rem; }
@@ -88,6 +93,16 @@
     .media-card .meta { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
     .media-card .cap { font-size: 0.8rem; color: var(--muted); word-break: break-word; }
 
+    /* ---- upload progress ---- */
+    .upload-progress { margin-top: 16px; }
+    .up__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    .up__meta { font-size: 0.78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; max-width: 70%; }
+    .up__pct { font-family: var(--font-mono); font-weight: 700; font-size: 0.85rem; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .up__track { height: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-full); overflow: hidden; }
+    .up__bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-soft)); border-radius: var(--radius-full); transition: width 0.15s linear; }
+    .up__bar.done { background: var(--ok); }
+    .up__actions { display: flex; gap: 10px; margin-top: 12px; }
+
     /* ---- orders ---- */
     .badge {
       display: inline-flex;
@@ -103,6 +118,12 @@
     .badge--pending { background: rgba(245,197,66,0.12); color: var(--warning); border-color: var(--warning); }
     .badge--approved { background: rgba(94,201,139,0.12); color: var(--ok); border-color: var(--ok); }
     .badge--rejected { background: rgba(255,90,90,0.12); color: var(--danger); border-color: var(--danger); }
+    .badge--draft { background: rgba(122,122,133,0.15); color: var(--muted); border-color: var(--border-light); }
+    .badge--published { background: rgba(94,201,139,0.12); color: var(--ok); border-color: var(--ok); }
+    .badge--sales-open { background: rgba(212,63,90,0.12); color: var(--accent-soft); border-color: var(--accent); }
+    .badge--sales-closed { background: rgba(122,122,133,0.15); color: var(--muted); border-color: var(--border); }
+    .badge--featured { background: rgba(245,197,66,0.12); color: var(--warning); border-color: var(--warning); }
+    .status-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 
     .orders-list { display: grid; gap: 16px; margin-top: 18px; }
     .order-card {
@@ -173,16 +194,60 @@
     <!-- Admin -->
     <div id="admin-view" hidden>
       <div class="toolbar">
-        <h1 style="border:0;padding:0;margin:0;">پنل مدیریت</h1>
+        <h1 style="border:0;padding:0;margin:0;">پنل مدیریت — WE WERE HERE</h1>
         <span class="spacer"></span>
+        <label class="muted" for="event-select" style="font-size:0.78rem;">رویداد فعال:</label>
+        <select id="event-select" style="width:auto;min-width:180px;padding:8px 10px;"></select>
         <button class="ghost" id="logout">خروج</button>
       </div>
+
+      <h2>رویدادها</h2>
+      <div class="card" style="margin-bottom:18px;">
+        <div class="toolbar" style="margin-bottom:12px;">
+          <button type="button" id="refresh-events">تازه‌سازی</button>
+          <button type="button" class="ghost" id="feature-event-btn">انتخاب به‌عنوان لندینگ</button>
+          <button type="button" class="ghost" id="publish-event-btn">انتشار</button>
+          <button type="button" class="ghost" id="open-sales-btn">باز کردن فروش</button>
+          <button type="button" class="ghost" id="close-sales-btn">بستن فروش</button>
+        </div>
+        <div class="status-badges" id="event-live-status"></div>
+        <form id="event-form" class="form-grid">
+          <div><label for="ev-slug">Slug</label><input id="ev-slug" dir="ltr" placeholder="third-shahrivar"></div>
+          <div><label for="ev-title">عنوان</label><input id="ev-title" placeholder="ما اینجا بودیم"></div>
+          <div><label for="ev-episode">شماره اپیزود</label><input id="ev-episode" type="number" min="1"></div>
+          <div><label for="ev-at">تاریخ و ساعت اجرا</label><input id="ev-at" dir="ltr" placeholder="انتخاب از تقویم" autocomplete="off"></div>
+          <div><label for="ev-capacity">ظرفیت</label><input id="ev-capacity" type="number" min="1" value="50"></div>
+          <div><label for="ev-price">قیمت (تومان)</label><input id="ev-price" dir="ltr" inputmode="numeric"></div>
+          <div><label for="ev-city">شهر</label><input id="ev-city" placeholder="تهران"></div>
+          <div><label for="ev-venue">محل</label><input id="ev-venue" placeholder=""></div>
+          <div><label for="ev-host-name">میزبان (اختیاری)</label><input id="ev-host-name" placeholder="نام میزبان / برند"></div>
+          <div><label for="ev-host-venue">محل میزبانی (اختیاری)</label><input id="ev-host-venue" placeholder="مثلاً کافه یا فضای میزبان"></div>
+          <div><label for="ev-card">شماره کارت</label><input id="ev-card" dir="ltr" inputmode="numeric"></div>
+          <div><label for="ev-card-holder">دارنده کارت</label><input id="ev-card-holder"></div>
+          <div><label for="ev-bank">بانک</label><input id="ev-bank"></div>
+          <div style="grid-column:1/-1;"><label for="ev-desc">توضیحات</label><textarea id="ev-desc" rows="2"></textarea></div>
+          <div style="grid-column:1/-1;"><label for="ev-setlist">ست‌لیست (JSON)</label><textarea id="ev-setlist" rows="6" dir="ltr" placeholder='[{"title":"...","artist":"...","duration":"4:13"}]'></textarea></div>
+        </form>
+        <div class="toolbar" style="margin-top:14px;margin-bottom:0;">
+          <button type="button" id="save-event-btn">ذخیره رویداد</button>
+          <button type="button" class="ghost" id="new-event-btn">رویداد جدید</button>
+          <span class="status" id="event-status"></span>
+        </div>
+      </div>
+
+      <div class="toolbar" style="align-items:center;">
+        <h2 style="margin:0;">پشتیبانی</h2>
+        <button type="button" class="ghost" id="refresh-support">تازه‌سازی</button>
+      </div>
+      <div class="orders-list" id="support-list"><p class="empty-note">در حال بارگذاری…</p></div>
 
       <!-- Tickets -->
       <h2>بلیط‌ها</h2>
       <div class="toolbar">
         <button class="ghost" id="refresh-tickets">تازه‌سازی</button>
         <button class="ghost" id="export-csv">خروجی CSV (لیست ورود)</button>
+        <button class="ghost" id="export-tickets-zip">خروجی تصویر بلیط‌ها (ZIP)</button>
+        <button class="ghost" id="sample-ticket-btn">دانلود بلیط نمونه</button>
         <span class="spacer"></span>
         <button id="add-ticket-btn">افزودن بلیط</button>
         <span class="muted" id="ticket-count"></span>
@@ -198,7 +263,7 @@
             </div>
             <div>
               <label for="tf-phone">تلفن</label>
-              <input type="text" id="tf-phone" dir="ltr" placeholder="09123456789">
+              <input type="tel" id="tf-phone" data-wwh-phone dir="ltr" placeholder="09123456789" autocomplete="tel">
             </div>
             <div>
               <label for="tf-serial">شماره سریال (خالی = رندوم)</label>
@@ -289,17 +354,39 @@
           </div>
           <button type="submit" id="upload-btn">آپلود</button>
         </form>
-        <p class="status" id="upload-status"></p>
+        <div class="upload-progress" id="upload-progress" hidden>
+          <div class="up__row">
+            <span class="up__meta" id="up-meta"></span>
+            <span class="up__pct" id="up-pct">۰٪</span>
+          </div>
+          <div class="up__track"><div class="up__bar" id="up-bar"></div></div>
+          <p class="status" id="upload-status"></p>
+          <div class="up__actions">
+            <button type="button" class="ghost small" id="up-retry" hidden>تلاش مجدد</button>
+            <button type="button" class="small" id="up-cancel">لغو آپلود</button>
+          </div>
+        </div>
       </div>
       <div class="media-grid" id="media-list"></div>
     </div>
 
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fa.js"></script>
+  <script src="/assets/wwh-phone.js"></script>
   <script>
     var TOKEN = sessionStorage.getItem('wwh_token') || null;
+    var eventAtPicker = null;
     var FA = '۰۱۲۳۴۵۶۷۸۹';
     var cachedTickets = [];
+    var cachedEvents = [];
+    var currentEventId = null;
+    var editingEventId = null;
+
+    function eventQuery() {
+      return currentEventId ? ('?eventId=' + encodeURIComponent(currentEventId)) : '';
+    }
 
     function toFa(s) { return String(s).replace(/\d/g, function (d) { return FA[d]; }); }
     function escapeHtml(s) {
@@ -325,7 +412,12 @@
     // ---- views -------------------------------------------------------------
     var loginView = document.getElementById('login-view');
     var adminView = document.getElementById('admin-view');
-    function showAdmin() { loginView.hidden = true; adminView.hidden = false; loadTickets(); loadMedia(); loadOrders(); loadSettings(); }
+    function showAdmin() {
+      loginView.hidden = true; adminView.hidden = false;
+      loadEvents().then(function () {
+        loadTickets(); loadMedia(); loadOrders(); loadSettings(); loadSupport();
+      });
+    }
     function showLogin() { adminView.hidden = true; loginView.hidden = false; }
 
     // ---- login -------------------------------------------------------------
@@ -349,13 +441,276 @@
     var tfId = document.getElementById('tf-id');
     var tfName = document.getElementById('tf-name');
     var tfPhone = document.getElementById('tf-phone');
+    WwhPhone.bindIranMobileInput(tfPhone);
     var tfSerial = document.getElementById('tf-serial');
     var tfGroup = document.getElementById('tf-group');
     var tfSave = document.getElementById('tf-save');
     var tfStatus = document.getElementById('tf-status');
 
+    function loadEvents() {
+      return api('/api/admin/events').then(function (res) {
+        cachedEvents = res.events || [];
+        var sel = document.getElementById('event-select');
+        if (!cachedEvents.length) {
+          sel.innerHTML = '<option value="">—</option>';
+          return;
+        }
+        if (!currentEventId) {
+          var featured = cachedEvents.find(function (e) { return e.isFeatured; });
+          currentEventId = featured ? featured.id : cachedEvents[0].id;
+        }
+        sel.innerHTML = cachedEvents.map(function (e) {
+          return '<option value="' + e.id + '">' + escapeHtml(e.title) + (e.isFeatured ? ' ★' : '') + '</option>';
+        }).join('');
+        sel.value = String(currentEventId);
+        var cur = cachedEvents.find(function (e) { return e.id === currentEventId; });
+        if (cur) fillEventForm(cur);
+      }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
+    }
+
+    function syncSettingsFormFromEvent(e) {
+      if (!e) return;
+      document.getElementById('set-card-number').value = e.paymentCardNumber || '';
+      document.getElementById('set-card-holder').value = e.paymentCardHolder || '';
+      document.getElementById('set-bank-name').value = e.paymentBankName || '';
+      document.getElementById('set-ticket-price').value = e.ticketPrice != null ? String(e.ticketPrice) : '';
+    }
+
+    function statusBadge(label, cls) {
+      return '<span class="badge ' + cls + '">' + escapeHtml(label) + '</span>';
+    }
+    function updateEventLiveStatus(e) {
+      var el = document.getElementById('event-live-status');
+      if (!el || !e) { if (el) el.innerHTML = ''; return; }
+      var st = e.status || 'draft';
+      var stCls = st === 'published' || st === 'sales_open' ? 'badge--published' : (st === 'draft' ? 'badge--draft' : 'badge--pending');
+      var salesCls = e.salesStatus === 'open' ? 'badge--sales-open' : 'badge--sales-closed';
+      el.innerHTML =
+        statusBadge('وضعیت: ' + st, stCls) +
+        statusBadge('فروش: ' + (e.salesStatus || 'closed'), salesCls) +
+        (e.isFeatured ? statusBadge('★ رویداد لندینگ', 'badge--featured') : statusBadge('لندینگ: خیر', 'badge--draft'));
+    }
+
+    var editingEventStatus = 'draft';
+    var editingEventSalesStatus = 'closed';
+
+    var TEHRAN_TZ = 'Asia/Tehran';
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function tehranParts(date) {
+      var map = {};
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: TEHRAN_TZ,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).formatToParts(date).forEach(function (part) {
+        if (part.type !== 'literal') map[part.type] = part.value;
+      });
+      return {
+        year: Number(map.year),
+        month: Number(map.month),
+        day: Number(map.day),
+        hour: Number(map.hour),
+        minute: Number(map.minute),
+        second: Number(map.second)
+      };
+    }
+
+    function utcIsoToPickerDate(iso) {
+      var raw = String(iso || '');
+      if (raw && !/Z$|[+-]\d{2}:?\d{2}$/.test(raw)) raw += 'Z';
+      var parsed = new Date(raw);
+      if (isNaN(parsed.getTime())) return null;
+      var p = tehranParts(parsed);
+      return new Date(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+    }
+
+    function pickerDateToTehranIso(date) {
+      if (!date) return '';
+      return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate()) +
+        'T' + pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':' + pad2(date.getSeconds()) +
+        '+03:30';
+    }
+
+    function fillEventForm(e) {
+      editingEventId = e.id;
+      editingEventStatus = e.status || 'draft';
+      editingEventSalesStatus = e.salesStatus || 'closed';
+      document.getElementById('ev-slug').value = e.slug || '';
+      document.getElementById('ev-title').value = e.title || '';
+      document.getElementById('ev-episode').value = e.episodeNumber || '';
+      document.getElementById('ev-capacity').value = e.capacity || 50;
+      document.getElementById('ev-price').value = e.ticketPrice != null ? e.ticketPrice : '';
+      document.getElementById('ev-desc').value = e.description || '';
+      document.getElementById('ev-city').value = e.city || '';
+      document.getElementById('ev-venue').value = e.venue || '';
+      document.getElementById('ev-host-name').value = e.hostName || '';
+      document.getElementById('ev-host-venue').value = e.hostVenue || '';
+      if (eventAtPicker && e.eventAt) {
+        var local = utcIsoToPickerDate(e.eventAt);
+        if (local) eventAtPicker.setDate(local, false);
+      }
+      document.getElementById('ev-card').value = e.paymentCardNumber || '';
+      document.getElementById('ev-card-holder').value = e.paymentCardHolder || '';
+      document.getElementById('ev-bank').value = e.paymentBankName || '';
+      document.getElementById('ev-setlist').value = e.setlistJson || '[]';
+      syncSettingsFormFromEvent(e);
+      updateEventLiveStatus(e);
+    }
+
+    document.getElementById('event-select').addEventListener('change', function () {
+      currentEventId = Number(this.value) || null;
+      var cur = cachedEvents.find(function (e) { return e.id === currentEventId; });
+      if (cur) fillEventForm(cur);
+      loadTickets(); loadMedia(); loadOrders(); loadSettings();
+    });
+    document.getElementById('refresh-events').addEventListener('click', loadEvents);
+    document.getElementById('new-event-btn').addEventListener('click', function () {
+      editingEventId = null;
+      document.getElementById('ev-slug').value = '';
+      document.getElementById('ev-title').value = '';
+      document.getElementById('ev-episode').value = '';
+      document.getElementById('ev-at').value = '';
+      document.getElementById('ev-capacity').value = '50';
+      document.getElementById('ev-price').value = '0';
+      document.getElementById('ev-desc').value = '';
+      document.getElementById('ev-city').value = '';
+      document.getElementById('ev-venue').value = '';
+      document.getElementById('ev-host-name').value = '';
+      document.getElementById('ev-host-venue').value = '';
+      if (eventAtPicker) eventAtPicker.clear();
+      document.getElementById('ev-card').value = '';
+      document.getElementById('ev-card-holder').value = '';
+      document.getElementById('ev-bank').value = '';
+      document.getElementById('ev-setlist').value = '[]';
+      editingEventStatus = 'draft';
+      editingEventSalesStatus = 'closed';
+    });
+    document.getElementById('save-event-btn').addEventListener('click', function () {
+      var st = document.getElementById('event-status');
+      var setlistRaw = document.getElementById('ev-setlist').value.trim() || '[]';
+      try {
+        JSON.parse(setlistRaw);
+      } catch (err) {
+        setStatus(st, 'ست‌لیست JSON معتبر نیست.', 'err');
+        return;
+      }
+      var body = {
+        slug: document.getElementById('ev-slug').value.trim(),
+        title: document.getElementById('ev-title').value.trim(),
+        episodeNumber: Number(document.getElementById('ev-episode').value) || null,
+        description: document.getElementById('ev-desc').value.trim(),
+        eventAt: (eventAtPicker && eventAtPicker.selectedDates[0])
+          ? pickerDateToTehranIso(eventAtPicker.selectedDates[0])
+          : (document.getElementById('ev-at').value.trim() || new Date().toISOString()),
+        city: document.getElementById('ev-city').value.trim(),
+        venue: document.getElementById('ev-venue').value.trim(),
+        hostName: document.getElementById('ev-host-name').value.trim(),
+        hostVenue: document.getElementById('ev-host-venue').value.trim(),
+        capacity: Number(document.getElementById('ev-capacity').value) || 50,
+        ticketPrice: Number(String(document.getElementById('ev-price').value).replace(/\D/g, '')) || 0,
+        paymentCardNumber: document.getElementById('ev-card').value.trim(),
+        paymentCardHolder: document.getElementById('ev-card-holder').value.trim(),
+        paymentBankName: document.getElementById('ev-bank').value.trim(),
+        paymentInstructions: '',
+        setlistJson: setlistRaw,
+        artistsJson: '[]',
+        status: editingEventStatus,
+        salesStatus: editingEventSalesStatus
+      };
+      var path = editingEventId ? ('/api/admin/events/' + editingEventId) : '/api/admin/events';
+      var method = editingEventId ? 'PATCH' : 'POST';
+      api(path, { method: method, headers: authHeaders(), body: JSON.stringify(body) })
+        .then(function (res) {
+          if (!editingEventId && res.id) { editingEventId = res.id; currentEventId = res.id; }
+          setStatus(st, 'ذخیره شد.', 'ok');
+          loadEvents();
+        })
+        .catch(function (e2) { setStatus(st, 'خطا: ' + e2.message, 'err'); });
+    });
+    document.getElementById('feature-event-btn').addEventListener('click', function () {
+      if (!editingEventId) return alert('ابتدا رویداد را ذخیره کنید.');
+      api('/api/admin/events/' + editingEventId + '/feature', { method: 'POST', headers: authHeaders() })
+        .then(loadEvents)
+        .catch(function (e2) { alert(e2.message); });
+    });
+    document.getElementById('publish-event-btn').addEventListener('click', function () {
+      if (!editingEventId) return;
+      api('/api/admin/events/' + editingEventId + '/publish', { method: 'POST', headers: authHeaders() })
+        .then(function () {
+          editingEventStatus = 'published';
+          loadEvents();
+        });
+    });
+    document.getElementById('open-sales-btn').addEventListener('click', function () {
+      if (!editingEventId) return;
+      api('/api/admin/events/' + editingEventId + '/open-sales', { method: 'POST', headers: authHeaders() })
+        .then(function () {
+          editingEventSalesStatus = 'open';
+          if (editingEventStatus === 'draft') editingEventStatus = 'sales_open';
+          loadEvents();
+        });
+    });
+    document.getElementById('close-sales-btn').addEventListener('click', function () {
+      if (!editingEventId) return;
+      api('/api/admin/events/' + editingEventId + '/close-sales', { method: 'POST', headers: authHeaders() })
+        .then(function () {
+          editingEventSalesStatus = 'closed';
+          loadEvents();
+        });
+    });
+
+    function loadSupport() {
+      api('/api/admin/support/tickets?status=active').then(function (res) {
+        var list = document.getElementById('support-list');
+        var tickets = res.tickets || [];
+        if (!tickets.length) { list.innerHTML = '<p class="empty-note">تیکت پشتیبانی باز نیست.</p>'; return; }
+        list.innerHTML = tickets.map(function (t) {
+          var who = (t.displayName ? escapeHtml(t.displayName) + ' · ' : '') +
+            '<a href="tel:' + escapeHtml(t.phone) + '">' + escapeHtml(t.phone) + '</a>';
+          return '<div class="order-card" data-support-id="' + t.id + '"><div class="order-card__names">' + escapeHtml(t.subject) +
+            '</div><div class="order-card__meta serial">' + who + ' · ' + escapeHtml(t.status) + '</div>' +
+            '<div class="support-thread-preview muted" style="font-size:0.8rem;margin:8px 0;">در حال بارگذاری پیام‌ها…</div>' +
+            '<div class="order-card__actions"><button class="small" data-support-reply="' + t.id + '">پاسخ</button>' +
+            '<button class="ghost small" data-support-close="' + t.id + '">بستن</button></div></div>';
+        }).join('');
+        tickets.forEach(function (t) {
+          api('/api/admin/support/tickets/' + t.id).then(function (detail) {
+            var card = document.querySelector('[data-support-id="' + t.id + '"]');
+            if (!card) return;
+            var box = card.querySelector('.support-thread-preview');
+            var msgs = (detail.messages || []).map(function (m) {
+              return '<p style="margin:4px 0;"><b>' + (m.role === 'admin' ? 'ادمین' : 'کاربر') + ':</b> ' + escapeHtml(m.body) + '</p>';
+            }).join('');
+            box.innerHTML = msgs || '<span>بدون پیام</span>';
+          }).catch(function () {});
+        });
+      }).catch(function () {});
+    }
+    document.getElementById('refresh-support').addEventListener('click', loadSupport);
+    document.getElementById('support-list').addEventListener('click', function (e) {
+      var reply = e.target.closest('[data-support-reply]');
+      var close = e.target.closest('[data-support-close]');
+      if (reply) {
+        var id = reply.getAttribute('data-support-reply');
+        var body = prompt('پاسخ ادمین:', '');
+        if (!body) return;
+        api('/api/admin/support/tickets/' + id + '/reply', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ body: body }) })
+          .then(loadSupport);
+      } else if (close) {
+        api('/api/admin/support/tickets/' + close.getAttribute('data-support-close') + '/close', { method: 'POST', headers: authHeaders() })
+          .then(loadSupport);
+      }
+    });
+
     function loadTickets() {
-      api('/api/admin/tickets').then(function (res) {
+      api('/api/admin/tickets' + eventQuery()).then(function (res) {
         cachedTickets = res.tickets;
         var body = document.getElementById('tickets-body');
         document.getElementById('ticket-count').textContent = 'مجموع: ' + toFa(res.tickets.length) + ' بلیط';
@@ -374,6 +729,7 @@
             '<td class="muted">' + time + '</td>' +
             '<td><div class="actions">' +
               '<button class="small ghost" data-edit="' + t.id + '">ویرایش</button>' +
+              '<button class="small ghost" data-export="' + t.id + '">چاپ/خروجی</button>' +
               '<button class="danger" data-del="' + t.id + '">حذف</button>' +
             '</div></td>' +
             '</tr>';
@@ -404,12 +760,19 @@
 
     document.getElementById('ticket-form-inner').addEventListener('submit', function (e) {
       e.preventDefault();
+      var phone = WwhPhone.parseIranMobile(tfPhone.value);
+      if (!phone) {
+        setStatus(tfStatus, WwhPhone.INVALID_HINT, 'err');
+        tfPhone.focus();
+        return;
+      }
       var id = tfId.value;
       var payload = {
         name: tfName.value.trim(),
-        phone: tfPhone.value.trim(),
+        phone: phone,
         serial: tfSerial.value.trim(),
-        group: tfGroup.value
+        group: tfGroup.value,
+        eventId: currentEventId
       };
       var method = id ? 'PUT' : 'POST';
       var path = '/api/admin/tickets' + (id ? '?id=' + id : '');
@@ -425,7 +788,19 @@
     document.getElementById('tickets-body').addEventListener('click', function (e) {
       var delBtn = e.target.closest('[data-del]');
       var editBtn = e.target.closest('[data-edit]');
-      if (delBtn) {
+      var exportBtn = e.target.closest('[data-export]');
+      if (exportBtn) {
+        var tid = exportBtn.getAttribute('data-export');
+        fetch('/api/admin/tickets/' + tid + '/export', { headers: { Authorization: 'Bearer ' + TOKEN } })
+          .then(function (r) { return r.blob(); })
+          .then(function (blob) {
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'ticket-' + tid + '.png';
+            a.click();
+            URL.revokeObjectURL(a.href);
+          });
+      } else if (delBtn) {
         if (!confirm('این بلیط حذف شود؟')) return;
         api('/api/admin/tickets?id=' + delBtn.getAttribute('data-del'), { method: 'DELETE' })
           .then(loadTickets)
@@ -438,6 +813,35 @@
     });
 
     // ---- CSV export --------------------------------------------------------
+    document.getElementById('sample-ticket-btn').addEventListener('click', function () {
+      var q = currentEventId ? ('?eventId=' + currentEventId) : '';
+      fetch('/api/admin/tickets/sample' + q, { headers: { Authorization: 'Bearer ' + TOKEN } })
+        .then(function (r) { return r.blob(); })
+        .then(function (blob) {
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'ticket-sample.png';
+          a.click();
+          URL.revokeObjectURL(a.href);
+        });
+    });
+    document.getElementById('export-tickets-zip').addEventListener('click', function () {
+      var q = currentEventId ? ('?eventId=' + currentEventId) : '';
+      fetch('/api/admin/tickets/export' + q, { headers: { Authorization: 'Bearer ' + TOKEN } })
+        .then(function (r) {
+          if (!r.ok) throw new Error('export failed');
+          return r.blob();
+        })
+        .then(function (blob) {
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'wewerehere-tickets.zip';
+          a.click();
+          URL.revokeObjectURL(a.href);
+        })
+        .catch(function (e2) { alert(e2.message); });
+    });
+
     document.getElementById('export-csv').addEventListener('click', function () {
       var rows = [['serial', 'name', 'phone', 'group', 'created_at']];
       cachedTickets.forEach(function (t) { rows.push([t.serial, t.name, t.phone, t.group_name, t.created_at]); });
@@ -472,8 +876,37 @@
       return s === 'pending' ? 'badge--pending' : s === 'approved' ? 'badge--approved' : 'badge--rejected';
     }
 
+    var _receiptObjectUrls = [];
+    function revokeReceiptObjectUrls() {
+      _receiptObjectUrls.forEach(function (u) {
+        try { URL.revokeObjectURL(u); } catch (e) { /* ignore */ }
+      });
+      _receiptObjectUrls = [];
+    }
+    function hydrateReceiptImages(container) {
+      if (!TOKEN) return;
+      container.querySelectorAll('img[data-receipt-order]').forEach(function (img) {
+        var oid = img.getAttribute('data-receipt-order');
+        fetch('/api/admin/receipts/' + oid, { headers: { Authorization: 'Bearer ' + TOKEN } })
+          .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.blob();
+          })
+          .then(function (blob) {
+            var url = URL.createObjectURL(blob);
+            _receiptObjectUrls.push(url);
+            img.src = url;
+          })
+          .catch(function () {
+            img.alt = 'خطا در بارگذاری تصویر رسید';
+            img.classList.add('receipt-img--error');
+          });
+      });
+    }
+
     function loadOrders() {
-      api('/api/admin/orders?status=' + encodeURIComponent(ordersFilter)).then(function (res) {
+      revokeReceiptObjectUrls();
+      api('/api/admin/orders?status=' + encodeURIComponent(ordersFilter) + (currentEventId ? '&eventId=' + currentEventId : '')).then(function (res) {
         var list = document.getElementById('orders-list');
         if (!res.orders.length) {
           list.innerHTML = '<p class="empty-note">سفارشی با این وضعیت پیدا نشد.</p>';
@@ -485,7 +918,8 @@
             receipt += '<div class="order-card__receipt"><strong>رسید متنی</strong><div class="txt">' + escapeHtml(o.receiptText) + '</div></div>';
           }
           if (o.receiptImageUrl) {
-            receipt += '<div class="order-card__receipt"><strong>تصویر رسید</strong><img src="' + o.receiptImageUrl + '" alt="تصویر رسید پرداخت" loading="lazy"></div>';
+            receipt += '<div class="order-card__receipt"><strong>تصویر رسید</strong>' +
+              '<img data-receipt-order="' + o.id + '" src="" alt="تصویر رسید پرداخت" loading="lazy"></div>';
           }
           var note = '';
           if (o.status === 'rejected' && o.adminNote) {
@@ -514,6 +948,7 @@
             '<div class="order-card__actions">' + actions + '</div>' +
           '</div>';
         }).join('');
+        hydrateReceiptImages(list);
       }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
     }
 
@@ -548,11 +983,17 @@
 
     // ---- payment settings (card shown on the landing page) -------------------
     function loadSettings() {
-      api('/api/admin/settings').then(function (s) {
+      api('/api/admin/settings' + eventQuery()).then(function (s) {
         document.getElementById('set-card-number').value = s.card_number || '';
         document.getElementById('set-card-holder').value = s.card_holder || '';
         document.getElementById('set-bank-name').value = s.bank_name || '';
         document.getElementById('set-ticket-price').value = s.ticket_price || '';
+        if (Number(currentEventId) === Number(editingEventId)) {
+          document.getElementById('ev-card').value = s.card_number || '';
+          document.getElementById('ev-card-holder').value = s.card_holder || '';
+          document.getElementById('ev-bank').value = s.bank_name || '';
+          document.getElementById('ev-price').value = s.ticket_price || '';
+        }
       }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
     }
     document.getElementById('settings-form').addEventListener('submit', function (e) {
@@ -565,15 +1006,22 @@
           card_number: document.getElementById('set-card-number').value.trim(),
           card_holder: document.getElementById('set-card-holder').value.trim(),
           bank_name: document.getElementById('set-bank-name').value.trim(),
-          ticket_price: document.getElementById('set-ticket-price').value.trim()
+          ticket_price: document.getElementById('set-ticket-price').value.trim(),
+          eventId: currentEventId
         })
-      }).then(function () { setStatus(st, 'ذخیره شد — از همین حالا روی صفحه اصلی نمایش داده میشود.', 'ok'); })
-        .catch(function (e2) { setStatus(st, 'خطا: ' + e2.message, 'err'); });
+      }).then(function () {
+        setStatus(st, 'ذخیره شد — از همین حالا روی صفحه اصلی نمایش داده می‌شود.', 'ok');
+        document.getElementById('ev-card').value = document.getElementById('set-card-number').value.trim();
+        document.getElementById('ev-card-holder').value = document.getElementById('set-card-holder').value.trim();
+        document.getElementById('ev-bank').value = document.getElementById('set-bank-name').value.trim();
+        document.getElementById('ev-price').value = document.getElementById('set-ticket-price').value.trim();
+        loadEvents();
+      }).catch(function (e2) { setStatus(st, 'خطا: ' + e2.message, 'err'); });
     });
 
     // ---- media -------------------------------------------------------------
     function loadMedia() {
-      api('/api/admin/media').then(function (res) {
+      api('/api/admin/media' + eventQuery()).then(function (res) {
         var list = document.getElementById('media-list');
         if (!res.media.length) { list.innerHTML = '<p class="muted">هنوز مدیایی آپلود نشده.</p>'; return; }
         list.innerHTML = res.media.map(function (m) {
@@ -592,34 +1040,170 @@
       }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
     }
 
+    // ---- upload with progress bar + retry / cancel ---------------------------
+    var uploadQueue = [];
+    var uploadIndex = 0;       // index of the file currently being sent
+    var uploadDone = 0;        // files fully uploaded in this queue
+    var uploadCaption = '';
+    var uploadXhr = null;
+    var uploadBusy = false;
+    var uploadCancelled = false;
+    var uploadGen = 0; // bumped on every (re)start so stale aborts are ignored
+
+    var upBox = document.getElementById('upload-progress');
+    var upMeta = document.getElementById('up-meta');
+    var upPct = document.getElementById('up-pct');
+    var upBar = document.getElementById('up-bar');
+    var upStatus = document.getElementById('upload-status');
+    var upRetry = document.getElementById('up-retry');
+    var upCancel = document.getElementById('up-cancel');
+    var uploadBtn = document.getElementById('upload-btn');
+
+    function setUpPct(p) {
+      p = Math.max(0, Math.min(100, Math.round(p)));
+      upBar.style.width = p + '%';
+      upPct.textContent = toFa(p) + '٪';
+      upBar.classList.toggle('done', p >= 100);
+    }
+    function setUpBusy(busy) {
+      uploadBtn.disabled = busy;
+      upCancel.disabled = !busy;
+    }
+
+    // startUpload(true) → fresh queue (new selection).
+    // startUpload(false) → resume: continue from the file that failed / was cancelled.
+    function startUpload(fromScratch) {
+      uploadGen++;
+      uploadCancelled = false;
+      setUpBusy(true);
+      upRetry.hidden = true;
+      setUpPct(fromScratch ? 0 : Math.round((uploadDone * 100) / uploadQueue.length));
+      if (fromScratch) {
+        uploadIndex = 0;
+        uploadDone = 0;
+      }
+      nextUpload();
+    }
+
+    function nextUpload() {
+      if (uploadCancelled) return; // cancel happened while reading — handled already
+      if (uploadIndex >= uploadQueue.length) return finishUpload();
+      var file = uploadQueue[uploadIndex];
+      upMeta.textContent = 'در حال خواندن: ' + file.name;
+      readAsBase64(file).then(function (b64) {
+        if (uploadCancelled) return;
+        sendUpload(file, b64);
+      }).catch(function () {
+        failUpload('خواندن فایل ناموفق بود.');
+      });
+    }
+
+    function sendUpload(file, b64) {
+      uploadBusy = true;
+      var gen = uploadGen;
+      var xhr = new XMLHttpRequest();
+      uploadXhr = xhr;
+      xhr.open('POST', '/api/admin/media');
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      if (TOKEN) xhr.setRequestHeader('Authorization', 'Bearer ' + TOKEN);
+
+      xhr.upload.onprogress = function (e) {
+        if (!e.lengthComputable) return;
+        var filePct = (e.loaded / e.total) * 100;
+        var overall = (uploadDone * 100 + filePct) / uploadQueue.length;
+        upMeta.textContent = 'در حال آپلود: ' + file.name + ' (' + Math.round(filePct) + '٪ از همین فایل)';
+        setUpPct(overall);
+      };
+
+      xhr.onload = function () {
+        uploadXhr = null;
+        uploadBusy = false;
+        if (uploadCancelled) return;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          uploadDone++;
+          uploadIndex++;
+          nextUpload();
+        } else {
+          var msg = 'خطای سرور (' + xhr.status + ')';
+          try { var j = JSON.parse(xhr.responseText); if (j && j.error) msg = j.error; } catch (err) { /* keep default */ }
+          if (xhr.status === 401) showLogin();
+          failUpload(msg);
+        }
+      };
+      xhr.onerror = function () { failUpload('خطای اتصال. اینترنتت رو چک کن.'); };
+      xhr.onabort = function () {
+        uploadXhr = null;
+        uploadBusy = false;
+        if (gen !== uploadGen) return; // stale abort from a previous queue
+        afterCancel();
+      };
+      xhr.send(JSON.stringify({
+        filename: file.name,
+        mime: file.type || guessMime(file.name),
+        data: b64,
+        caption: uploadCaption,
+        eventId: currentEventId
+      }));
+    }
+
+    function failUpload(message) {
+      uploadBusy = false;
+      uploadXhr = null;
+      var name = uploadQueue[uploadIndex] ? uploadQueue[uploadIndex].name : '';
+      setStatus(upStatus, 'خطا در آپلود «' + name + '»: ' + message, 'err');
+      upRetry.hidden = false;
+      setUpBusy(false);
+    }
+
+    function finishUpload() {
+      uploadBusy = false;
+      uploadXhr = null;
+      if (uploadCancelled) return; // afterCancel already showed the message
+      var allDone = uploadDone >= uploadQueue.length;
+      if (allDone) {
+        setStatus(upStatus, 'آپلود شد: ' + toFa(uploadDone) + ' فایل.', 'ok');
+        setUpPct(100);
+        upMeta.textContent = 'تمام شد ✓';
+        document.getElementById('media-file').value = '';
+        document.getElementById('media-caption').value = '';
+        loadMedia();
+      } else {
+        setStatus(upStatus, 'آپلود کامل نشد — ' + toFa(uploadDone) + ' فایل آپلود شد.', 'err');
+      }
+      upRetry.hidden = allDone;
+      setUpBusy(false);
+    }
+
+    function afterCancel() {
+      uploadCancelled = true;
+      uploadBusy = false;
+      uploadXhr = null;
+      setStatus(upStatus, 'آپلود لغو شد. با «تلاش مجدد» از همون فایل ادامه بده.', 'err');
+      upRetry.hidden = false;
+      setUpBusy(false);
+    }
+
     document.getElementById('upload-form').addEventListener('submit', function (e) {
       e.preventDefault();
       var files = document.getElementById('media-file').files;
       var caption = document.getElementById('media-caption').value.trim();
-      var status = document.getElementById('upload-status');
-      var btn = document.getElementById('upload-btn');
-      if (!files.length) { setStatus(status, 'یک فایل انتخاب کن.', 'err'); return; }
-      btn.disabled = true;
-      setStatus(status, 'در حال آپلود ' + toFa(files.length) + ' فایل…', '');
-      var chain = Promise.resolve();
-      var ok = 0;
-      Array.from(files).forEach(function (file) {
-        chain = chain.then(function () {
-          return readAsBase64(file).then(function (b64) {
-            return api('/api/admin/media', {
-              method: 'POST', headers: authHeaders(),
-              body: JSON.stringify({ filename: file.name, mime: file.type || guessMime(file.name), data: b64, caption: caption })
-            }).then(function () { ok++; });
-          });
-        });
-      });
-      chain.then(function () {
-        setStatus(status, 'آپلود شد: ' + toFa(ok) + ' فایل.', 'ok');
-        document.getElementById('media-file').value = '';
-        document.getElementById('media-caption').value = '';
-        loadMedia();
-      }).catch(function (e2) { setStatus(status, 'خطا: ' + e2.message, 'err'); })
-        .finally(function () { btn.disabled = false; });
+      if (!files.length) { setStatus(upStatus, 'یک فایل انتخاب کن.', 'err'); return; }
+      if (uploadBusy && uploadXhr) uploadXhr.abort(); // cancel any in-flight upload
+      uploadQueue = Array.from(files);
+      uploadCaption = caption;
+      upBox.hidden = false;
+      setStatus(upStatus, '', '');
+      startUpload(true);
+    });
+
+    upCancel.addEventListener('click', function () {
+      if (uploadXhr) { uploadXhr.abort(); return; } // onabort → afterCancel
+      afterCancel(); // cancel while a file is still being read
+    });
+
+    upRetry.addEventListener('click', function () {
+      setStatus(upStatus, '', '');
+      startUpload(false); // from the failed file, keeping the already-uploaded ones
     });
 
     function readAsBase64(file) {
@@ -654,6 +1238,18 @@
           .then(loadMedia)
           .catch(function (e2) { alert('خطا: ' + e2.message); });
       }
+    });
+
+    // ---- flatpickr (Tehran) ------------------------------------------------
+    eventAtPicker = flatpickr('#ev-at', {
+      enableTime: true,
+      time_24hr: true,
+      locale: 'fa',
+      dateFormat: 'Y-m-d\\TH:i:S',
+      altInput: true,
+      altFormat: 'j F Y — H:i',
+      defaultHour: 17,
+      minuteIncrement: 5
     });
 
     // ---- boot --------------------------------------------------------------

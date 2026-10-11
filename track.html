@@ -2,8 +2,11 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>پیگیری سفارش — ما اینجا بودیم</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0A0A0B">
+  <title>پیگیری بلیط — ما اینجا بودیم</title>
+  <link rel="stylesheet" href="/assets/wwh-theme.css">
+  <link rel="stylesheet" href="/assets/wwh-shell.css">
   <meta name="description" content="پیگیری وضعیت پرداخت و دریافت بلیط‌های رویداد ما اینجا بودیم — با شماره تماس.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -85,34 +88,6 @@
 
     .container { max-width: 640px; margin: 0 auto; padding: 0 24px; }
 
-    /* ---- header ---- */
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 22px 24px;
-      border-bottom: 1px solid var(--color-border);
-    }
-    .topbar__brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--color-primary);
-      text-decoration: none;
-      font-weight: 800;
-      font-size: 1.05rem;
-    }
-    .topbar__brand svg { color: var(--color-accent); }
-    .topbar__link {
-      color: var(--color-secondary);
-      text-decoration: none;
-      font-size: 0.85rem;
-      font-weight: 600;
-      transition: color var(--transition-base);
-    }
-    .topbar__link:hover { color: var(--color-accent); }
-
     /* ---- hero ---- */
     .hero {
       padding: 64px 0 32px;
@@ -143,6 +118,43 @@
 
     /* ---- lookup form ---- */
     .lookup { max-width: 420px; margin: 36px auto 0; }
+    .lookup__episode-label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--color-muted);
+      margin-bottom: 8px;
+      text-align: right;
+    }
+    .lookup__episode-select {
+      width: 100%;
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-text);
+      font-family: var(--font);
+      font-size: 0.95rem;
+    }
+    .track-scope-banner {
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    .track-scope-banner strong { color: var(--color-text); }
+    .track-pending-banner {
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(245, 197, 66, 0.45);
+      background: rgba(245, 197, 66, 0.08);
+      color: var(--color-warning);
+      font-size: 0.9rem;
+    }
     .lookup__group { display: flex; }
     .lookup__input {
       flex: 1;
@@ -162,7 +174,13 @@
       -webkit-appearance: none;
       appearance: none;
     }
-    .lookup__input::placeholder { color: var(--color-muted); font-weight: 400; font-size: 0.85rem; letter-spacing: 0; }
+    /* placeholder typography for phone → wwh-theme.css [data-wwh-phone] */
+    .lookup__input:not([data-wwh-phone])::placeholder {
+      color: var(--color-muted);
+      font-weight: 400;
+      font-size: 0.85rem;
+      letter-spacing: 0;
+    }
     .lookup__input:focus { border-color: var(--color-border-light); outline: none; background: var(--color-surface-light); box-shadow: 0 0 0 2px var(--color-accent-soft); }
     .lookup__btn {
       padding: 0 26px;
@@ -328,14 +346,29 @@
     .ticket-stage__label::after { background: linear-gradient(90deg, rgba(184, 172, 205, 0.5), transparent); }
 
     .ticket-art svg,
-    .ticket-art img {
+    .ticket-art img,
+    .ticket-art object.ticket-art__embed {
       display: block;
       width: 100%;
       height: auto;
       background: #f1ecdf;
       box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6);
+      border: 0;
     }
-    .ticket__actions { display: flex; justify-content: center; margin-top: 16px; }
+    .ticket-art object.ticket-art__embed {
+      aspect-ratio: 362 / 128;
+      min-height: 120px;
+    }
+    .ticket__summary {
+      display: none;
+      padding: 18px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.025);
+    }
+    .ticket__summary-name { color: var(--color-primary); font-weight: 800; }
+    .ticket__summary-meta { margin-top: 6px; color: var(--color-muted); font-size: 0.82rem; direction: ltr; }
+    .ticket__actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
 
     .btn {
       display: inline-flex;
@@ -377,75 +410,57 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .footer { padding: 40px 0; text-align: center; border-top: 1px solid var(--color-border); margin-top: 64px; }
-    .footer__text { font-size: 0.8rem; color: var(--color-muted); }
-    .footer__text a { color: var(--color-secondary); text-decoration: none; transition: color var(--transition-base); }
-    .footer__text a:hover { color: var(--color-accent); }
-
     @media (max-width: 520px) {
       .ticket__meta { flex-direction: column; }
+      .ticket .gothic-frame { display: none; }
+      .ticket__summary { display: block; }
+      .ticket__actions .btn { flex: 1 1 130px; }
     }
 
-    @media print {
-      body { background: #fff !important; }
-      body::before, body::after { display: none !important; }
-      .topbar, .hero, .lookup, .order, .tickets-block__title, .tickets-block__sub, .ticket-stage__label, .ticket__actions, .footer { display: none !important; }
-      .ticket, .ticket .gothic-frame {
-        background: none !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-      }
-      .ticket .gothic-frame::before { display: none !important; }
-      .ticket .ticket-art svg, .ticket .ticket-art img { background: #f1ecdf !important; box-shadow: none !important; }
-    }
+
   </style>
 </head>
 <body>
 
-  <header class="topbar">
-    <a class="topbar__brand" href="/">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" aria-hidden="true">
-        <rect x="9" y="2" width="6" height="11" />
-        <path d="M5 10v1a7 7 0 0 0 14 0v-1" />
-        <line x1="12" y1="18" x2="12" y2="22" />
-        <line x1="8" y1="22" x2="16" y2="22" />
-      </svg>
-      ما اینجا بودیم
-    </a>
-    <a class="topbar__link" href="/">بازگشت به صفحه اصلی</a>
-  </header>
+  <div id="wwh-topbar-mount"></div>
 
   <main class="container">
     <section class="hero">
       <p class="hero__eyebrow">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-        پیگیری سفارش
+        پیگیری بلیط
       </p>
-      <h1 class="hero__title">سفارشت کجاست؟</h1>
+      <h1 class="hero__title">بلیطت کجاست؟</h1>
       <p class="hero__subtitle">شماره تماسی که باهاش ثبت‌نام کردی رو وارد کن تا وضعیت پرداخت و بلیط‌هات رو ببینی. اگه مرورگرت رو بستی هم نگران نباش — همه‌چیز اینجاست.</p>
 
       <form class="lookup" id="lookup-form" novalidate>
+        <label class="lookup__episode-label" for="track-event">اپیزود / اجرا</label>
+        <select class="lookup__episode-select" id="track-event" aria-label="انتخاب اپیزود"></select>
+        <div class="lookup__group" style="margin-bottom:10px;">
+          <input class="lookup__input" type="tel" id="lookup-phone" data-wwh-phone placeholder="09123456789" dir="ltr" aria-label="شماره تماس" autocomplete="tel">
+        </div>
         <div class="lookup__group">
-          <input class="lookup__input" type="text" id="lookup-phone" placeholder="۰۹۱۲۱۲۳۴۵۶۷" required inputmode="tel" dir="ltr" aria-label="شماره تماس" autocomplete="tel">
+          <input class="lookup__input" type="text" id="lookup-serial" placeholder="کد پیگیری / سریال (۴ رقم)" maxlength="4" inputmode="numeric" dir="ltr" aria-label="کد سریال بلیط">
           <button type="submit" class="lookup__btn" id="lookup-btn">
             <span id="lookup-btn-text">پیگیری</span>
             <span class="spinner" id="lookup-spinner" style="display: none;"></span>
           </button>
         </div>
-        <p class="lookup__error" id="lookup-error">لطفاً شماره تماس معتبر وارد کن.</p>
-        <p class="lookup__hint">با همین شماره، بعد از تایید ادمین به بلیط‌هات هم دسترسی داری.</p>
+        <p class="lookup__error" id="lookup-error">شماره 09123456789 (۱۱ رقم) یا کد سریال ۴ رقمی معتبر وارد کن.</p>
+        <p class="lookup__hint">پیگیری فقط برای اپیزود انتخاب‌شده است — با شماره تماس یا کد ۴ رقمی همان اجرا. <a href="/support" style="color:var(--color-accent-soft);">پشتیبانی و گفتگو</a></p>
       </form>
     </section>
 
     <section class="results" id="results" aria-live="polite"></section>
   </main>
 
-  <footer class="footer">
-    <p class="footer__text">ما اینجا بودیم — <a href="/">ثبت‌نام</a> · <a href="/#access">دسترسی بعد از اجرا</a></p>
-  </footer>
+  <div id="wwh-footer-mount"></div>
 
+
+  <script src="/assets/wwh-datetime.js"></script>
+  <script src="/assets/wwh-chrome.js"></script>
   <script src="/tickets.js"></script>
+  <script src="/assets/wwh-phone.js"></script>
   <script>
     var FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
     var AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
@@ -475,8 +490,77 @@
       rejected: 'badge--rejected'
     };
 
+    var STORAGE_EVENT = 'wwh_track_event_id';
     var form = document.getElementById('lookup-form');
     var input = document.getElementById('lookup-phone');
+    var eventSelect = document.getElementById('track-event');
+    var trackEvents = [];
+    var lastPhone = '';
+
+    function selectedEventId() {
+      var v = parseInt(eventSelect.value, 10);
+      return isNaN(v) ? null : v;
+    }
+
+    function eventLabel(ev) {
+      var base = ev.title + ' — اپیزود ' + (ev.episodeNumber || '—');
+      return ev.isFeatured ? base + ' (همین اجرا)' : base;
+    }
+
+    function loadTrackEvents() {
+      return fetch('/api/events').then(function (r) { return r.json(); }).then(function (data) {
+        trackEvents = data.events || [];
+        var stored = '';
+        try { stored = sessionStorage.getItem(STORAGE_EVENT) || ''; } catch (e) { /* ignore */ }
+        var storedId = stored ? parseInt(stored, 10) : NaN;
+        var featured = trackEvents.find(function (e) { return e.isFeatured; });
+        var defaultId = featured ? featured.id : (trackEvents[0] ? trackEvents[0].id : null);
+        if (storedId && trackEvents.some(function (e) { return e.id === storedId; })) {
+          defaultId = storedId;
+        }
+        eventSelect.innerHTML = trackEvents.map(function (ev) {
+          return '<option value="' + ev.id + '">' + escapeHtml(eventLabel(ev)) + '</option>';
+        }).join('');
+        if (defaultId) eventSelect.value = String(defaultId);
+      }).catch(function () {
+        eventSelect.innerHTML = '<option value="">—</option>';
+      });
+    }
+
+    eventSelect.addEventListener('change', function () {
+      try { sessionStorage.setItem(STORAGE_EVENT, eventSelect.value); } catch (e) { /* ignore */ }
+    });
+
+    function validStoredPhone(raw) {
+      return WwhPhone.parseIranMobile(raw);
+    }
+
+    function resolveTrackPhone() {
+      var fromInput = WwhPhone.parseIranMobile(input.value);
+      if (fromInput) return fromInput;
+      if (lastPhone && WwhPhone.isCompleteIranMobile(lastPhone)) return lastPhone;
+      var q = validStoredPhone(new URLSearchParams(location.search).get('phone') || '');
+      if (q) return q;
+      try {
+        var stored = validStoredPhone(localStorage.getItem('wwh_track_phone') || '');
+        if (stored) return stored;
+      } catch (e) { /* ignore */ }
+      return '';
+    }
+
+    WwhPhone.bindIranMobileInput(input);
+    loadTrackEvents();
+
+    (function prefillPhone() {
+      var q = new URLSearchParams(location.search).get('phone') || '';
+      try { if (!q) q = localStorage.getItem('wwh_track_phone') || ''; } catch (e) { /* ignore */ }
+      q = WwhPhone.sanitizeIranMobilePartial(q);
+      if (q) input.value = q;
+      if (location.hash === '#support') {
+        var p = resolveTrackPhone();
+        location.replace('/support');
+      }
+    })();
     var btn = document.getElementById('lookup-btn');
     var btnText = document.getElementById('lookup-btn-text');
     var spinner = document.getElementById('lookup-spinner');
@@ -495,6 +579,13 @@
       var stage = document.createElement('div');
       stage.className = 'ticket';
 
+      var summary = document.createElement('div');
+      summary.className = 'ticket__summary';
+      summary.innerHTML =
+        '<div class="ticket__summary-name">' + escapeHtml(String(t.name)) + '</div>' +
+        '<div class="ticket__summary-meta">No. ' + escapeHtml(String(t.number)) +
+        ' · Code: ' + escapeHtml(String(t.serial)) + '</div>';
+
       var frame = document.createElement('div');
       frame.className = 'gothic-frame';
       frame.innerHTML =
@@ -506,38 +597,110 @@
 
       var actions = document.createElement('div');
       actions.className = 'ticket__actions';
+      var viewBtn = document.createElement('button');
+      viewBtn.type = 'button';
+      viewBtn.className = 'btn btn--filled btn--small';
+      viewBtn.setAttribute('data-print', String(t.serial));
+      viewBtn.setAttribute('data-download-url', t.printUrl || '');
+      viewBtn.setAttribute('data-ticket-action', 'view');
+      viewBtn.textContent = 'مشاهده بلیت';
+      actions.appendChild(viewBtn);
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'btn btn--outline btn--small';
       btn.setAttribute('data-print', String(t.serial));
-      btn.textContent = 'دانلود / چاپ تیکت';
+      btn.setAttribute('data-download-url', t.printUrl || '');
+      btn.setAttribute('data-ticket-action', 'download');
+      btn.textContent = 'دانلود بلیت';
       actions.appendChild(btn);
 
+      stage.appendChild(summary);
       stage.appendChild(frame);
       stage.appendChild(actions);
 
       var art = frame.querySelector('[data-slot="1"]');
-      return renderTicketArt(art, {
-        group: t.group,
-        no: String(t.number),
-        code: String(t.serial),
-        name: String(t.name)
-      })
-        .then(function () {
-          // The preview must be pixel-identical to the downloaded file, so we
-          // render the SVG to a PNG right away and show THAT image — not the
-          // live SVG (whose on-page CSS cascade can differ from the exported one).
-          var ready = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
-          return ready.then(function () { return svgToPngDataUrl(art.querySelector('svg'), 4); });
-        })
-        .then(function (dataUrl) {
-          var img = document.createElement('img');
-          img.src = dataUrl;
-          img.alt = 'بلیط ' + t.name;
-          art.innerHTML = '';
-          art.appendChild(img);
+      stage.dataset.ticketSerial = String(t.serial);
+      stage.dataset.ticketPrintUrl = t.printUrl || '';
+      // Same bytes as «مشاهده بلیت» (server-filled SVG/PNG + embedded fonts).
+      return fetchTicketInlineBlob(t.printUrl, t.serial)
+        .then(function (blob) {
+          mountTicketPreviewInArt(art, blob);
           return stage;
+        })
+        .catch(function () {
+          return renderTicketArt(art, {
+            group: t.group,
+            no: String(t.number),
+            code: String(t.serial),
+            name: String(t.name),
+            date: t.date || '',
+            time: t.time || '',
+            venue: t.venue || '',
+            city: t.city || '',
+            cityLine: t.cityLine || ''
+          }).then(function () { return stage; });
         });
+    }
+
+    function ticketInlineApiUrl(dl, serial) {
+      var phone = resolveTrackPhone();
+      var q = WwhPhone.isCompleteIranMobile(phone)
+        ? ('phone=' + encodeURIComponent(phone))
+        : ('serial=' + encodeURIComponent(serial));
+      return dl + '?' + q + '&inline=true';
+    }
+
+    function fetchTicketInlineBlob(dl, serial) {
+      if (!dl) return Promise.reject(new Error('no print url'));
+      return fetch(ticketInlineApiUrl(dl, serial)).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.blob();
+      });
+    }
+
+    function mountTicketPreviewInArt(art, blob) {
+      if (art.dataset.previewBlob) {
+        try { URL.revokeObjectURL(art.dataset.previewBlob); } catch (err) { /* ignore */ }
+      }
+      var url = URL.createObjectURL(blob);
+      art.dataset.previewBlob = url;
+      art.innerHTML = '';
+      var mime = (blob.type || '').toLowerCase();
+      if (mime.indexOf('svg') >= 0) {
+        var obj = document.createElement('object');
+        obj.type = 'image/svg+xml';
+        obj.data = url;
+        obj.className = 'ticket-art__embed';
+        obj.setAttribute('aria-label', 'پیش‌نمایش بلیط');
+        art.appendChild(obj);
+        return;
+      }
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = 'بلیط';
+      art.appendChild(img);
+    }
+
+    function openTicketPreviewFromArt(card) {
+      if (!card) return false;
+      var art = card.querySelector('.ticket-art');
+      if (!art) return false;
+      var url = art.dataset.previewBlob;
+      if (url) {
+        window.open(url, '_blank', 'noopener');
+        return true;
+      }
+      var img = art.querySelector('img');
+      if (img && img.src) {
+        window.open(img.src, '_blank', 'noopener');
+        return true;
+      }
+      var obj = art.querySelector('object.ticket-art__embed');
+      if (obj && obj.data) {
+        window.open(obj.data, '_blank', 'noopener');
+        return true;
+      }
+      return false;
     }
 
     function orderHtml(o) {
@@ -565,10 +728,15 @@
       '</div>';
     }
 
+    var serialInput = document.getElementById('lookup-serial');
+
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      var phone = normalizeDigits(input.value).replace(/\s/g, '');
-      if (!/^\d{10,11}$/.test(phone)) {
+      var phone = WwhPhone.parseIranMobile(input.value);
+      var serial = normalizeDigits(serialInput.value).replace(/\s/g, '').slice(-4);
+      var hasPhone = !!phone;
+      var hasSerial = /^\d{4}$/.test(serial);
+      if (!hasPhone && !hasSerial) {
         errorEl.classList.add('visible');
         return;
       }
@@ -578,33 +746,64 @@
       btn.disabled = true;
       results.classList.remove('visible');
 
-      fetch('/api/orders/track?phone=' + encodeURIComponent(phone))
+      var eid = selectedEventId();
+      if (!eid) {
+        errorEl.textContent = 'اپیزودی برای پیگیری انتخاب نشده.';
+        errorEl.classList.add('visible');
+        btnText.style.display = '';
+        spinner.style.display = 'none';
+        btn.disabled = false;
+        return;
+      }
+      var url = '/api/orders/track?eventId=' + encodeURIComponent(String(eid)) + '&';
+      if (hasSerial) url += 'serial=' + encodeURIComponent(serial);
+      else url += 'phone=' + encodeURIComponent(phone);
+
+      fetch(url)
         .then(function (r) {
           return r.json().catch(function () { return {}; }).then(function (j) {
-            if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+            var message = j.error || j.detail || ('HTTP ' + r.status);
+            if (message && typeof message === 'object') message = message.error || JSON.stringify(message);
+            if (!r.ok) throw new Error(message);
             return j;
           });
         })
         .then(function (res) {
+          if (hasPhone) {
+            try { localStorage.setItem('wwh_track_phone', phone); } catch (err) { /* ignore */ }
+            lastPhone = phone;
+          }
+          var ev = res.event || {};
+          var scopeHtml = '<div class="track-scope-banner"><strong>پیگیری برای:</strong> ' +
+            escapeHtml(ev.title || '') + (ev.episodeNumber ? ' — اپیزود ' + toPersian(ev.episodeNumber) : '') +
+            (ev.isFeatured ? ' <span style="color:var(--color-accent-soft);">(همین اجرا)</span>' : '') +
+            '</div>';
           if (!res.orders.length && !res.tickets.length) {
-            results.innerHTML = '<div class="empty">برای این شماره سفارشی پیدا نشد.<br>اگه هنوز ثبت‌نام نکردی، <a href="/#register" style="color:var(--color-primary);">از اینجا شروع کن</a>.</div>';
+            results.innerHTML = scopeHtml + '<div class="empty">برای این اپیزود و این شماره/سریال چیزی پیدا نشد.<br>اگه هنوز ثبت‌نام نکردی، <a href="/#register" style="color:var(--color-primary);">از اینجا شروع کن</a>.</div>';
             results.classList.add('visible');
             results.scrollIntoView({ behavior: 'smooth', block: 'start' });
             return;
           }
-          var html = '';
+          var html = scopeHtml;
+          if (res.orders.length && res.orders.every(function (o) { return o.status === 'pending'; })) {
+            html += '<div class="track-pending-banner">رسید شما ثبت شده و در انتظار تأیید ادمین است.</div>';
+          }
           res.orders.forEach(function (o) { html += orderHtml(o); });
           Promise.all(res.tickets.map(ticketHtml)).then(function (cards) {
             if (cards.length) {
               html += '<div class="tickets-block">' +
                 '<h2 class="tickets-block__title">بلیط‌های تو آماده‌ست ♥</h2>' +
                 '<p class="tickets-block__sub">تیکت‌هات رو ذخیره کن — شماره سریال، کلید خاطره‌های اون شبه.</p>' +
+                '<p class="tickets-block__sub">همراه داشتن بلیط الزامی نیست؛ کافیه اسمت رو در ورودی بگی.</p>' +
                 '<div class="tickets-list">' + cards.map(function (c) { return c.outerHTML; }).join('') + '</div>' +
               '</div>';
             }
             results.innerHTML = html;
             results.classList.add('visible');
             results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }).catch(function (err) {
+            results.innerHTML = html + '<div class="empty">خطا در نمایش بلیط: ' + escapeHtml(err && err.message ? err.message : 'نامشخص') + '</div>';
+            results.classList.add('visible');
           });
         })
         .catch(function (err) {
@@ -620,8 +819,12 @@
 
     input.addEventListener('input', function () { errorEl.classList.remove('visible'); });
 
-    // ---- render an SVG element to a PNG data URL (shared by preview + download) ----
-    function svgToPngDataUrl(svgEl, scale) {
+    form.addEventListener('submit', function () {
+      lastPhone = WwhPhone.parseIranMobile(input.value) || '';
+    }, true);
+
+    // ---- render SVG to raster data URL (preview + download fallback) ----
+    function svgToRasterDataUrl(svgEl, scale, mime, quality) {
       return new Promise(function (resolve, reject) {
         if (!svgEl) return reject(new Error('no svg'));
         var vb = (svgEl.getAttribute('viewBox') || '0 0 362 128').split(/\s+/).map(Number);
@@ -640,18 +843,96 @@
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/png'));
+          var outMime = mime || 'image/jpeg';
+          resolve(outMime === 'image/png'
+            ? canvas.toDataURL('image/png')
+            : canvas.toDataURL('image/jpeg', quality == null ? 0.92 : quality));
         };
         img.onerror = reject;
         img.src = svg64;
       });
     }
 
-    // ---- download handler: reuses the exact PNG already shown in the preview ----
+    function svgToJpegDataUrl(svgEl, scale) {
+      return svgToRasterDataUrl(svgEl, scale, 'image/jpeg', 0.92);
+    }
+
+    function svgToPngDataUrl(svgEl, scale) {
+      return svgToRasterDataUrl(svgEl, scale, 'image/png');
+    }
+
+    function triggerBlobDownload(blob, filename) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    }
+
+    function downloadTicketFromApi(dl, serial, action) {
+      var url = action === 'view'
+        ? ticketInlineApiUrl(dl, serial)
+        : (function () {
+          var phone = resolveTrackPhone();
+          var q = WwhPhone.isCompleteIranMobile(phone)
+            ? ('phone=' + encodeURIComponent(phone))
+            : ('serial=' + encodeURIComponent(serial));
+          return dl + '?' + q;
+        })();
+      return fetch(url).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        var ct = (r.headers.get('content-type') || '').toLowerCase();
+        return r.blob().then(function (blob) { return { blob: blob, ct: ct }; });
+      }).then(function (res) {
+        if (action === 'view') {
+          var viewUrl = URL.createObjectURL(res.blob);
+          window.open(viewUrl, '_blank', 'noopener');
+          setTimeout(function () { URL.revokeObjectURL(viewUrl); }, 60000);
+          return;
+        }
+        if (res.ct.indexOf('image/png') >= 0 || res.ct.indexOf('application/pdf') >= 0) {
+          var ext = res.ct.indexOf('pdf') >= 0 ? 'pdf' : 'png';
+          triggerBlobDownload(res.blob, 'ticket-' + serial + '.' + ext);
+          return;
+        }
+        return res.blob.text().then(function (svgText) {
+          var parser = new DOMParser();
+          var doc = parser.parseFromString(svgText, 'image/svg+xml');
+          var svgEl = doc.documentElement;
+          return svgToJpegDataUrl(svgEl, 4).then(function (dataUrl) {
+            return fetch(dataUrl).then(function (r) { return r.blob(); }).then(function (blob) {
+              triggerBlobDownload(blob, 'ticket-' + serial + '.jpg');
+            });
+          });
+        });
+      });
+    }
+
+    // ---- download handler: PNG/PDF from API, client PNG fallback if server returns SVG ----
     document.addEventListener('click', function (e) {
       var btn2 = e.target.closest('[data-print]');
       if (!btn2) return;
+      var dl = btn2.getAttribute('data-download-url');
+      if (dl) {
+        var serial = btn2.getAttribute('data-print');
+        var action = btn2.getAttribute('data-ticket-action') || 'download';
+        if (action === 'view') {
+          var card = btn2.closest('.ticket');
+          if (openTicketPreviewFromArt(card)) return;
+        }
+        downloadTicketFromApi(dl, serial, action).catch(function (err) {
+          console.error(err);
+          alert('دانلود بلیت ناموفق بود.');
+        });
+        return;
+      }
       var card = btn2.closest('.ticket');
+      if (btn2.getAttribute('data-ticket-action') === 'view' && openTicketPreviewFromArt(card)) {
+        return;
+      }
       var img = card.querySelector('.ticket-art img');
       if (img && img.src) {
         fetch(img.src)
@@ -668,12 +949,7 @@
           });
       }
 
-      document.querySelectorAll('.ticket').forEach(function (t) { t.classList.remove('ticket--print'); });
-      card.classList.add('ticket--print');
-      var cleanup = function () { card.classList.remove('ticket--print'); };
-      window.addEventListener('afterprint', cleanup, { once: true });
-      setTimeout(function () { window.print(); }, 60);
-      setTimeout(cleanup, 2000);
+      
     });
   </script>
 </body>

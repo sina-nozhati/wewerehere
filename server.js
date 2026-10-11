@@ -523,7 +523,21 @@ function handleCreateOrder(req, res) {
 }
 
 function handleTrackOrders(req, res, url) {
-  const phone = String(url.searchParams.get('phone') || '').replace(/\s/g, '');
+  const normalizeDigits = (value) => String(value || '')
+    .replace(/[۰-۹]/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))
+    .replace(/[٠-٩]/g, (digit) => '٠١٢٣٤٥٦٧٨٩'.indexOf(digit));
+  const serial = normalizeDigits(url.searchParams.get('serial')).replace(/\D/g, '');
+  const phone = normalizeDigits(url.searchParams.get('phone')).replace(/\s/g, '');
+
+  if (serial) {
+    if (!/^\d{4}$/.test(serial)) return send(res, 400, { error: 'invalid serial' });
+    const tickets = db
+      .prepare('SELECT id, serial, name, group_name FROM tickets WHERE serial = ? ORDER BY id DESC')
+      .all(serial)
+      .map((t) => ({ number: ticketNumber(t.id), serial: t.serial, name: t.name, group: t.group_name }));
+    return send(res, 200, { orders: [], tickets });
+  }
+
   if (!/^\d{10,11}$/.test(phone)) return send(res, 400, { error: 'invalid phone' });
 
   const orders = db

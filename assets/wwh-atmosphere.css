@@ -1,0 +1,249 @@
+/* Gothic atmosphere — above page, below film grain */
+
+.wwh-fish-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.wwh-fish-layer .fish {
+  position: fixed;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.wwh-fish-layer .fish.is-swimming {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.wwh-fish-layer .fish.is-swimming:hover,
+.wwh-fish-layer .fish.is-swimming:focus-visible {
+  filter: blur(0) drop-shadow(0 0 12px rgba(212, 63, 90, 0.6));
+  outline: none;
+}
+
+.wwh-fish-layer .fish.fish--invite,
+.wwh-fish-layer .fish.fish--bold {
+  filter: blur(0.15px) drop-shadow(0 0 16px rgba(212, 63, 90, 0.58));
+  transition: filter 0.45s ease-out;
+}
+
+.fish-meet-ripple--soft {
+  border-color: rgba(212, 63, 90, 0.4);
+  box-shadow: 0 0 14px rgba(212, 63, 90, 0.22);
+  animation-duration: 1.2s;
+}
+
+.wwh-fish-dialog {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 99990;
+  width: min(420px, calc(100vw - 32px));
+  padding: 12px 18px 14px;
+  direction: rtl;
+  text-align: right;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 63, 90, 0.45);
+  background: rgba(14, 9, 20, 0.88);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 24px rgba(212, 63, 90, 0.16);
+  color: #f3f0fa;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, -16px) scale(0.97);
+  transition: opacity 0.28s cubic-bezier(0.23, 1, 0.32, 1),
+    transform 0.28s cubic-bezier(0.23, 1, 0.32, 1), visibility 0.28s;
+  cursor: pointer;
+}
+
+.wwh-fish-dialog.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.wwh-fish-dialog::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  right: 28px;
+  width: 12px;
+  height: 12px;
+  background: rgba(14, 9, 20, 0.88);
+  border-right: 1px solid rgba(212, 63, 90, 0.45);
+  border-bottom: 1px solid rgba(212, 63, 90, 0.45);
+  transform: rotate(45deg);
+}
+
+.wwh-fish-dialog__who {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: #d43f5a;
+}
+
+.wwh-fish-dialog__text {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.fish-meet-ripple {
+  position: fixed;
+  z-index: 3;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(212, 63, 90, 0.65);
+  box-shadow:
+    0 0 20px rgba(212, 63, 90, 0.4),
+    inset 0 0 12px rgba(255, 220, 230, 0.25);
+  transform: translate(-50%, -50%) scale(0.4);
+  pointer-events: none;
+  animation: fishMeetRipple 0.85s ease-out forwards;
+}
+
+.fish-meet-spark {
+  position: fixed;
+  z-index: 3;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 230, 238, 0.95), rgba(212, 63, 90, 0.7));
+  box-shadow: 0 0 8px rgba(212, 63, 90, 0.55);
+  pointer-events: none;
+  animation: fishMeetSpark 0.75s ease-out forwards;
+}
+
+@keyframes fishMeetRipple {
+  0% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(4.2);
+  }
+}
+
+@keyframes fishMeetSpark {
+  0% {
+    opacity: 0.9;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx, 0), var(--dy, -24px)) scale(0.2);
+  }
+}
+
+.atmosphere-exempt {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.atmosphere-exempt .moon,
+.atmosphere-exempt .mist,
+.atmosphere-exempt #embers,
+.atmosphere-exempt .atmosphere-dust {
+  position: fixed;
+}
+
+.atmosphere-exempt .moon {
+  z-index: 0;
+}
+
+.atmosphere-exempt .mist {
+  z-index: 1;
+}
+
+.atmosphere-exempt .atmosphere-dust {
+  z-index: 2;
+  inset: 0;
+  opacity: 0.55;
+  background:
+    radial-gradient(ellipse 40% 28% at 18% 82%, rgba(212, 63, 90, 0.22), transparent 72%),
+    radial-gradient(ellipse 35% 24% at 82% 88%, rgba(212, 63, 90, 0.18), transparent 70%),
+    radial-gradient(ellipse 50% 35% at 50% 100%, rgba(180, 40, 60, 0.14), transparent 65%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='%23D43F5A' opacity='0.35'%3E%3Ccircle cx='24' cy='198' r='1.2'/%3E%3Ccircle cx='88' cy='220' r='0.9'/%3E%3Ccircle cx='156' cy='206' r='1.4'/%3E%3Ccircle cx='210' cy='228' r='1'/%3E%3Ccircle cx='42' cy='168' r='0.8'/%3E%3Ccircle cx='120' cy='184' r='1.1'/%3E%3Ccircle cx='192' cy='172' r='0.7'/%3E%3Ccircle cx='68' cy='232' r='1.3'/%3E%3Ccircle cx='148' cy='238' r='0.9'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: auto, auto, auto, 240px 240px;
+  animation: dustDrift 48s linear infinite alternate;
+}
+
+@keyframes dustDrift {
+  from {
+    background-position: 0 0, 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 0 0, 0 0, 0 0, 120px -80px;
+  }
+}
+
+.atmosphere-exempt #embers {
+  z-index: 3;
+}
+
+.atmosphere-exempt .ember {
+  width: 6px;
+  height: 6px;
+  box-shadow:
+    0 0 12px 3px rgba(212, 63, 90, 0.55),
+    0 0 24px 6px rgba(212, 63, 90, 0.2);
+}
+
+body > section,
+body > .marquee,
+body > .divider,
+body > .scroll-progress {
+  position: relative;
+  z-index: 2;
+}
+
+body > .scroll-progress {
+  z-index: 10001;
+}
+
+.hero__gothic-art {
+  position: absolute;
+  inset: -8px -12px;
+  z-index: 0;
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0.35;
+  color: var(--color-accent);
+}
+
+.hero__gothic-art svg {
+  width: 100%;
+  height: 100%;
+}
+
+.hero__stack > *:not(.hero__gothic-art) {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atmosphere-exempt .atmosphere-dust {
+    animation: none;
+  }
+  .wwh-fish-layer .fish.is-swimming {
+    opacity: 0.22 !important;
+    animation: none !important;
+  }
+  .wwh-fish-layer .fish .fish__inner {
+    animation: none !important;
+  }
+}

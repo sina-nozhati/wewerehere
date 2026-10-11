@@ -122,7 +122,11 @@
 
 ## Component Specs
 
-### Buttons
+### Buttons (shared CSS: `assets/wwh-theme.css`)
+
+- **Touch:** `min-height: 44px` on mobile for `.btn--small`; `:active` scale feedback on all buttons.
+- **Hover:** gated behind `@media (hover: hover) and (pointer: fine)` (mobile-native — no sticky hover).
+- **Footer nav** includes link to `/track#support` on all public pages.
 
 ```css
 /* Primary — White on Black (Gothic) */
