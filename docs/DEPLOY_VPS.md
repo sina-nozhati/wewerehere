@@ -119,7 +119,7 @@ sudo wwh-deploy smoke
 | `git pull` شکست | شبکه / احراز هویت | SSH key، `GIT_SSH_COMMAND`، `known_hosts` |
 | `would be overwritten by merge` روی `wwh-deploy.sh` | ویرایش دستی اسکریپت روی سرور | `sudo git -C /opt/wewerehere checkout -- scripts/deploy/wwh-deploy.sh` سپس `sudo wwh-deploy update` (از نسخهٔ جدید اسکریپت خودکار هم discard می‌کند) |
 | `apt-get update` / Docker `403 Forbidden` | منبع apt خراب (مثلاً `download.docker.com`) | موقتاً غیرفعال کنید: `sudo mv /etc/apt/sources.list.d/docker.list /etc/apt/sources.list.d/docker.list.disabled` سپس `sudo apt-get update` و `sudo apt-get install -y libcairo2 libpango-1.0-0 libgdk-pixbuf-2.0-0 fontconfig` |
-| `curl` نمونه بلیت → `application/json` | توکن ادمین اشتباه/جایگزین `TOKEN` | لاگین واقعی: `curl -sS -X POST …/api/admin/login -d '{"password":"…"}'` و `Authorization: Bearer <token>` |
+| `curl` نمونه بلیت → `application/json` | توکن ادمین اشتباه/جایگزین `TOKEN` | `export PW` بعد از `PW=$(grep …)`؛ یا: `ADMIN_PASSWORD="$PW" python3 /opt/wewerehere/backend/scripts/smoke_admin_ticket_png.py` |
 | smoke health شکست بلافاصله بعد از restart | uvicorn هنوز بالا نیامده | `curl -s http://127.0.0.1:5173/api/health` — اگر `{"ok":true}` است deploy موفق بوده؛ `git pull` و دوباره `bash …/wwh-deploy.sh update` (نسخهٔ جدید health را retry می‌کند) |
 | smoke health شکست | سرویس down | `sudo systemctl status wewerehere`، `journalctl -u wewerehere -n 80` |
 | health از localhost OK، دامنه نه | nginx/ssl | `nginx -t`، certbot، `proxy_pass` |

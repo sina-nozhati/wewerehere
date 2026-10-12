@@ -4,8 +4,9 @@
 
 ## پیش‌نیاز
 
-- [ ] `npm run dev` (uvicorn روی `http://127.0.0.1:5173`)
-- [ ] متغیر `ADMIN_PASSWORD` برای پنل ادمین
+- [ ] `npm run dev` یا `powershell -File scripts/dev-local.ps1` (uvicorn روی `http://127.0.0.1:5173`)
+- [ ] متغیر `ADMIN_PASSWORD` برای پنل ادمین (لوکال پیش‌فرض در `dev-local.ps1`: `test-local`)
+- [ ] PNG نمونه روی **ویندوز** بدون نصب Cairo معمولاً **۵۰۳** می‌دهد؛ منطق SVG/فیلدها را با `pytest` چک کنید. PNG واقعی روی **Linux/VPS** یا WSL.
 - [ ] شماره‌های نمونه: `09121112233`, `0935528745`, سریال `۴۲۴۲` (در صورت وجود در DB)
 
 ## تست خودکار
