@@ -304,6 +304,9 @@ wait_for_health() {
   while [[ "$attempt" -le "$max" ]]; do
     health="$(curl -fsS "$url" 2>/dev/null || true)"
     if [[ "$health" == *'"ok"'* && "$health" == *'true'* ]]; then
+      if [[ "$health" != *'"backend":"fastapi"'* && "$health" != *'"backend": "fastapi"'* ]]; then
+        log "WARN: health OK but backend is not FastAPI (legacy Node?)"
+      fi
       return 0
     fi
     sleep 1

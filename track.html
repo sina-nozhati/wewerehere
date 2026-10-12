@@ -459,7 +459,6 @@
 
   <script src="/assets/wwh-datetime.js"></script>
   <script src="/assets/wwh-chrome.js"></script>
-  <script src="/tickets.js"></script>
   <script src="/assets/wwh-phone.js"></script>
   <script>
     var FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
@@ -621,24 +620,20 @@
       var art = frame.querySelector('[data-slot="1"]');
       stage.dataset.ticketSerial = String(t.serial);
       stage.dataset.ticketPrintUrl = t.printUrl || '';
-      // Same bytes as «مشاهده بلیت» (server-filled SVG/PNG + embedded fonts).
+      if (!t.printUrl) {
+        art.innerHTML = '<p class="muted" style="padding:12px;font-size:13px;">بلیت از سرور قدیمی (Node) قابل دانلود نیست. روی VPS باید uvicorn (FastAPI) فعال باشد.</p>';
+        return Promise.resolve(stage);
+      }
       return fetchTicketInlineBlob(t.printUrl, t.serial)
         .then(function (blob) {
           mountTicketPreviewInArt(art, blob);
           return stage;
         })
-        .catch(function () {
-          return renderTicketArt(art, {
-            group: t.group,
-            no: String(t.number),
-            code: String(t.serial),
-            name: String(t.name),
-            date: t.date || '',
-            time: t.time || '',
-            venue: t.venue || '',
-            city: t.city || '',
-            cityLine: t.cityLine || ''
-          }).then(function () { return stage; });
+        .catch(function (err) {
+          art.innerHTML = '<p class="muted" style="padding:12px;font-size:13px;">' +
+            escapeHtml(String(err && err.message ? err.message : 'پیش‌نمایش بلیت ناموفق')) +
+            '</p>';
+          return stage;
         });
     }
 

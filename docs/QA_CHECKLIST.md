@@ -43,6 +43,8 @@ pytest -q
 
 ## دانلود / مشاهده بلیت
 
+- [ ] `/api/health` → `"backend":"fastapi"` (Node legacy `printUrl` ندارد و بلیت را اشتباه نشان می‌دهد)
+- [ ] track فقط PNG سرور (`/api/tickets/.../download`) — بدون پر کردن `ticket-a.svg` در مرورگر با `tickets.js`
 - [ ] «دانلود بلیت» → فایل `.png` (یا `.pdf` با `?format=pdf`) — نه `.svg` برای کاربر
 - [ ] «مشاهده بلیت» → تصویر در تب جدید
 - [ ] کیس `0935528745`: نام، تاریخ، ساعت، venue، `Live in …`، نام روی stub

@@ -56,7 +56,12 @@ def health(db: Session = Depends(get_db)):
     from sqlalchemy import func
 
     total = db.scalar(select(func.count()).select_from(Ticket)) or 0
-    return {"ok": True, "tickets": total}
+    return {
+        "ok": True,
+        "tickets": total,
+        "backend": "fastapi",
+        "ticketDownload": True,
+    }
 
 
 @router.get("/api/landing")

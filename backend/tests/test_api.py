@@ -64,7 +64,10 @@ def client():
 def test_health(client: TestClient):
     r = client.get("/api/health")
     assert r.status_code == 200
-    assert r.json()["ok"] is True
+    data = r.json()
+    assert data["ok"] is True
+    assert data.get("backend") == "fastapi"
+    assert data.get("ticketDownload") is True
 
 
 def test_static_theme_assets(client: TestClient):
