@@ -459,6 +459,7 @@
 
   <script src="/assets/wwh-datetime.js"></script>
   <script src="/assets/wwh-chrome.js"></script>
+  <script src="/assets/wwh-api.js"></script>
   <script src="/assets/wwh-phone.js"></script>
   <script>
     var FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
@@ -653,7 +654,7 @@
             var msg = txt;
             try {
               var j = JSON.parse(txt);
-              msg = (j && (j.message || j.detail || j.error)) || txt;
+              msg = (window.WwhApi && WwhApi.errorMessage(j, txt)) || txt;
             } catch (e) { /* ignore */ }
             throw new Error(msg || ('HTTP ' + r.status));
           });
@@ -770,8 +771,7 @@
       fetch(url)
         .then(function (r) {
           return r.json().catch(function () { return {}; }).then(function (j) {
-            var message = j.error || j.detail || ('HTTP ' + r.status);
-            if (message && typeof message === 'object') message = message.error || JSON.stringify(message);
+            var message = (window.WwhApi && WwhApi.errorMessage(j, 'HTTP ' + r.status)) || ('HTTP ' + r.status);
             if (!r.ok) throw new Error(message);
             return j;
           });

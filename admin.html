@@ -379,6 +379,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fa.js"></script>
+  <script src="/assets/wwh-api.js"></script>
   <script src="/assets/wwh-phone.js"></script>
   <script>
     var TOKEN = sessionStorage.getItem('wwh_token') || null;
@@ -408,7 +409,10 @@
       return fetch(path, opts).then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (j) {
           if (r.status === 401) throw new Error('unauthorized');
-          if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+          if (!r.ok) {
+            var errMsg = (window.WwhApi && WwhApi.errorMessage(j, 'HTTP ' + r.status)) || ('HTTP ' + r.status);
+            throw new Error(errMsg);
+          }
           return j;
         });
       });
@@ -743,8 +747,7 @@
           var msg = txt;
           try {
             var j = JSON.parse(txt);
-            msg = (j && (j.error || j.detail)) || txt;
-            if (typeof msg === 'object') msg = JSON.stringify(msg);
+            msg = (window.WwhApi && WwhApi.errorMessage(j, txt)) || txt;
           } catch (e) { /* ignore */ }
           throw new Error(msg || ('HTTP ' + r.status));
         });
