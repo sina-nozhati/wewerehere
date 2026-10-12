@@ -245,6 +245,8 @@
   animation: none;
   flex-wrap: nowrap;
   justify-content: stretch;
+  /* RTL page: keep timer units LTR — روز | ساعت | دقیقه | ثانیه from left */
+  direction: ltr;
 }
 
 .hero__countdown.countdown--past {
@@ -256,6 +258,7 @@
   min-width: 0;
   padding: 14px 6px;
   border-radius: var(--radius-md);
+  direction: rtl;
 }
 
 .hero__countdown .countdown__number {
