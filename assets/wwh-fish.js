@@ -479,8 +479,14 @@
     showJoke();
   }
 
+  var perfLite = document.documentElement.classList.contains('wwh-perf-lite');
+
   function gameLoop(now) {
     if (!lastTick) lastTick = now;
+    if (perfLite && now - lastTick < 32) {
+      loopRaf = requestAnimationFrame(gameLoop);
+      return;
+    }
     var dt = clamp((now - lastTick) / 1000, 0.008, 0.042);
     lastTick = now;
 

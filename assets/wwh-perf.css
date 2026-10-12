@@ -1,0 +1,65 @@
+/* Lite motion — same effects, lower GPU cost (old phones) */
+
+html.wwh-perf-lite .wwh-loader__moon,
+html.wwh-perf-lite .wwh-loader__mist--2 {
+  display: none;
+}
+
+html.wwh-perf-lite .wwh-loader__mist {
+  animation-duration: 72s;
+  opacity: 0.28;
+  will-change: auto;
+}
+
+html.wwh-perf-lite .wwh-loader__haze {
+  animation: none;
+  opacity: 0.45;
+}
+
+html.wwh-perf-lite .wwh-loader__ember:nth-child(n + 5) {
+  display: none;
+}
+
+html.wwh-perf-lite .wwh-loader__moon {
+  animation-duration: 5.2s;
+}
+
+html.wwh-perf-lite .wwh-loader__focus {
+  animation-duration: 420ms;
+}
+
+html.wwh-perf-lite .hero-spotlight:not(.is-reduced) {
+  background: rgba(4, 2, 8, 0.82);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html.wwh-perf-lite .atmosphere-exempt .mist--2 {
+  display: none;
+}
+
+html.wwh-perf-lite .atmosphere-exempt .atmosphere-dust {
+  animation: none;
+  opacity: 0.35;
+}
+
+html.wwh-perf-lite .atmosphere-exempt .moon {
+  animation: none;
+  opacity: 0.12;
+}
+
+html.wwh-perf-lite .atmosphere-exempt .mist {
+  animation-duration: 80s;
+}
+
+html.wwh-perf-lite .atmosphere-exempt .ember:nth-child(n + 9) {
+  display: none;
+}
+
+html.wwh-perf-lite .wwh-fish-layer .fish {
+  filter: none !important;
+}
+
+html.wwh-perf-lite body::before {
+  opacity: 0.028;
+}

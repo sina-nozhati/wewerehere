@@ -15,7 +15,6 @@
   }
 
   function measureEl(hero, el, padX, padY) {
-    var hr = hero.getBoundingClientRect();
     var er = el.getBoundingClientRect();
     if (!er.width && !er.height) return null;
     var px = padX != null ? padX : 40;
@@ -23,14 +22,13 @@
     var w = er.width + px * 2;
     var h = er.height + py * 2;
     return {
-      x: er.left + er.width / 2 - hr.left,
-      y: er.top + er.height / 2 - hr.top,
+      x: er.left + er.width / 2,
+      y: er.top + er.height / 2,
       r: Math.max(w, h) * 0.54,
     };
   }
 
   function measureGroup(hero, nodes, pad) {
-    var hr = hero.getBoundingClientRect();
     var padV = pad != null ? pad : 22;
     var minL = Infinity;
     var minT = Infinity;
@@ -51,8 +49,8 @@
     var w = maxR - minL + padV * 2;
     var h = maxB - minT + padV * 2;
     return {
-      x: (minL + maxR) / 2 - hr.left,
-      y: (minT + maxB) / 2 - hr.top,
+      x: (minL + maxR) / 2,
+      y: (minT + maxB) / 2,
       r: Math.max(w, h) * 0.52,
     };
   }
@@ -74,12 +72,12 @@
   }
 
   function openingSpot(hero) {
-    var w = hero.clientWidth || window.innerWidth;
-    var h = hero.clientHeight || window.innerHeight * 0.55;
+    var w = window.innerWidth || hero.clientWidth || 360;
+    var h = window.innerHeight || hero.clientHeight || 640;
     return {
       x: w * 0.5,
-      y: h * 0.36,
-      r: Math.max(w, h) * 0.44,
+      y: h * 0.38,
+      r: Math.max(w, h) * 0.48,
     };
   }
 
@@ -115,7 +113,9 @@
     dim.removeAttribute('hidden');
     dim.classList.remove('is-done', 'is-exit');
     dim.classList.add('is-active');
-    if (reduceMotion) dim.classList.add('is-reduced');
+    if (reduceMotion || document.documentElement.classList.contains('wwh-perf-lite')) {
+      dim.classList.add('is-reduced');
+    }
   }
 
   function runSequence(hero, dim, reduceMotion, opts) {
@@ -123,8 +123,9 @@
     var spots = collectSpots(hero);
     if (spots.length < 2) return Promise.resolve();
 
-    var holds = reduceMotion ? [500, 480, 320] : [1100, 1050, 420];
-    var travel = reduceMotion ? 0 : TRAVEL_MS;
+    var lite = document.documentElement.classList.contains('wwh-perf-lite');
+    var holds = reduceMotion ? [500, 480, 320] : lite ? [820, 780, 320] : [1100, 1050, 420];
+    var travel = reduceMotion ? 0 : lite ? Math.round(TRAVEL_MS * 0.85) : TRAVEL_MS;
 
     prepareDim(dim, reduceMotion);
 
