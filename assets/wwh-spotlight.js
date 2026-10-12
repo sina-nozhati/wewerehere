@@ -3,6 +3,11 @@
  */
 (function () {
   var TRAVEL_MS = 820;
+  var baseSpot = { x: 0, y: 0, r: 140 };
+  var wobbleOn = false;
+  var wobbleRaf = 0;
+  var wobbleSeed = Math.random() * 2000;
+  var wobbleDim = null;
 
   var EASE = function (t) {
     return 1 - Math.pow(1 - t, 3);
@@ -81,10 +86,54 @@
     };
   }
 
+  function wobbleAmp(dim) {
+    if (!dim) return 1;
+    if (dim.classList.contains('is-reduced')) return 0.5;
+    return 1;
+  }
+
+  function paintSpot(dim) {
+    var ox = 0;
+    var oy = 0;
+    var dr = 0;
+    if (wobbleOn) {
+      var t = performance.now() + wobbleSeed;
+      var amp = wobbleAmp(dim);
+      ox = (Math.sin(t * 0.00112) * 2.4 + Math.sin(t * 0.00208) * 1.05) * amp;
+      oy = (Math.cos(t * 0.00131) * 1.75 + Math.sin(t * 0.00088) * 1.15) * amp;
+      dr = Math.sin(t * 0.00162) * 2.2 * amp;
+    }
+    dim.style.setProperty('--spot-x', baseSpot.x + ox + 'px');
+    dim.style.setProperty('--spot-y', baseSpot.y + oy + 'px');
+    dim.style.setProperty('--spot-r', baseSpot.r + dr + 'px');
+  }
+
   function applySpot(dim, spot) {
-    dim.style.setProperty('--spot-x', spot.x + 'px');
-    dim.style.setProperty('--spot-y', spot.y + 'px');
-    dim.style.setProperty('--spot-r', spot.r + 'px');
+    baseSpot.x = spot.x;
+    baseSpot.y = spot.y;
+    baseSpot.r = spot.r;
+    paintSpot(dim);
+  }
+
+  function startHandheld(dim, reduceMotion) {
+    if (reduceMotion || wobbleOn) return;
+    wobbleDim = dim;
+    wobbleOn = true;
+    function loop() {
+      if (!wobbleOn || !wobbleDim) return;
+      paintSpot(wobbleDim);
+      wobbleRaf = requestAnimationFrame(loop);
+    }
+    wobbleRaf = requestAnimationFrame(loop);
+  }
+
+  function stopHandheld() {
+    wobbleOn = false;
+    wobbleDim = null;
+    if (wobbleRaf) {
+      cancelAnimationFrame(wobbleRaf);
+      wobbleRaf = 0;
+    }
   }
 
   function tween(dim, from, to, ms, done) {
@@ -121,6 +170,7 @@
     if (reduceMotion || touch) {
       dim.classList.add('is-reduced');
     }
+    startHandheld(dim, reduceMotion);
   }
 
   function runSequence(hero, dim, reduceMotion, opts) {
@@ -163,6 +213,7 @@
 
     return chain
       .then(function () {
+        stopHandheld();
         dim.classList.remove('is-active');
         dim.classList.add('is-exit');
         return wait(reduceMotion ? 450 : 700);

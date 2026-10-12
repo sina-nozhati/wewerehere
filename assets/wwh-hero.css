@@ -71,6 +71,49 @@
   transition: opacity 0.5s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
+/* Soft beam edge — follows --spot-* (handheld wobble in wwh-spotlight.js) */
+.hero-spotlight__glow {
+  position: fixed;
+  left: var(--spot-x, 50%);
+  top: var(--spot-y, 38%);
+  width: calc(var(--spot-r, 140px) * 2.12);
+  height: calc(var(--spot-r, 140px) * 2.12);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  background: radial-gradient(
+    circle,
+    rgba(255, 250, 253, 0.075) 0%,
+    rgba(228, 218, 238, 0.04) 36%,
+    rgba(212, 63, 90, 0.022) 52%,
+    transparent 66%
+  );
+  filter: blur(5px);
+  transition: opacity 0.45s ease;
+}
+
+.hero-spotlight.is-active .hero-spotlight__glow {
+  opacity: 1;
+}
+
+.hero-spotlight.is-exit .hero-spotlight__glow,
+.hero-spotlight.is-done .hero-spotlight__glow {
+  opacity: 0;
+}
+
+.hero-spotlight.is-reduced .hero-spotlight__glow {
+  opacity: 0.55;
+  filter: blur(3px);
+  background: radial-gradient(
+    circle,
+    rgba(255, 250, 253, 0.05) 0%,
+    rgba(212, 63, 90, 0.015) 48%,
+    transparent 62%
+  );
+}
+
 /* Solid bleed for notch / short viewport (mask does not cover padding edge on old WebKit) */
 .hero-spotlight::before {
   content: '';
