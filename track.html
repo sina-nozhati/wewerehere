@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0A0A0B">
-  <title>پیگیری بلیط — ما اینجا بودیم</title>
+  <title>پیگیری بلیت — ما اینجا بودیم</title>
   <link rel="stylesheet" href="/assets/wwh-theme.css">
   <link rel="stylesheet" href="/assets/wwh-shell.css">
-  <meta name="description" content="پیگیری وضعیت پرداخت و دریافت بلیط‌های رویداد ما اینجا بودیم — با شماره تماس.">
+  <meta name="description" content="پیگیری وضعیت پرداخت و دریافت بلیت‌های رویداد ما اینجا بودیم — با شماره تماس.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -428,10 +428,10 @@
     <section class="hero">
       <p class="hero__eyebrow">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-        پیگیری بلیط
+        پیگیری بلیت
       </p>
-      <h1 class="hero__title">بلیطت کجاست؟</h1>
-      <p class="hero__subtitle">شماره تماسی که باهاش ثبت‌نام کردی رو وارد کن تا وضعیت پرداخت و بلیط‌هات رو ببینی. اگه مرورگرت رو بستی هم نگران نباش — همه‌چیز اینجاست.</p>
+      <h1 class="hero__title">بلیتت کجاست؟</h1>
+      <p class="hero__subtitle">شماره تماسی که باهاش ثبت‌نام کردی رو وارد کن تا وضعیت پرداخت و بلیت‌هات رو ببینی. اگه مرورگرت رو بستی هم نگران نباش — همه‌چیز اینجاست.</p>
 
       <form class="lookup" id="lookup-form" novalidate>
         <label class="lookup__episode-label" for="track-event">اپیزود / اجرا</label>
@@ -440,7 +440,7 @@
           <input class="lookup__input" type="tel" id="lookup-phone" data-wwh-phone placeholder="09123456789" dir="ltr" aria-label="شماره تماس" autocomplete="tel">
         </div>
         <div class="lookup__group">
-          <input class="lookup__input" type="text" id="lookup-serial" placeholder="کد پیگیری / سریال (۴ رقم)" maxlength="4" inputmode="numeric" dir="ltr" aria-label="کد سریال بلیط">
+          <input class="lookup__input" type="text" id="lookup-serial" placeholder="کد پیگیری / سریال (۴ رقم)" maxlength="4" inputmode="numeric" dir="ltr" aria-label="کد سریال بلیت">
           <button type="submit" class="lookup__btn" id="lookup-btn">
             <span id="lookup-btn-text">پیگیری</span>
             <span class="spinner" id="lookup-spinner" style="display: none;"></span>
@@ -671,13 +671,13 @@
         obj.type = 'image/svg+xml';
         obj.data = url;
         obj.className = 'ticket-art__embed';
-        obj.setAttribute('aria-label', 'پیش‌نمایش بلیط');
+        obj.setAttribute('aria-label', 'پیش‌نمایش بلیت');
         art.appendChild(obj);
         return;
       }
       var img = document.createElement('img');
       img.src = url;
-      img.alt = 'بلیط';
+      img.alt = 'بلیت';
       art.appendChild(img);
     }
 
@@ -792,9 +792,9 @@
           Promise.all(res.tickets.map(ticketHtml)).then(function (cards) {
             if (cards.length) {
               html += '<div class="tickets-block">' +
-                '<h2 class="tickets-block__title">بلیط‌های تو آماده‌ست ♥</h2>' +
+                '<h2 class="tickets-block__title">بلیت‌های تو آماده‌ست ♥</h2>' +
                 '<p class="tickets-block__sub">تیکت‌هات رو ذخیره کن — شماره سریال، کلید خاطره‌های اون شبه.</p>' +
-                '<p class="tickets-block__sub">همراه داشتن بلیط الزامی نیست؛ کافیه اسمت رو در ورودی بگی.</p>' +
+                '<p class="tickets-block__sub">همراه داشتن بلیت الزامی نیست؛ کافیه اسمت رو در ورودی بگی.</p>' +
                 '<div class="tickets-list">' + cards.map(function (c) { return c.outerHTML; }).join('') + '</div>' +
               '</div>';
             }
@@ -802,7 +802,7 @@
             results.classList.add('visible');
             results.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }).catch(function (err) {
-            results.innerHTML = html + '<div class="empty">خطا در نمایش بلیط: ' + escapeHtml(err && err.message ? err.message : 'نامشخص') + '</div>';
+            results.innerHTML = html + '<div class="empty">خطا در نمایش بلیت: ' + escapeHtml(err && err.message ? err.message : 'نامشخص') + '</div>';
             results.classList.add('visible');
           });
         })

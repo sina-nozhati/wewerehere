@@ -44,7 +44,7 @@ The registration section is now a **3-step flow** (single page, no page reload):
 
 ## Hero
 - Accent heart SVG in the eyebrow (cute touch)
-- Secondary CTA: `پیگیری بلیط` → `/track` (outline, small)
+- Secondary CTA: `پیگیری بلیت` → `/track` (outline, small)
 
 ## Hero Re-UI (mobile-first)
 
@@ -66,7 +66,7 @@ The registration section is now a **3-step flow** (single page, no page reload):
 
 ## Footer
 - Shared chrome: [`assets/wwh-chrome.js`](assets/wwh-chrome.js) + [`assets/wwh-shell.css`](assets/wwh-shell.css) — mount `#wwh-footer-mount` on public pages
-- `.footer__nav` links: اپیزودها / ثبت‌نام / ست لیست / پیگیری بلیط / پشتیبانی (`/support`) / دسترسی بعد از اجرا
+- `.footer__nav` links: اپیزودها / ثبت‌نام / ست لیست / پیگیری بلیت / پشتیبانی (`/support`) / دسترسی بعد از اجرا
 - `#footer-meta` from `wwh-landing.js` on `/`; other pages via `/api/landing` in chrome
 - Footer mark (mic icon) recolored to accent; mobile 2-column nav grid
 
@@ -84,7 +84,7 @@ The registration section is now a **3-step flow** (single page, no page reload):
 - `کارت به کارت به شماره زیر:` header, then a `gothic-frame` + `gothic-card`:
   - `SHETAB` brand (Cinzel, letterspaced) + gold chip, centered card number (JetBrains Mono, glow)
   - Bottom row: مبلغ قابل پرداخت (total = price × quantity, with ریال equivalent) / نام دارنده کارت
-  - Meta row below: بانک + مبلغ هر بلیط
+  - Meta row below: بانک + مبلغ هر بلیت
 
 ## Ticket Preview
 

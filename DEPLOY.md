@@ -138,7 +138,7 @@ sudo certbot --nginx -d example.com -d www.example.com
 30 3 * * *  tar -czf /backup/wewerehere-$(date +\%F).tgz -C /opt/wewerehere data.sqlite storage uploads && find /backup -name 'wewerehere-*.tgz' -mtime +14 -delete
 ```
 
-بلیطها، سفارشها و رسیدها در دیتابیس و پوشه‌های `storage/` (و در صورت legacy، `uploads/`) هستند؛ بدون بکاپ، حذف سرور = حذف دادهها.
+بلیتها، سفارشها و رسیدها در دیتابیس و پوشه‌های `storage/` (و در صورت legacy، `uploads/`) هستند؛ بدون بکاپ، حذف سرور = حذف دادهها.
 
 قبل از هر `wwh-deploy update` هم یک بکاپ timestamp‌شده در `BACKUP_DIR` (پیش‌فرض `/var/backups/wewerehere`) ساخته می‌شود.
 
@@ -176,8 +176,8 @@ curl -I https://example.com/tickets.js                # 200 text/javascript
 curl -I https://example.com/admin                     # 200 (صفحهی ادمین)
 ```
 
-- باز کردن `/` → بلیطهای نمونه A/B با شماره/کد/نام درست.
-- باز کردن `/admin` با رمز جدید → ایجاد بلیط تست → بررسی در `/track`.
+- باز کردن `/` → بلیتهای نمونه A/B با شماره/کد/نام درست.
+- باز کردن `/admin` با رمز جدید → ایجاد بلیت تست → بررسی در `/track`.
 - باز کردن `/track` → ثبت سفارش تستی و پیگیری.
 
 ---

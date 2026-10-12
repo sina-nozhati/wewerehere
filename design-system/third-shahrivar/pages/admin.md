@@ -19,7 +19,7 @@ A new section between Tickets and Media:
 - Rejected orders show admin note in danger-bordered box
 
 ### Actions (pending only)
-- **تایید و صدور بلیط** (`.ok` = success green) → `POST /api/admin/orders/approve?id=`
+- **تایید و صدور بلیت** (`.ok` = success green) → `POST /api/admin/orders/approve?id=`
   — server issues one ticket per name, links `order_id`, then refresh orders + tickets
 - **رد** (`.danger`) → prompt for optional note → `POST /api/admin/orders/reject?id=`
 - Reviewed orders show a static status badge instead of buttons
@@ -28,7 +28,7 @@ A new section between Tickets and Media:
 
 A **پرداخت — مشخصات کارت** section lets the admin edit the card shown on the landing page without touching env vars:
 
-- شماره کارت (card_number), نام دارنده کارت (card_holder), نام بانک (bank_name), قیمت هر بلیط (ticket_price)
+- شماره کارت (card_number), نام دارنده کارت (card_holder), نام بانک (bank_name), قیمت هر بلیت (ticket_price)
 - **ذخیره** → `PUT /api/admin/settings` (stored in the `settings` table; overrides env defaults)
 - Landing page fetches via `/api/payment-info`
 

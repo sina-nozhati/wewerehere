@@ -13,7 +13,7 @@ before admin approval can recover their order + tickets by **phone number**.
 
 ## Layout
 - **Chrome** — shared topbar + footer (`wwh-chrome.js`); no setlist on this page (setlist only on landing `/#setlist`; backup JSON in `data/setlists/third-shahrivar-track-page-snapshot.json`)
-- **Hero** — small accent heart eyebrow «پیگیری بلیط», title `بلیطت کجاست؟`, subtitle reassuring
+- **Hero** — small accent heart eyebrow «پیگیری بلیت», title `بلیتت کجاست؟`, subtitle reassuring
   users that nothing is lost if they closed the browser
 - **Lookup form** — phone input (JetBrains Mono, LTR, centered) + pill button
 - **Results** — order cards + ticket cards

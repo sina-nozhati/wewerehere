@@ -154,7 +154,7 @@
       if (meta && sched.tagline) {
         meta.setAttribute(
           'content',
-          ev.title + ' — ' + sched.tagline + '. ثبت‌نام و دریافت بلیط.'
+          ev.title + ' — ' + sched.tagline + '. ثبت‌نام و دریافت بلیت.'
         );
       }
     }
@@ -182,7 +182,7 @@
       parts.push(
         rem <= 0
           ? 'ظرفیت تکمیل'
-          : 'ظرفیت ' + (typeof global.toPersian === 'function' ? global.toPersian(rem) : rem) + ' بلیط'
+          : 'ظرفیت ' + (typeof global.toPersian === 'function' ? global.toPersian(rem) : rem) + ' بلیت'
       );
     }
     return parts.join(' — ') || 'WE WERE HERE';

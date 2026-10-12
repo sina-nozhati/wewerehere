@@ -222,7 +222,7 @@ function handleRegister(req, res) {
       const remaining = remainingTickets();
       if (names.length > remaining) {
         return send(res, 409, {
-          error: remaining <= 0 ? 'ظرفیت تکمیل شده است' : 'فقط ' + remaining + ' بلیط باقی مانده است'
+          error: remaining <= 0 ? 'ظرفیت تکمیل شده است' : 'فقط ' + remaining + ' بلیت باقی مانده است'
         });
       }
 

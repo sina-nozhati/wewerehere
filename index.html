@@ -1516,7 +1516,7 @@
       <div class="hero__cta">
         <a href="#register" class="btn btn--filled btn--shine btn--glow" id="hero-register-cta">ثبت‌نام و دریافت تیکت</a>
         <div class="hero__cta-secondary">
-          <a href="/track" class="btn btn--outline btn--small btn--secondary-hero">پیگیری بلیط</a>
+          <a href="/track" class="btn btn--outline btn--small btn--secondary-hero">پیگیری بلیت</a>
           <a href="/support" class="btn btn--outline btn--small btn--secondary-hero">پشتیبانی</a>
         </div>
       </div>
@@ -1562,13 +1562,13 @@
         </div>
 
         <div class="form__group">
-          <label class="form__label" id="qty-label">تعداد بلیط</label>
+          <label class="form__label" id="qty-label">تعداد بلیت</label>
           <div class="stepper">
-            <button type="button" class="stepper__btn" id="qty-minus" aria-label="کاهش تعداد بلیط">
+            <button type="button" class="stepper__btn" id="qty-minus" aria-label="کاهش تعداد بلیت">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
             <span class="stepper__value" id="qty-value" aria-live="polite">۱</span>
-            <button type="button" class="stepper__btn" id="qty-plus" aria-label="افزایش تعداد بلیط">
+            <button type="button" class="stepper__btn" id="qty-plus" aria-label="افزایش تعداد بلیت">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           </div>
@@ -1616,7 +1616,7 @@
           </div>
           <div class="card-info__meta">
             <span>بانک: <b id="card-bank">—</b></span>
-            <span>مبلغ هر بلیط: <b id="card-unit-price">—</b></span>
+            <span>مبلغ هر بلیت: <b id="card-unit-price">—</b></span>
           </div>
           <p class="card-info__hint" id="card-hint">بعد از واریز، رسید پرداخت رو در پایین ثبت کن.</p>
         </div>
@@ -1653,9 +1653,9 @@
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
         </div>
         <h3 class="section-title" style="margin-bottom: 6px;">در انتظار تایید</h3>
-        <p class="result__note">رسیدت ثبت شد. به محض تایید ادمین، تیکت‌هات فعال می‌شن. برای پیگیری بلیط، شماره‌ات رو در صفحه پیگیری بلیط وارد کن.</p>
+        <p class="result__note">رسیدت ثبت شد. به محض تایید ادمین، تیکت‌هات فعال می‌شن. برای پیگیری بلیت، شماره‌ات رو در صفحه پیگیری بلیت وارد کن.</p>
         <div class="result__actions">
-          <a href="/track" class="btn btn--filled btn--shine" id="pending-track-link">پیگیری بلیط</a>
+          <a href="/track" class="btn btn--filled btn--shine" id="pending-track-link">پیگیری بلیت</a>
           <a href="/support" class="btn btn--outline btn--small" id="pending-support-link">پشتیبانی</a>
         </div>
       </div>
@@ -2100,7 +2100,7 @@
       samples.forEach(function (s) {
         if (!s.el) return;
         renderTicketArt(s.el, s.ticket)
-          .catch(function () { s.el.innerHTML = '<p class="ticket-stage__note">نمونه بلیط در دسترس نیست.</p>'; });
+          .catch(function () { s.el.innerHTML = '<p class="ticket-stage__note">نمونه بلیت در دسترس نیست.</p>'; });
       });
     })();
 

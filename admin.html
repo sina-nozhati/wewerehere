@@ -242,14 +242,14 @@
       <div class="orders-list" id="support-list"><p class="empty-note">در حال بارگذاری…</p></div>
 
       <!-- Tickets -->
-      <h2>بلیط‌ها</h2>
+      <h2>بلیت‌ها</h2>
       <div class="toolbar">
         <button class="ghost" id="refresh-tickets">تازه‌سازی</button>
         <button class="ghost" id="export-csv">خروجی CSV (لیست ورود)</button>
-        <button class="ghost" id="export-tickets-zip">خروجی تصویر بلیط‌ها (ZIP)</button>
-        <button class="ghost" id="sample-ticket-btn">دانلود بلیط نمونه</button>
+        <button class="ghost" id="export-tickets-zip">خروجی تصویر بلیت‌ها (ZIP)</button>
+        <button class="ghost" id="sample-ticket-btn">دانلود بلیت نمونه</button>
         <span class="spacer"></span>
-        <button id="add-ticket-btn">افزودن بلیط</button>
+        <button id="add-ticket-btn">افزودن بلیت</button>
         <span class="muted" id="ticket-count"></span>
       </div>
 
@@ -329,7 +329,7 @@
               <input type="text" id="set-bank-name" placeholder="مثال: ملت">
             </div>
             <div>
-              <label for="set-ticket-price">قیمت هر بلیط (تومان)</label>
+              <label for="set-ticket-price">قیمت هر بلیت (تومان)</label>
               <input type="text" id="set-ticket-price" dir="ltr" inputmode="numeric" placeholder="935000">
             </div>
           </div>
@@ -713,9 +713,9 @@
       api('/api/admin/tickets' + eventQuery()).then(function (res) {
         cachedTickets = res.tickets;
         var body = document.getElementById('tickets-body');
-        document.getElementById('ticket-count').textContent = 'مجموع: ' + toFa(res.tickets.length) + ' بلیط';
+        document.getElementById('ticket-count').textContent = 'مجموع: ' + toFa(res.tickets.length) + ' بلیت';
         if (!res.tickets.length) {
-          body.innerHTML = '<tr><td colspan="6" class="muted">هنوز بلیطی ثبت نشده.</td></tr>';
+          body.innerHTML = '<tr><td colspan="6" class="muted">هنوز بلیتی ثبت نشده.</td></tr>';
           return;
         }
         body.innerHTML = res.tickets.map(function (t) {
@@ -801,7 +801,7 @@
             URL.revokeObjectURL(a.href);
           });
       } else if (delBtn) {
-        if (!confirm('این بلیط حذف شود؟')) return;
+        if (!confirm('این بلیت حذف شود؟')) return;
         api('/api/admin/tickets?id=' + delBtn.getAttribute('data-del'), { method: 'DELETE' })
           .then(loadTickets)
           .catch(function (e2) { alert('خطا: ' + e2.message); });
@@ -928,7 +928,7 @@
           var actions = '';
           if (o.status === 'pending') {
             actions =
-              '<button class="ok" data-approve="' + o.id + '">تایید و صدور بلیط</button>' +
+              '<button class="ok" data-approve="' + o.id + '">تایید و صدور بلیت</button>' +
               '<button class="danger" data-reject="' + o.id + '">رد</button>';
           } else {
             actions = '<span class="badge ' + statusClass(o.status) + '">' + statusLabel(o.status) + '</span>';
@@ -966,7 +966,7 @@
       var rejectBtn = e.target.closest('[data-reject]');
       if (approveBtn) {
         var id = approveBtn.getAttribute('data-approve');
-        if (!confirm('تایید این سفارش و صدور بلیط‌ها؟')) return;
+        if (!confirm('تایید این سفارش و صدور بلیت‌ها؟')) return;
         approveBtn.disabled = true;
         api('/api/admin/orders/approve?id=' + id, { method: 'POST', headers: authHeaders() })
           .then(function () { loadOrders(); loadTickets(); })

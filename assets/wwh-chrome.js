@@ -25,7 +25,7 @@
   var TOP_LINKS = [
     { href: '/episodes', label: 'اپیزودها', match: /^\/episodes\/?$/ },
     { href: '/#register', label: 'ثبت\u200cنام', match: null },
-    { href: '/track', label: 'پیگیری بلیط', match: /^\/track\/?$/ },
+    { href: '/track', label: 'پیگیری بلیت', match: /^\/track\/?$/ },
     { href: '/support', label: 'پشتیبانی', match: /^\/support\/?$/ },
   ];
 
@@ -33,7 +33,7 @@
     { href: '/episodes', label: 'اپیزودها', match: /^\/episodes\/?$/ },
     { href: '/#register', label: 'ثبت\u200cنام', match: null },
     { href: '/#setlist', label: 'ست لیست', match: null },
-    { href: '/track', label: 'پیگیری بلیط', match: /^\/track\/?$/ },
+    { href: '/track', label: 'پیگیری بلیت', match: /^\/track\/?$/ },
     { href: '/support', label: 'پشتیبانی', match: /^\/support\/?$/ },
     { href: '/#access', label: 'دسترسی بعد از اجرا', match: null },
   ];
