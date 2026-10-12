@@ -106,7 +106,6 @@ html.wwh-loading body {
     radial-gradient(ellipse 50% 30% at 78% 68%, rgba(190, 178, 210, 0.06), transparent 70%),
     radial-gradient(ellipse 48% 28% at 48% 92%, rgba(212, 63, 90, 0.1), transparent 68%);
   animation: wwhLoaderMist 42s linear infinite alternate;
-  will-change: transform;
 }
 
 .wwh-loader__mist--2 {

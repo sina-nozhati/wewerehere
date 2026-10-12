@@ -2,14 +2,38 @@
  * Gothic loader — until load + landing API + fonts; arms spotlight under overlay, then fades.
  */
 (function () {
-  var MIN_VISIBLE_MS = 2000;
-  /** Match spotlight travel (~820ms) so first target is locked before loader fades. */
-  var SPOTLIGHT_SYNC_MS = 900;
+  function isLite() {
+    var root = document.documentElement;
+    return (
+      root.classList.contains('wwh-perf-lite') ||
+      root.classList.contains('wwh-touch') ||
+      root.classList.contains('wwh-loader-simple')
+    );
+  }
+
+  var MIN_VISIBLE_MS = isLite() ? 1050 : 2000;
+  var SPOTLIGHT_SYNC_MS = isLite() ? 480 : 900;
+  var FONT_WAIT_MS = isLite() ? 750 : 5000;
 
   function wait(ms) {
     return new Promise(function (resolve) {
       setTimeout(resolve, ms);
     });
+  }
+
+  function whenFonts() {
+    if (!document.fonts) return Promise.resolve();
+    if (isLite()) {
+      var loads = [];
+      try {
+        loads.push(document.fonts.load('900 1.05rem Vazirmatn'));
+        loads.push(document.fonts.load('700 1rem Vazirmatn'));
+      } catch (e) {
+        return wait(FONT_WAIT_MS);
+      }
+      return Promise.race([Promise.all(loads), wait(FONT_WAIT_MS)]).catch(function () {});
+    }
+    return Promise.race([document.fonts.ready, wait(FONT_WAIT_MS)]).catch(function () {});
   }
 
   function whenReady() {
@@ -21,9 +45,7 @@
       if (window.__wwhEventAt) resolve();
       else window.addEventListener('wwh:event-ready', resolve, { once: true });
     });
-    var fontsP =
-      document.fonts && document.fonts.ready ? document.fonts.ready.catch(function () {}) : Promise.resolve();
-    return Promise.all([loadP, apiP, fontsP]);
+    return Promise.all([loadP, apiP, whenFonts()]);
   }
 
   function dispatch(name) {
@@ -49,18 +71,20 @@
     whenReady()
       .then(function () {
         var elapsed = performance.now() - t0;
-        if (elapsed < MIN_VISIBLE_MS) return wait(MIN_VISIBLE_MS - elapsed);
+        var minVis = isLite() ? 1050 : 2000;
+        if (elapsed < minVis) return wait(minVis - elapsed);
       })
       .then(function () {
         dispatch('wwh:loader-arm-spotlight');
         document.documentElement.classList.remove('wwh-loading');
-        return wait(SPOTLIGHT_SYNC_MS);
+        var sync = isLite() ? 480 : 900;
+        return wait(sync);
       })
       .then(function () {
         loader.classList.add('is-exit');
         return new Promise(function (resolve) {
           var settled = false;
-          var fallback = setTimeout(finish, 750);
+          var fallback = setTimeout(finish, isLite() ? 520 : 750);
 
           function finish(event) {
             if (settled || (event && event.propertyName !== 'opacity')) return;

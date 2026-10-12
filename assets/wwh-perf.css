@@ -1,5 +1,86 @@
 /* Lite motion — same effects, lower GPU cost (old phones) */
 
+/* Loader — touch / lite: static scene, cheap text in (no clip-path / stroke-dash) */
+html.wwh-loader-simple .wwh-loader__mist,
+html.wwh-loader-simple .wwh-loader__mist--2,
+html.wwh-loader-simple .wwh-loader__embers {
+  display: none !important;
+}
+
+html.wwh-loader-simple .wwh-loader__moon {
+  animation: none;
+  opacity: 0.17;
+  filter: none;
+  box-shadow: 0 0 72px 20px rgba(214, 205, 231, 0.1);
+}
+
+html.wwh-loader-simple .wwh-loader__haze {
+  animation: none;
+  opacity: 0.42;
+}
+
+html.wwh-loader-simple .wwh-loader__focus {
+  animation: wwhLoaderFocusIn 380ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+html.wwh-loader-simple .wwh-loader__title span {
+  clip-path: none;
+  transform: none;
+  animation: wwhLoaderWordLite 420ms ease forwards;
+}
+
+html.wwh-loader-simple .wwh-loader__title span:nth-child(1) {
+  animation-delay: 120ms;
+}
+
+html.wwh-loader-simple .wwh-loader__title span:nth-child(2) {
+  animation-delay: 260ms;
+}
+
+@keyframes wwhLoaderWordLite {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+html.wwh-loader-simple .wwh-loader__sigil {
+  filter: none;
+}
+
+html.wwh-loader-simple .wwh-loader__sigil-ring,
+html.wwh-loader-simple .wwh-loader__sigil-mark {
+  animation: none;
+  stroke-dashoffset: 0;
+}
+
+html.wwh-loader-simple .wwh-loader__sigil-core {
+  animation: wwhLoaderCoreLite 320ms ease 180ms forwards;
+}
+
+@keyframes wwhLoaderCoreLite {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+html.wwh-loader-simple .wwh-loader__rule span {
+  animation: wwhLoaderRuleIn 360ms ease 320ms forwards;
+}
+
+html.wwh-loader-simple .wwh-loader__caption {
+  animation: wwhLoaderCaptionIn 320ms ease 420ms forwards;
+}
+
 html.wwh-perf-lite .wwh-loader__moon,
 html.wwh-perf-lite .wwh-loader__mist--2 {
   display: none;
