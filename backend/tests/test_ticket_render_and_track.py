@@ -21,6 +21,7 @@ from app.services.ticket_render import (
     REQUIRED_TICKET_FIELDS,
     fill_ticket_svg,
     render_ticket_png,
+    ticket_png_export_available,
     ticket_template_field_names,
 )
 from app.services.tickets import issue_ticket
@@ -28,11 +29,7 @@ from datetime import datetime, timezone
 
 
 def _cairo_png_export_available() -> bool:
-    try:
-        import cairosvg  # noqa: F401
-    except OSError:
-        return False
-    return True
+    return ticket_png_export_available()
 
 
 @pytest.fixture()

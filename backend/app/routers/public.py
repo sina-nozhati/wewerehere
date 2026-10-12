@@ -316,7 +316,7 @@ def download_ticket_png(
             503,
             {
                 "error": "ticket_png_unavailable",
-                "message": "PNG export failed; install Cairo/Pango and Vazirmatn on the server",
+                "message": "PNG export failed; on server: libcairo2/libpango + Vazirmatn — local dev: pip install pymupdf",
                 "detail": str(e),
             },
         )

@@ -247,23 +247,67 @@ def fill_ticket_svg(
     )
 
 
-def render_ticket_png(svg_text: str, scale: float = 4.0) -> bytes:
+def ticket_png_export_available() -> bool:
+    if _cairo_png_available():
+        return True
     try:
-        import cairosvg
-    except ImportError as e:
-        raise RuntimeError("cairosvg not installed") from e
-    vb = re.search(r'viewBox="([^"]+)"', svg_text)
-    w, h = 362.0, 128.0
-    if vb:
-        parts = vb.group(1).split()
-        if len(parts) >= 4:
-            w, h = float(parts[2]), float(parts[3])
+        import fitz  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def _cairo_png_available() -> bool:
+    try:
+        import cairocffi  # noqa: F401
+    except OSError:
+        return False
+    return True
+
+
+def _render_ticket_png_cairo(svg_text: str, scale: float, out_w: int, out_h: int) -> bytes:
+    import cairosvg
+
+    ensure_vazirmatn_font()
     with _cairo_fontconfig_scope():
         return cairosvg.svg2png(
             bytestring=svg_text.encode("utf-8"),
-            output_width=int(w * scale),
-            output_height=int(h * scale),
+            output_width=out_w,
+            output_height=out_h,
         )
+
+
+def _render_ticket_png_pymupdf(svg_text: str, scale: float) -> bytes:
+    import fitz
+
+    doc = fitz.open(stream=svg_text.encode("utf-8"), filetype="svg")
+    if doc.page_count < 1:
+        raise TicketRenderError("empty SVG document")
+    page = doc[0]
+    pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
+    return pix.tobytes("png")
+
+
+def render_ticket_png(svg_text: str, scale: float = 4.0) -> bytes:
+    w, h = _svg_viewbox_size(svg_text)
+    out_w, out_h = int(w * scale), int(h * scale)
+    cairo_error: Exception | None = None
+    if _cairo_png_available():
+        try:
+            return _render_ticket_png_cairo(svg_text, scale, out_w, out_h)
+        except TicketFontError:
+            raise
+        except Exception as exc:
+            cairo_error = exc
+            logger.warning("Cairo PNG export failed, trying PyMuPDF: %s", exc)
+    try:
+        return _render_ticket_png_pymupdf(svg_text, scale)
+    except ImportError as exc:
+        raise TicketRenderError(
+            "PNG export unavailable: install pymupdf (pip) or libcairo2/libpango (Linux server)"
+        ) from (cairo_error or exc)
+    except Exception as exc:
+        raise TicketRenderError(str(exc)) from (cairo_error or exc)
 
 
 def _svg_viewbox_size(svg_text: str) -> tuple[float, float]:
@@ -330,9 +374,8 @@ def render_ticket_bytes(
     if not prefer_png:
         raise TicketRenderError("PNG export required")
     try:
-        ensure_vazirmatn_font()
         png = render_ticket_png(svg)
-    except TicketFontError:
+    except TicketRenderError:
         raise
     except Exception as exc:
         logger.exception("ticket PNG export failed")

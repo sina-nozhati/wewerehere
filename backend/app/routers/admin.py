@@ -389,7 +389,7 @@ def _ticket_export_response(t: Ticket, db: Session, sample: bool = False):
             503,
             {
                 "error": "ticket_png_unavailable",
-                "message": "PNG export failed; run wwh-deploy install (Cairo + Vazirmatn)",
+                "message": "PNG export failed; server: wwh-deploy install — local: pip install -r backend/requirements.txt",
                 "detail": str(e),
             },
         )
