@@ -1,8 +1,12 @@
 /**
- * Hero stage spotlight — armed before loader fade; first target ready when overlay lifts.
+ * Hero stage spotlight — armed under loader; visible sequence starts after loader is gone.
  */
 (function () {
   var TRAVEL_MS = 820;
+  var TITLE_HOLD_MS = 1350;
+  var TITLE_HOLD_LITE_MS = 1000;
+  var TITLE_HOLD_REDUCED_MS = 480;
+
   var baseSpot = { x: 0, y: 0, r: 140 };
   var wobbleOn = false;
   var wobbleRaf = 0;
@@ -42,6 +46,7 @@
     var any = false;
     nodes.forEach(function (el) {
       if (!el) return;
+      if (el.hidden) return;
       var er = el.getBoundingClientRect();
       if (!er.width && !er.height) return;
       any = true;
@@ -62,13 +67,13 @@
 
   function collectSpots(hero) {
     var title = hero.querySelector('.hero__title');
-    var tagline = document.getElementById('hero-jalali-tagline');
+    var dateBlock = hero.querySelector('.hero__date-block');
     var capacity = document.getElementById('capacity-badge');
     var register = document.getElementById('hero-register-cta');
 
     var spots = [];
-    var s1 = measureEl(hero, title, 52, 40);
-    var s2 = measureEl(hero, tagline, 48, 36);
+    var s1 = measureEl(hero, title, 56, 44);
+    var s2 = dateBlock ? measureEl(hero, dateBlock, 28, 22) : null;
     var s3 = measureGroup(hero, [capacity, register], 18);
     if (s1) spots.push(s1);
     if (s2) spots.push(s2);
@@ -173,30 +178,45 @@
     startHandheld(dim, reduceMotion);
   }
 
-  function runSequence(hero, dim, reduceMotion, opts) {
-    opts = opts || {};
+  function travelMs(reduceMotion) {
+    if (reduceMotion) return 0;
+    var lite = document.documentElement.classList.contains('wwh-perf-lite');
+    return lite ? Math.round(TRAVEL_MS * 0.88) : TRAVEL_MS;
+  }
+
+  function titleHoldMs(reduceMotion) {
+    if (reduceMotion) return TITLE_HOLD_REDUCED_MS;
+    var lite = document.documentElement.classList.contains('wwh-perf-lite');
+    return lite ? TITLE_HOLD_LITE_MS : TITLE_HOLD_MS;
+  }
+
+  /** Under loader: drift toward title while overlay still visible */
+  function armUnderLoader(hero, dim, reduceMotion) {
+    prepareDim(dim, reduceMotion);
+    var spots = collectSpots(hero);
+    if (!spots.length) return;
+    var open = openingSpot(hero);
+    var travel = travelMs(reduceMotion);
+    applySpot(dim, open);
+    if (spots[0] && travel > 0) {
+      tween(dim, open, spots[0], travel, function () {});
+    } else if (spots[0]) {
+      applySpot(dim, spots[0]);
+    }
+  }
+
+  /** After loader gone: lock on «ما اینجا بودیم», then date block, then capacity + CTA */
+  function playVisibleSequence(hero, dim, reduceMotion) {
     var spots = collectSpots(hero);
     if (spots.length < 2) return Promise.resolve();
 
     var lite = document.documentElement.classList.contains('wwh-perf-lite');
-    var holds = reduceMotion ? [500, 480, 320] : lite ? [820, 780, 320] : [1100, 1050, 420];
-    var travel = reduceMotion ? 0 : lite ? Math.round(TRAVEL_MS * 0.85) : TRAVEL_MS;
+    var legHolds = reduceMotion ? [520, 420] : lite ? [920, 780] : [1050, 900];
+    var travel = travelMs(reduceMotion);
 
-    prepareDim(dim, reduceMotion);
+    applySpot(dim, spots[0]);
 
-    var chain;
-    if (opts.skipOpening) {
-      applySpot(dim, spots[0]);
-      chain = wait(holds[0]);
-    } else {
-      var open = openingSpot(hero);
-      applySpot(dim, open);
-      chain = new Promise(function (resolve) {
-        tween(dim, open, spots[0], travel, resolve);
-      }).then(function () {
-        return wait(holds[0]);
-      });
-    }
+    var chain = wait(titleHoldMs(reduceMotion));
 
     for (var i = 0; i < spots.length - 1; i++) {
       (function (idx) {
@@ -206,7 +226,7 @@
           });
         });
         chain = chain.then(function () {
-          return wait(holds[idx + 1] != null ? holds[idx + 1] : 400);
+          return wait(legHolds[idx] != null ? legHolds[idx] : 400);
         });
       })(i);
     }
@@ -232,14 +252,16 @@
     if (!hero || !dim) return;
 
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var started = false;
+    var armed = false;
+    var loaderGone = false;
+    var playing = false;
 
-    function kick(opts) {
-      if (started) return;
-      started = true;
+    function tryPlay() {
+      if (playing || !armed || !loaderGone) return;
+      playing = true;
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
-          runSequence(hero, dim, reduceMotion, opts);
+          playVisibleSequence(hero, dim, reduceMotion);
         });
       });
     }
@@ -247,19 +269,35 @@
     window.addEventListener(
       'wwh:loader-arm-spotlight',
       function () {
-        kick({ skipOpening: false });
+        if (armed) return;
+        armed = true;
+        armUnderLoader(hero, dim, reduceMotion);
       },
       { once: true }
     );
 
-    function fallbackStart() {
-      kick({ skipOpening: true });
-    }
+    window.addEventListener(
+      'wwh:loader-done',
+      function () {
+        loaderGone = true;
+        if (!armed) {
+          armed = true;
+          prepareDim(dim, reduceMotion);
+          var spots = collectSpots(hero);
+          if (spots[0]) applySpot(dim, spots[0]);
+        }
+        tryPlay();
+      },
+      { once: true }
+    );
 
     if (window.__wwhLoaderDone) {
-      fallbackStart();
-    } else {
-      window.addEventListener('wwh:loader-done', fallbackStart, { once: true });
+      loaderGone = true;
+      armed = true;
+      prepareDim(dim, reduceMotion);
+      var spots = collectSpots(hero);
+      if (spots[0]) applySpot(dim, spots[0]);
+      tryPlay();
     }
   }
 

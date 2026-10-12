@@ -12,7 +12,8 @@
   }
 
   var MIN_VISIBLE_MS = isLite() ? 1050 : 2000;
-  var SPOTLIGHT_SYNC_MS = isLite() ? 480 : 900;
+  /** Let spotlight reach title before loader fully lifts */
+  var SPOTLIGHT_SYNC_MS = isLite() ? 720 : 1050;
   var FONT_WAIT_MS = isLite() ? 750 : 5000;
 
   function wait(ms) {
