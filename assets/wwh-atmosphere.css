@@ -1,5 +1,10 @@
 /* Gothic atmosphere — above page, below film grain */
 
+:root {
+  --wwh-moon-top: calc(env(safe-area-inset-top, 0px) + 5.5vh);
+  --wwh-moon-size: clamp(200px, 34vw, 400px);
+}
+
 .wwh-fish-layer {
   position: fixed;
   inset: 0;
@@ -163,6 +168,10 @@
 
 .atmosphere-exempt .moon {
   z-index: 0;
+  top: var(--wwh-moon-top);
+  width: var(--wwh-moon-size);
+  height: var(--wwh-moon-size);
+  margin-left: calc(var(--wwh-moon-size) / -2);
 }
 
 .atmosphere-exempt .mist {
@@ -233,6 +242,17 @@ body > .scroll-progress {
 .hero__stack > *:not(.hero__gothic-art) {
   position: relative;
   z-index: 1;
+}
+
+html:not(.wwh-hero-inview) .atmosphere-exempt .mist,
+html:not(.wwh-hero-inview) .atmosphere-exempt .atmosphere-dust,
+html:not(.wwh-hero-inview) .atmosphere-exempt .moon {
+  animation-play-state: paused;
+}
+
+html.wwh-spotlight-active .atmosphere-exempt .mist,
+html.wwh-spotlight-active .atmosphere-exempt .atmosphere-dust {
+  animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {

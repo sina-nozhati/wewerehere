@@ -16,7 +16,21 @@
 .hero {
   position: relative;
   isolation: isolate;
-  padding: calc(48px + env(safe-area-inset-top, 0px)) 20px calc(40px + env(safe-area-inset-bottom, 0px));
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 20px calc(40px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Title sits on the moon disc (shared --wwh-moon-* in wwh-atmosphere.css) */
+.hero__title-stage {
+  width: 100%;
+  flex-shrink: 0;
+  margin-top: calc(var(--wwh-moon-top, 6vh) + var(--wwh-moon-size, 220px) * 0.5);
+  transform: translateY(-52%);
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.hero__title-stage .hero__title {
+  margin-bottom: 0;
 }
 
 /* Stage spotlight — full viewport dim (fixed), hole reveals sharp hero */
@@ -66,10 +80,20 @@
 }
 
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .hero-spotlight:not(.is-reduced) {
-    background: rgba(6, 4, 10, 0.55);
-    -webkit-backdrop-filter: blur(12px) brightness(0.45) saturate(0.8);
-    backdrop-filter: blur(12px) brightness(0.45) saturate(0.8);
+  @media (hover: hover) and (pointer: fine) {
+    .hero-spotlight:not(.is-reduced) {
+      background: rgba(6, 4, 10, 0.55);
+      -webkit-backdrop-filter: blur(12px) brightness(0.45) saturate(0.8);
+      backdrop-filter: blur(12px) brightness(0.45) saturate(0.8);
+    }
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .hero-spotlight {
+    background: rgba(4, 2, 8, 0.86);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 

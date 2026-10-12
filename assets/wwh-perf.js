@@ -26,4 +26,8 @@
   if (saveData || cores <= 4 || mem <= 4 || (coarse && narrow && (cores <= 6 || mem <= 6))) {
     root.classList.add('wwh-perf-lite');
   }
+
+  if (coarse) {
+    root.classList.add('wwh-touch');
+  }
 })();

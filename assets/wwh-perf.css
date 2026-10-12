@@ -60,6 +60,35 @@ html.wwh-perf-lite .wwh-fish-layer .fish {
   filter: none !important;
 }
 
+/* Touch / weak GPU — drop full-screen SVG noise (major jank in hero) */
+html.wwh-touch body::before,
 html.wwh-perf-lite body::before {
-  opacity: 0.028;
+  display: none;
+}
+
+html.wwh-touch .hero__title,
+html.wwh-perf-lite .hero__title {
+  animation: fadeInUp 0.8s ease forwards !important;
+  animation-delay: 0.3s !important;
+  text-shadow: 0 0 36px rgba(255, 255, 255, 0.12);
+}
+
+html.wwh-touch .moon,
+html.wwh-perf-lite .atmosphere-exempt .moon {
+  box-shadow: 0 0 80px 24px rgba(214, 205, 231, 0.1);
+  filter: none;
+}
+
+html.wwh-touch .mist--2,
+html.wwh-perf-lite .mist--2 {
+  display: none;
+}
+
+html.wwh-touch .atmosphere-exempt .atmosphere-dust {
+  animation: none;
+  opacity: 0.38;
+}
+
+html.wwh-touch .fish__inner {
+  animation-duration: calc(var(--wobble-dur, 2s) * 1.35);
 }

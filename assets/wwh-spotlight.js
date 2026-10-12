@@ -113,7 +113,12 @@
     dim.removeAttribute('hidden');
     dim.classList.remove('is-done', 'is-exit');
     dim.classList.add('is-active');
-    if (reduceMotion || document.documentElement.classList.contains('wwh-perf-lite')) {
+    document.documentElement.classList.add('wwh-spotlight-active');
+    var touch =
+      window.matchMedia('(hover: none) and (pointer: coarse)').matches ||
+      document.documentElement.classList.contains('wwh-perf-lite') ||
+      document.documentElement.classList.contains('wwh-touch');
+    if (reduceMotion || touch) {
       dim.classList.add('is-reduced');
     }
   }
@@ -166,6 +171,7 @@
         dim.classList.remove('is-exit');
         dim.classList.add('is-done');
         dim.setAttribute('hidden', '');
+        document.documentElement.classList.remove('wwh-spotlight-active');
       });
   }
 

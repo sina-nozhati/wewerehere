@@ -479,11 +479,25 @@
     showJoke();
   }
 
-  var perfLite = document.documentElement.classList.contains('wwh-perf-lite');
+  function isPerfLite() {
+    return document.documentElement.classList.contains('wwh-perf-lite');
+  }
+
+  function shouldRunFish() {
+    if (typeof window.__wwhHeroInView === 'function') {
+      return window.__wwhHeroInView();
+    }
+    return !document.documentElement.classList.contains('wwh-spotlight-active');
+  }
 
   function gameLoop(now) {
     if (!lastTick) lastTick = now;
-    if (perfLite && now - lastTick < 32) {
+    if (!shouldRunFish()) {
+      lastTick = now;
+      loopRaf = requestAnimationFrame(gameLoop);
+      return;
+    }
+    if (isPerfLite() && now - lastTick < 32) {
       loopRaf = requestAnimationFrame(gameLoop);
       return;
     }
