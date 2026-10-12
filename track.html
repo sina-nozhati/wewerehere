@@ -647,14 +647,31 @@
       var q = WwhPhone.isCompleteIranMobile(phone)
         ? ('phone=' + encodeURIComponent(phone))
         : ('serial=' + encodeURIComponent(serial));
-      return dl + '?' + q + '&inline=true';
+      return dl + '?' + q + '&inline=true&format=svg';
     }
 
     function fetchTicketInlineBlob(dl, serial) {
       if (!dl) return Promise.reject(new Error('no print url'));
-      return fetch(ticketInlineApiUrl(dl, serial)).then(function (r) {
+      var url = ticketInlineApiUrl(dl, serial);
+      return fetch(url).then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.blob();
+        var ct = (r.headers.get('Content-Type') || '').toLowerCase();
+        return r.blob().then(function (blob) {
+          if (ct.indexOf('svg') >= 0 || (blob.type || '').toLowerCase().indexOf('svg') >= 0) {
+            return blob;
+          }
+          if (ct.indexOf('png') >= 0) {
+            return blob;
+          }
+          return blob;
+        });
+      }).catch(function (err) {
+        var pngUrl = url.replace(/format=svg/, 'format=png');
+        if (pngUrl === url) return Promise.reject(err);
+        return fetch(pngUrl).then(function (r) {
+          if (!r.ok) throw err;
+          return r.blob();
+        });
       });
     }
 

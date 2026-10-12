@@ -123,6 +123,8 @@
     .badge--sales-open { background: rgba(212,63,90,0.12); color: var(--accent-soft); border-color: var(--accent); }
     .badge--sales-closed { background: rgba(122,122,133,0.15); color: var(--muted); border-color: var(--border); }
     .badge--featured { background: rgba(245,197,66,0.12); color: var(--warning); border-color: var(--warning); }
+    .badge--revoked { background: rgba(122,122,133,0.15); color: var(--muted); border-color: var(--border); }
+    .badge--capacity { background: rgba(212,63,90,0.08); color: var(--accent-soft); border-color: var(--border); }
     .status-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 
     .orders-list { display: grid; gap: 16px; margin-top: 18px; }
@@ -248,6 +250,9 @@
         <button class="ghost" id="export-csv">خروجی CSV (لیست ورود)</button>
         <button class="ghost" id="export-tickets-zip">خروجی تصویر بلیت‌ها (ZIP)</button>
         <button class="ghost" id="sample-ticket-btn">دانلود بلیت نمونه</button>
+        <label class="muted" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="tickets-show-revoked"> نمایش لغو‌شده‌ها
+        </label>
         <span class="spacer"></span>
         <button id="add-ticket-btn">افزودن بلیت</button>
         <span class="muted" id="ticket-count"></span>
@@ -289,9 +294,9 @@
       <div style="overflow-x:auto;">
         <table id="tickets-table">
           <thead>
-            <tr><th>سریال</th><th>نام</th><th>تلفن</th><th>گروه</th><th>زمان ثبت</th><th>عملیات</th></tr>
+            <tr><th>سریال</th><th>نام</th><th>تلفن</th><th>گروه</th><th>وضعیت</th><th>زمان ثبت</th><th>عملیات</th></tr>
           </thead>
-          <tbody id="tickets-body"><tr><td colspan="6" class="muted">در حال بارگذاری…</td></tr></tbody>
+          <tbody id="tickets-body"><tr><td colspan="7" class="muted">در حال بارگذاری…</td></tr></tbody>
         </table>
       </div>
 
@@ -709,29 +714,84 @@
       }
     });
 
+    var ticketsShowRevoked = false;
+
+    function ticketListQuery() {
+      var parts = [];
+      if (currentEventId) parts.push('eventId=' + encodeURIComponent(currentEventId));
+      parts.push('status=' + (ticketsShowRevoked ? 'all' : 'active'));
+      return '?' + parts.join('&');
+    }
+
+    function extFromContentType(ct) {
+      var t = (ct || '').split(';')[0].trim().toLowerCase();
+      if (t === 'image/png') return 'png';
+      if (t === 'image/svg+xml') return 'svg';
+      if (t === 'application/pdf') return 'pdf';
+      return 'bin';
+    }
+
+    function filenameFromDisposition(cd, fallback) {
+      if (!cd) return fallback;
+      var m = /filename\*?=(?:UTF-8'')?["']?([^"';]+)/i.exec(cd);
+      return m ? decodeURIComponent(m[1].replace(/^["']|["']$/g, '')) : fallback;
+    }
+
+    function downloadFromFetchResponse(r, fallbackBase) {
+      if (!r.ok) {
+        return r.text().then(function (txt) {
+          var msg = txt;
+          try {
+            var j = JSON.parse(txt);
+            msg = (j && (j.error || j.detail)) || txt;
+            if (typeof msg === 'object') msg = JSON.stringify(msg);
+          } catch (e) { /* ignore */ }
+          throw new Error(msg || ('HTTP ' + r.status));
+        });
+      }
+      var ct = r.headers.get('Content-Type') || '';
+      var cd = r.headers.get('Content-Disposition') || '';
+      return r.blob().then(function (blob) {
+        var name = filenameFromDisposition(cd, fallbackBase + '.' + extFromContentType(ct));
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+    }
+
     function loadTickets() {
-      api('/api/admin/tickets' + eventQuery()).then(function (res) {
+      api('/api/admin/tickets' + ticketListQuery()).then(function (res) {
         cachedTickets = res.tickets;
         var body = document.getElementById('tickets-body');
         document.getElementById('ticket-count').textContent = 'مجموع: ' + toFa(res.tickets.length) + ' بلیت';
         if (!res.tickets.length) {
-          body.innerHTML = '<tr><td colspan="6" class="muted">هنوز بلیتی ثبت نشده.</td></tr>';
+          body.innerHTML = '<tr><td colspan="7" class="muted">هنوز بلیتی ثبت نشده.</td></tr>';
           return;
         }
         body.innerHTML = res.tickets.map(function (t) {
           var d = new Date(t.created_at);
           var time = isNaN(d) ? t.created_at : d.toLocaleString('fa-IR');
+          var revoked = t.status === 'revoked';
+          var st = revoked
+            ? '<span class="badge badge--revoked">لغو شده</span>'
+            : '<span class="badge badge--approved">فعال</span>';
+          var actions = revoked
+            ? '<span class="muted">—</span>'
+            : '<div class="actions">' +
+              '<button class="small ghost" data-edit="' + t.id + '">ویرایش</button>' +
+              '<button class="small ghost" data-export="' + t.id + '">چاپ/خروجی</button>' +
+              '<button class="danger" data-del="' + t.id + '">حذف</button>' +
+            '</div>';
           return '<tr>' +
             '<td class="serial">' + t.serial + '</td>' +
             '<td>' + escapeHtml(t.name) + '</td>' +
             '<td class="serial">' + escapeHtml(t.phone) + '</td>' +
             '<td><span class="group-badge">' + t.group_name + '</span></td>' +
+            '<td>' + st + '</td>' +
             '<td class="muted">' + time + '</td>' +
-            '<td><div class="actions">' +
-              '<button class="small ghost" data-edit="' + t.id + '">ویرایش</button>' +
-              '<button class="small ghost" data-export="' + t.id + '">چاپ/خروجی</button>' +
-              '<button class="danger" data-del="' + t.id + '">حذف</button>' +
-            '</div></td>' +
+            '<td>' + actions + '</td>' +
             '</tr>';
         }).join('');
       }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
@@ -757,6 +817,10 @@
     document.getElementById('add-ticket-btn').addEventListener('click', function () { openTicketForm(null); });
     document.getElementById('tf-cancel').addEventListener('click', function () { ticketForm.hidden = true; });
     document.getElementById('refresh-tickets').addEventListener('click', loadTickets);
+    document.getElementById('tickets-show-revoked').addEventListener('change', function (e) {
+      ticketsShowRevoked = e.target.checked;
+      loadTickets();
+    });
 
     document.getElementById('ticket-form-inner').addEventListener('submit', function (e) {
       e.preventDefault();
@@ -792,14 +856,8 @@
       if (exportBtn) {
         var tid = exportBtn.getAttribute('data-export');
         fetch('/api/admin/tickets/' + tid + '/export', { headers: { Authorization: 'Bearer ' + TOKEN } })
-          .then(function (r) { return r.blob(); })
-          .then(function (blob) {
-            var a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'ticket-' + tid + '.png';
-            a.click();
-            URL.revokeObjectURL(a.href);
-          });
+          .then(function (r) { return downloadFromFetchResponse(r, 'ticket-' + tid); })
+          .catch(function (e2) { alert('خطا در خروجی بلیت: ' + e2.message); });
       } else if (delBtn) {
         if (!confirm('این بلیت حذف شود؟')) return;
         api('/api/admin/tickets?id=' + delBtn.getAttribute('data-del'), { method: 'DELETE' })
@@ -816,14 +874,8 @@
     document.getElementById('sample-ticket-btn').addEventListener('click', function () {
       var q = currentEventId ? ('?eventId=' + currentEventId) : '';
       fetch('/api/admin/tickets/sample' + q, { headers: { Authorization: 'Bearer ' + TOKEN } })
-        .then(function (r) { return r.blob(); })
-        .then(function (blob) {
-          var a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = 'ticket-sample.png';
-          a.click();
-          URL.revokeObjectURL(a.href);
-        });
+        .then(function (r) { return downloadFromFetchResponse(r, 'ticket-sample'); })
+        .catch(function (e2) { alert('خطا در بلیت نمونه: ' + e2.message); });
     });
     document.getElementById('export-tickets-zip').addEventListener('click', function () {
       var q = currentEventId ? ('?eventId=' + currentEventId) : '';
@@ -925,6 +977,15 @@
           if (o.status === 'rejected' && o.adminNote) {
             note = '<div class="order-card__note">' + escapeHtml(o.adminNote) + '</div>';
           }
+          var n = o.ticketCount != null ? o.ticketCount : (o.names ? o.names.length : 0);
+          var capBadge = n <= 1
+            ? '<span class="badge badge--capacity">تک‌نفره</span>'
+            : '<span class="badge badge--capacity">' + toFa(n) + ' نفره</span>';
+          var capLine = '<div class="order-card__meta">' + toFa(n) + ' بلیت — ' + o.names.map(escapeHtml).join('، ') + '</div>';
+          var issued = '';
+          if (o.status === 'approved' && o.issuedTicketCount != null) {
+            issued = ' · صادرشده: ' + toFa(o.issuedTicketCount) + ' بلیت';
+          }
           var actions = '';
           if (o.status === 'pending') {
             actions =
@@ -936,10 +997,12 @@
           return '<div class="order-card ' + (o.status === 'pending' ? 'is-pending' : '') + '" data-id="' + o.id + '">' +
             '<div class="order-card__head">' +
               '<div>' +
-                '<div class="order-card__names">' + o.names.map(escapeHtml).join('، ') + '</div>' +
+                '<div class="order-card__names">' + capBadge + ' ' + o.names.map(escapeHtml).join('، ') + '</div>' +
+                capLine +
                 '<div class="order-card__meta">' +
                   '<span class="serial">' + escapeHtml(o.phone) + '</span> · ثبت: ' + fmtDate(o.createdAt) +
                   (o.reviewedAt ? ' · بررسی: ' + fmtDate(o.reviewedAt) : '') +
+                  issued +
                 '</div>' +
               '</div>' +
               '<span class="badge ' + statusClass(o.status) + '">' + statusLabel(o.status) + '</span>' +
@@ -966,10 +1029,18 @@
       var rejectBtn = e.target.closest('[data-reject]');
       if (approveBtn) {
         var id = approveBtn.getAttribute('data-approve');
-        if (!confirm('تایید این سفارش و صدور بلیت‌ها؟')) return;
+        var ev = cachedEvents.find(function (e) { return Number(e.id) === Number(currentEventId); });
+        var warn = (!ev || !ev.eventAt)
+          ? 'تاریخ/ساعت رویداد خالی است؛ بلیت‌ها بدون تاریخ کامل صادر می‌شوند.\n\n'
+          : '';
+        if (!confirm(warn + 'تایید این سفارش و صدور بلیت‌ها؟')) return;
         approveBtn.disabled = true;
         api('/api/admin/orders/approve?id=' + id, { method: 'POST', headers: authHeaders() })
-          .then(function () { loadOrders(); loadTickets(); })
+          .then(function (res) {
+            var n = (res.tickets && res.tickets.length) || 0;
+            if (n) alert(toFa(n) + ' بلیت صادر شد.');
+            loadOrders(); loadTickets();
+          })
           .catch(function (e2) { alert('خطا: ' + e2.message); approveBtn.disabled = false; });
       } else if (rejectBtn) {
         var rid = rejectBtn.getAttribute('data-reject');

@@ -266,9 +266,17 @@ def admin_open_sales(event_id: int, db: Session = Depends(get_db), _: str = Depe
 
 
 @router.get("/tickets")
-def admin_tickets(eventId: int | None = Query(None), db: Session = Depends(get_db), _: str = Depends(require_admin)):
+def admin_tickets(
+    eventId: int | None = Query(None),
+    status: str = Query("active"),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
     eid = eventId or _default_event_id(db)
-    rows = db.scalars(select(Ticket).where(Ticket.event_id == eid).order_by(Ticket.id.desc())).all()
+    q = select(Ticket).where(Ticket.event_id == eid)
+    if status != "all":
+        q = q.where(Ticket.status == status)
+    rows = db.scalars(q.order_by(Ticket.id.desc())).all()
     return {
         "tickets": [
             {
@@ -487,11 +495,14 @@ def admin_orders(
         img_url = ""
         if receipt and receipt.file_path:
             img_url = f"/api/admin/receipts/{o.id}"
+        names = json.loads(o.names_json or "[]")
         orders.append(
             {
                 "id": o.id,
                 "phone": o.phone,
-                "names": json.loads(o.names_json or "[]"),
+                "names": names,
+                "ticketCount": len(names),
+                "issuedTicketCount": sum(1 for t in o.tickets if t.status == "active"),
                 "status": "pending" if o.status == "payment_submitted" else o.status,
                 "receiptText": receipt.text if receipt else "",
                 "receiptImageUrl": img_url,

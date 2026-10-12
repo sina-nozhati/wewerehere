@@ -6,7 +6,7 @@ import tempfile
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 os.environ["ADMIN_PASSWORD"] = "test-admin-pass"
@@ -248,6 +248,47 @@ def test_admin_sample_ticket(client: TestClient):
     r = client.get("/api/admin/tickets/sample", headers=headers)
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("image/")
+    if r.headers["content-type"].startswith("image/png"):
+        assert r.content[:8] == b"\x89PNG\r\n\x1a\n"
+    disp = r.headers.get("content-disposition", "")
+    assert ".png" in disp or ".svg" in disp
+
+
+def test_admin_tickets_default_active_hides_revoked(client: TestClient):
+    from datetime import timezone as tz
+
+    from app.db import get_db
+    from sqlalchemy.orm import Session
+
+    login = client.post("/api/admin/login", json={"password": "test-admin-pass"})
+    headers = {"Authorization": f"Bearer {login.json()['token']}"}
+    override = app.dependency_overrides.get(get_db)
+    gen = override()
+    db: Session = next(gen)
+    try:
+        t = db.get(Ticket, db.scalars(select(Ticket)).first().id)
+        t.status = "revoked"
+        t.revoked_at = datetime.now(tz.utc)
+        db.commit()
+        tid = t.id
+    finally:
+        try:
+            next(gen)
+        except StopIteration:
+            pass
+
+    active = client.get("/api/admin/tickets", headers=headers).json()["tickets"]
+    assert not any(x["id"] == tid for x in active)
+    all_rows = client.get("/api/admin/tickets?status=all", headers=headers).json()["tickets"]
+    assert any(x["id"] == tid and x["status"] == "revoked" for x in all_rows)
+
+
+def test_track_inline_svg_format(client: TestClient):
+    ticket = client.get("/api/orders/track?serial=4242").json()["tickets"][0]
+    r = client.get(f'{ticket["printUrl"]}?serial=4242&inline=true&format=svg')
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("image/svg")
+    assert "Vazirmatn" in r.text or "4242" in r.text
 
 
 def test_support_requires_auth(client: TestClient):

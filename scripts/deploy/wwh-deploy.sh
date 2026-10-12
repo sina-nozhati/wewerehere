@@ -111,6 +111,29 @@ check_python() {
   fi
 }
 
+install_apt_runtime_deps() {
+  if ! command -v apt-get >/dev/null 2>&1; then
+    log "apt-get not found; skip Cairo/Pango install"
+    return 0
+  fi
+  log "apt install Cairo/Pango/fontconfig (ticket PNG)"
+  run apt-get update -qq
+  run apt-get install -y -qq libcairo2 libpango-1.0-0 libgdk-pixbuf-2.0-0 fontconfig
+}
+
+install_ticket_font() {
+  local font_src="$APP_DIR/assets/fonts/Vazirmatn-Regular.ttf"
+  [[ -f "$font_src" ]] || die "missing ticket font: $font_src"
+  run mkdir -p "$APP_DIR/storage/fonts"
+  if command -v fc-cache >/dev/null 2>&1 && [[ "$(id -u)" -eq 0 ]]; then
+    local sys_font_dir="/usr/local/share/fonts/wwh"
+    run mkdir -p "$sys_font_dir"
+    run cp -f "$font_src" "$sys_font_dir/Vazirmatn-Regular.ttf"
+    run fc-cache -f "$sys_font_dir" >/dev/null 2>&1 || true
+    log "Vazirmatn registered with fontconfig ($sys_font_dir)"
+  fi
+}
+
 pip_install() {
   [[ -d "$APP_DIR" ]] || die "APP_DIR does not exist: $APP_DIR"
   local venv="$APP_DIR/.venv"
@@ -163,9 +186,11 @@ hint_systemd_unit() {
 cmd_install() {
   need_root_for install
   check_python
+  install_apt_runtime_deps
   run cd "$APP_DIR"
   pip_install
   ensure_data_dirs
+  install_ticket_font
   fix_permissions
   hint_systemd_unit
   log "install finished"
@@ -228,6 +253,70 @@ restart_service() {
   run systemctl restart "$SERVICE"
 }
 
+smoke_admin_ticket_png() {
+  local base="${HEALTH_URL%/api/health}"
+  local unit="/etc/systemd/system/${SERVICE}.service"
+  local pw=""
+  if [[ -f "$unit" ]]; then
+    pw="$(sed -n 's/^Environment=ADMIN_PASSWORD=//p' "$unit" | head -1)"
+  fi
+  if [[ -z "$pw" ]]; then
+    log "ticket PNG smoke skipped (no ADMIN_PASSWORD in $unit)"
+    return 0
+  fi
+  local py="$APP_DIR/.venv/bin/python"
+  if [[ ! -x "$py" ]]; then
+    log "ticket PNG smoke skipped (venv python missing)"
+    return 0
+  fi
+  log "smoke GET /api/admin/tickets/sample (expect PNG)"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    return 0
+  fi
+  if ! "$py" - "$base" "$pw" <<'PY'
+import json
+import sys
+import urllib.error
+import urllib.request
+
+base, pw = sys.argv[1], sys.argv[2]
+login = urllib.request.Request(
+    f"{base}/api/admin/login",
+    data=json.dumps({"password": pw}).encode(),
+    headers={"Content-Type": "application/json"},
+    method="POST",
+)
+try:
+    with urllib.request.urlopen(login, timeout=20) as r:
+        token = json.load(r)["token"]
+except urllib.error.HTTPError as e:
+    print(f"admin login failed: HTTP {e.code}", file=sys.stderr)
+    sys.exit(1)
+req = urllib.request.Request(
+    f"{base}/api/admin/tickets/sample",
+    headers={"Authorization": f"Bearer {token}"},
+)
+try:
+    with urllib.request.urlopen(req, timeout=45) as r:
+        ct = (r.headers.get("Content-Type") or "").lower()
+        head = r.read(8)
+except urllib.error.HTTPError as e:
+    print(f"sample ticket failed: HTTP {e.code}", file=sys.stderr)
+    sys.exit(1)
+if "image/png" not in ct:
+    print(f"unexpected content-type: {ct} (install libcairo2/libpango)", file=sys.stderr)
+    sys.exit(1)
+if head != b"\x89PNG\r\n\x1a\n":
+    print("sample response is not PNG magic bytes", file=sys.stderr)
+    sys.exit(1)
+PY
+  then
+    log "ticket PNG smoke failed"
+    return 1
+  fi
+  return 0
+}
+
 run_smoke_checks() {
   local base="${HEALTH_URL%/api/health}"
   log "smoke health $HEALTH_URL"
@@ -265,6 +354,7 @@ run_smoke_checks() {
       return 1
     fi
   done
+  smoke_admin_ticket_png || return 1
   log "smoke OK"
   return 0
 }
@@ -286,8 +376,10 @@ cmd_update() {
   do_backup
   do_git_pull
   check_python
+  install_apt_runtime_deps
   pip_install
   ensure_data_dirs
+  install_ticket_font
   do_migrate || true
   fix_permissions
   restart_service
@@ -321,6 +413,31 @@ cmd_status() {
   printf 'git=%s branch=%s\n' "$commit" "$GIT_BRANCH"
   printf 'data.sqlite=%s\n' "$dbsize"
   printf 'app_dir=%s\n' "$APP_DIR"
+  local font_path="$APP_DIR/assets/fonts/Vazirmatn-Regular.ttf"
+  if [[ -f "$font_path" ]]; then
+    printf 'vazirmatn_font=ok (%s)\n' "$font_path"
+  else
+    printf 'vazirmatn_font=MISSING\n'
+  fi
+  if command -v dpkg >/dev/null 2>&1; then
+    if dpkg -l libcairo2 2>/dev/null | grep -q '^ii'; then
+      printf 'libcairo2=installed\n'
+    else
+      printf 'libcairo2=missing (apt install libcairo2 libpango-1.0-0)\n'
+    fi
+  fi
+  local unit="/etc/systemd/system/${SERVICE}.service"
+  if [[ -f "$unit" ]]; then
+    if grep -q uvicorn "$unit"; then
+      printf 'runtime=uvicorn (FastAPI)\n'
+    elif grep -qi node "$unit"; then
+      printf 'runtime=node (legacy — switch to wewerehere.service.example)\n'
+    fi
+    grep -E '^WorkingDirectory=' "$unit" 2>/dev/null || true
+    grep -E '^ExecStart=' "$unit" 2>/dev/null || true
+  else
+    printf 'systemd_unit=missing\n'
+  fi
 }
 
 main() {

@@ -208,4 +208,6 @@ def test_admin_ticket_and_orders_scope(client: TestClient):
     )
     assert order.status_code in (200, 201)
     orders = client.get(f"/api/admin/orders?eventId={ev_id}", headers=headers).json()
-    assert any(o["phone"] == "09122222222" for o in orders["orders"])
+    row = next(o for o in orders["orders"] if o["phone"] == "09122222222")
+    assert row["ticketCount"] == 1
+    assert row["issuedTicketCount"] == 0

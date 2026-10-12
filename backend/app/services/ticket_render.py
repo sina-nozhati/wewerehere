@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import base64
 import logging
+import os
 import re
+from contextlib import contextmanager
 from io import BytesIO
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -24,27 +26,74 @@ REQUIRED_TICKET_FIELDS = frozenset(
 )
 
 _VAZIRMATN_TTF = ROOT / "assets" / "fonts" / "Vazirmatn-Regular.ttf"
+_FONTCONFIG_PATH = ROOT / "storage" / "fonts" / "fonts.conf"
 _FONT_FACE_CSS: str | None = None
 
 
+class TicketFontError(FileNotFoundError):
+    """Persian ticket font missing on server."""
+
+
+def vazirmatn_font_path() -> Path:
+    return _VAZIRMATN_TTF
+
+
+def ensure_vazirmatn_font() -> Path:
+    if not _VAZIRMATN_TTF.is_file():
+        raise TicketFontError(
+            f"Persian ticket font missing: {_VAZIRMATN_TTF} (run wwh-deploy install)"
+        )
+    return _VAZIRMATN_TTF
+
+
 def _embedded_vazirmatn_css() -> str:
-    """@font-face for CairoSVG/PNG export (no system webfonts)."""
+    """@font-face for CairoSVG/PNG export (file URL + data URI for browsers)."""
     global _FONT_FACE_CSS
     if _FONT_FACE_CSS is not None:
         return _FONT_FACE_CSS
     if not _VAZIRMATN_TTF.is_file():
+        logger.error("ticket font missing at %s", _VAZIRMATN_TTF)
         _FONT_FACE_CSS = ""
         return _FONT_FACE_CSS
+    file_url = _VAZIRMATN_TTF.resolve().as_uri()
     b64 = base64.b64encode(_VAZIRMATN_TTF.read_bytes()).decode("ascii")
     _FONT_FACE_CSS = (
         "@font-face{font-family:'Vazirmatn';"
-        f"src:url('data:font/ttf;base64,{b64}') format('truetype');"
+        f"src:url('{file_url}') format('truetype'),"
+        f"url('data:font/ttf;base64,{b64}') format('truetype');"
         "font-weight:100 900;font-style:normal;}"
     )
     return _FONT_FACE_CSS
 
 
+@contextmanager
+def _cairo_fontconfig_scope():
+    """Point Fontconfig at bundled Vazirmatn for Pango/Cairo PNG export."""
+    ensure_vazirmatn_font()
+    font_dir = _VAZIRMATN_TTF.parent.resolve()
+    _FONTCONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not _FONTCONFIG_PATH.is_file():
+        _FONTCONFIG_PATH.write_text(
+            '<?xml version="1.0"?>\n'
+            '<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n'
+            "<fontconfig>\n"
+            f"  <dir>{font_dir}</dir>\n"
+            "</fontconfig>\n",
+            encoding="utf-8",
+        )
+    prev = os.environ.get("FONTCONFIG_FILE")
+    os.environ["FONTCONFIG_FILE"] = str(_FONTCONFIG_PATH.resolve())
+    try:
+        yield
+    finally:
+        if prev is None:
+            os.environ.pop("FONTCONFIG_FILE", None)
+        else:
+            os.environ["FONTCONFIG_FILE"] = prev
+
+
 def _inject_persian_font(root: ET.Element) -> None:
+    ensure_vazirmatn_font()
     css = _embedded_vazirmatn_css()
     if not css:
         return
@@ -192,11 +241,12 @@ def render_ticket_png(svg_text: str, scale: float = 4.0) -> bytes:
         parts = vb.group(1).split()
         if len(parts) >= 4:
             w, h = float(parts[2]), float(parts[3])
-    return cairosvg.svg2png(
-        bytestring=svg_text.encode("utf-8"),
-        output_width=int(w * scale),
-        output_height=int(h * scale),
-    )
+    with _cairo_fontconfig_scope():
+        return cairosvg.svg2png(
+            bytestring=svg_text.encode("utf-8"),
+            output_width=int(w * scale),
+            output_height=int(h * scale),
+        )
 
 
 def _svg_viewbox_size(svg_text: str) -> tuple[float, float]:
@@ -255,6 +305,7 @@ def render_ticket_bytes(
     fmt = (output_format or "png").lower().strip()
     if fmt in ("png", "pdf") and prefer_png:
         try:
+            ensure_vazirmatn_font()
             png = render_ticket_png(svg)
             if fmt == "pdf":
                 w, h = _svg_viewbox_size(svg)

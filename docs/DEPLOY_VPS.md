@@ -9,8 +9,9 @@
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-venv python3-pip git nginx curl
-# در صورت خطای CairoSVG هنگام PNG بلیت:
-sudo apt install -y libcairo2 libpango-1.0-0 libgdk-pixbuf-2.0-0
+# برای PNG بلیت با متن فارسی (Cairo/Pango + فونت):
+sudo apt install -y libcairo2 libpango-1.0-0 libgdk-pixbuf-2.0-0 fontconfig
+# `wwh-deploy install` همین پکیج‌ها و ثبت Vazirmatn را انجام می‌دهد.
 ```
 
 کلون روی سرور:
@@ -111,7 +112,8 @@ sudo wwh-deploy smoke
 | smoke health شکست | سرویس down | `sudo systemctl status wewerehere`، `journalctl -u wewerehere -n 80` |
 | health از localhost OK، دامنه نه | nginx/ssl | `nginx -t`، certbot، `proxy_pass` |
 | آپلود رسید خطا | دسترسی فایل | `chown www-data` روی `storage/` و `ReadWritePaths` در unit |
-| PNG بلیت خطا | Cairo | `apt install libcairo2 libpango-1.0-0` |
+| PNG بلیت خطا یا مربع فارسی | Cairo / فونت | `sudo wwh-deploy install`؛ `wwh-deploy status` (font + libcairo2 + uvicorn) |
+| بلیت بدون تاریخ | `event_at` خالی | در ادمین «تاریخ و ساعت اجرا» را پر کنید قبل از تأیید سفارش |
 
 بعد از هر `update` ناموفق، اسکریپت آخرین خطوط journal را نشان می‌دهد.
 
@@ -122,7 +124,8 @@ sudo wwh-deploy smoke
 1. `curl -s http://127.0.0.1:5173/api/health` → `"ok":true`
 2. باز کردن `/track` در مرورگر
 3. ورود `/admin` با رمز systemd
-4. دانلود/نمایش یک بلیت (SVG یا PNG)
+4. `sudo wwh-deploy smoke` — شامل health و در صورت تنظیم `ADMIN_PASSWORD` در unit، نمونه PNG
+5. دانلود بلیت نمونه از ادمین (باید PNG با متن فارسی باشد)
 
 ---
 
