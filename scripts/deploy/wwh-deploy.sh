@@ -116,9 +116,25 @@ install_apt_runtime_deps() {
     log "apt-get not found; skip Cairo/Pango install"
     return 0
   fi
+  local pkgs=(libcairo2 libpango-1.0-0 libgdk-pixbuf-2.0-0 fontconfig)
+  local p need=0
+  for p in "${pkgs[@]}"; do
+    if ! dpkg -l "$p" 2>/dev/null | grep -q '^ii'; then
+      need=1
+      break
+    fi
+  done
+  if [[ "$need" -eq 0 ]]; then
+    log "Cairo/Pango/fontconfig already installed"
+    return 0
+  fi
   log "apt install Cairo/Pango/fontconfig (ticket PNG)"
-  run apt-get update -qq
-  run apt-get install -y -qq libcairo2 libpango-1.0-0 libgdk-pixbuf-2.0-0 fontconfig
+  if ! run apt-get update -qq; then
+    log "WARN: apt-get update failed (often a broken third-party source, e.g. Docker 403). Trying install anyway."
+  fi
+  if ! run apt-get install -y -qq "${pkgs[@]}"; then
+    die "apt install failed for: ${pkgs[*]}. Fix broken apt repos (docs/DEPLOY_VPS.md) then: apt-get install -y ${pkgs[*]}"
+  fi
 }
 
 install_ticket_font() {
