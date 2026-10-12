@@ -79,7 +79,6 @@
         '<li class="setlist__row setlist__row--empty"><span class="setlist__title">ست‌لیست به‌زودی اعلام می‌شود.</span></li>';
       if (countEl) countEl.textContent = '';
       if (timeEl) timeEl.textContent = '';
-      if (subtitle) subtitle.textContent = 'ترتیب قطعات از پنل مدیریت تنظیم می‌شود.';
       return;
     }
 

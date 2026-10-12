@@ -193,9 +193,7 @@
     }
 
     var footMount = ensureMount('wwh-footer-mount', 'last');
-    if (!footMount.querySelector('.wwh-footer')) {
-      footMount.innerHTML = footerHtml();
-    }
+    footMount.innerHTML = footerHtml();
 
     applyBodyClass();
     bindMobileNav();
