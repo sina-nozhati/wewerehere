@@ -295,6 +295,24 @@ restart_service() {
   run systemctl restart "$SERVICE"
 }
 
+wait_for_health() {
+  local url="$HEALTH_URL"
+  local attempt=1
+  local max=45
+  local health=""
+  log "waiting for health (up to ${max}s) $url"
+  while [[ "$attempt" -le "$max" ]]; do
+    health="$(curl -fsS "$url" 2>/dev/null || true)"
+    if [[ "$health" == *'"ok"'* && "$health" == *'true'* ]]; then
+      return 0
+    fi
+    sleep 1
+    attempt=$((attempt + 1))
+  done
+  log "health never became ready; last response: ${health:-<empty>}"
+  return 1
+}
+
 smoke_admin_ticket_png() {
   local base="${HEALTH_URL%/api/health}"
   local unit="/etc/systemd/system/${SERVICE}.service"
@@ -364,13 +382,9 @@ run_smoke_checks() {
   log "smoke health $HEALTH_URL"
   if [[ "$DRY_RUN" -eq 1 ]]; then
     run curl -fsS "$HEALTH_URL"
-  else
-    local health
-    health="$(curl -fsS "$HEALTH_URL" 2>/dev/null || true)"
-    if [[ "$health" != *'"ok":true'* && "$health" != *'"ok": true'* ]]; then
-      log "health check failed: $HEALTH_URL"
-      return 1
-    fi
+  elif ! wait_for_health; then
+    log "health check failed: $HEALTH_URL"
+    return 1
   fi
 
   local paths=(
@@ -428,8 +442,10 @@ cmd_update() {
   restart_service
   if ! run_smoke_checks; then
     smoke_failure_hint
+    ensure_wwh_deploy_cli
     exit 1
   fi
+  ensure_wwh_deploy_cli
   log "update finished"
 }
 
