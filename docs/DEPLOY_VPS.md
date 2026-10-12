@@ -55,6 +55,14 @@ sudo ln -sf /opt/wewerehere/scripts/deploy/wwh-deploy.sh /usr/local/bin/wwh-depl
 sudo chmod +x /opt/wewerehere/scripts/deploy/wwh-deploy.sh
 ```
 
+اگر `wwh-deploy: command not found` دیدید، یا لینک بالا را بزنید یا مستقیم:
+
+```bash
+sudo bash /opt/wewerehere/scripts/deploy/wwh-deploy.sh update
+```
+
+(`install` / `update` از نسخهٔ جدید اسکریپت خودکار `/usr/local/bin/wwh-deploy` را می‌سازند.)
+
 واحد systemd (رمز ادمین را عوض کنید):
 
 ```bash

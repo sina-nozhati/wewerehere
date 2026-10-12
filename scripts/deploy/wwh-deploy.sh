@@ -199,8 +199,29 @@ hint_systemd_unit() {
   fi
 }
 
+ensure_wwh_deploy_cli() {
+  local script="$APP_DIR/scripts/deploy/wwh-deploy.sh"
+  local link="/usr/local/bin/wwh-deploy"
+  [[ -f "$script" ]] || return 0
+  run chmod +x "$script"
+  if [[ "$DRY_RUN" -eq 1 ]] || [[ "$(id -u)" -ne 0 ]]; then
+    return 0
+  fi
+  local target
+  target="$(readlink -f "$script" 2>/dev/null || echo "$script")"
+  local current=""
+  if [[ -L "$link" ]] || [[ -e "$link" ]]; then
+    current="$(readlink -f "$link" 2>/dev/null || true)"
+  fi
+  if [[ "$current" != "$target" ]]; then
+    log "link $link -> $script"
+    run ln -sf "$script" "$link"
+  fi
+}
+
 cmd_install() {
   need_root_for install
+  ensure_wwh_deploy_cli
   check_python
   install_apt_runtime_deps
   run cd "$APP_DIR"
@@ -394,6 +415,7 @@ smoke_failure_hint() {
 
 cmd_update() {
   need_root_for update
+  ensure_wwh_deploy_cli
   do_backup
   do_git_pull
   check_python
