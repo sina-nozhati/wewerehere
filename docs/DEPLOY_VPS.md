@@ -109,6 +109,7 @@ sudo wwh-deploy smoke
 | علامت | احتمال | اقدام |
 |--------|--------|--------|
 | `git pull` شکست | شبکه / احراز هویت | SSH key، `GIT_SSH_COMMAND`، `known_hosts` |
+| `would be overwritten by merge` روی `wwh-deploy.sh` | ویرایش دستی اسکریپت روی سرور | `sudo git -C /opt/wewerehere checkout -- scripts/deploy/wwh-deploy.sh` سپس `sudo wwh-deploy update` (از نسخهٔ جدید اسکریپت خودکار هم discard می‌کند) |
 | smoke health شکست | سرویس down | `sudo systemctl status wewerehere`، `journalctl -u wewerehere -n 80` |
 | health از localhost OK، دامنه نه | nginx/ssl | `nginx -t`، certbot، `proxy_pass` |
 | آپلود رسید خطا | دسترسی فایل | `chown www-data` روی `storage/` و `ReadWritePaths` در unit |

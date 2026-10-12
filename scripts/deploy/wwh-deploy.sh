@@ -230,6 +230,11 @@ do_git_pull() {
     return 0
   fi
   [[ -d "$APP_DIR/.git" ]] || die "not a git repo: $APP_DIR"
+  local deploy_script="scripts/deploy/wwh-deploy.sh"
+  if ! git -C "$APP_DIR" diff --quiet HEAD -- "$deploy_script" 2>/dev/null; then
+    log "discarding local edits to $deploy_script (use /etc/wewerehere/deploy.conf for overrides)"
+    run git -C "$APP_DIR" checkout -- "$deploy_script"
+  fi
   log "git fetch && pull $GIT_BRANCH"
   run git -C "$APP_DIR" fetch origin
   run git -C "$APP_DIR" checkout "$GIT_BRANCH"
