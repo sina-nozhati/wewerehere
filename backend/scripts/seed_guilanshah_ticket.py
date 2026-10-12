@@ -60,10 +60,10 @@ def main() -> None:
         ticket.holder_name,
         ticket.public_code,
         ticket.display_number,
-        prefer_png=False,
         event_at=event_at,
         venue=ev.venue or "",
         city=ev.city or "",
+        output_format="png",
     )
     png_path = OUT.with_suffix(f".{ext}")
     png_path.write_bytes(body)

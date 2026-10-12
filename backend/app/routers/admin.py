@@ -18,7 +18,7 @@ from app.services.events import FEATURED_KEY, event_at_iso, get_featured_event_i
 from app.services.orders import approve_order, reject_order
 from app.services.phone import normalize_phone, valid_phone
 from app.services.event_display import ticket_venue_from_event
-from app.services.ticket_render import render_ticket_bytes
+from app.services.ticket_render import TicketRenderError, render_ticket_bytes
 from app.services.support_contacts import contact_display_name
 from app.services.tickets import group_for_code, issue_ticket, unique_public_code
 
@@ -372,15 +372,27 @@ def _ticket_export_response(t: Ticket, db: Session, sample: bool = False):
     if t.status != "active" and not sample:
         raise HTTPException(409, {"error": "ticket not printable"})
     ev = db.get(Event, t.event_id)
-    body, media_type, ext = render_ticket_bytes(
-        t.group_name,
-        t.holder_name,
-        t.public_code,
-        t.display_number,
-        event_at=ev.event_at if ev else None,
-        venue=ticket_venue_from_event(ev),
-        city=ev.city if ev else "",
-    )
+    try:
+        body, media_type, ext = render_ticket_bytes(
+            t.group_name,
+            t.holder_name,
+            t.public_code,
+            t.display_number,
+            event_at=ev.event_at if ev else None,
+            venue=ticket_venue_from_event(ev),
+            city=ev.city if ev else "",
+            output_format="png",
+            allow_svg_export=False,
+        )
+    except TicketRenderError as e:
+        raise HTTPException(
+            503,
+            {
+                "error": "ticket_png_unavailable",
+                "message": "PNG export failed; run wwh-deploy install (Cairo + Vazirmatn)",
+                "detail": str(e),
+            },
+        )
     label = "sample" if sample else t.public_code
     return Response(
         content=body,

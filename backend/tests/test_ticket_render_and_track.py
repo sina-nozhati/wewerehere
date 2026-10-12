@@ -27,6 +27,14 @@ from app.services.tickets import issue_ticket
 from datetime import datetime, timezone
 
 
+def _cairo_png_export_available() -> bool:
+    try:
+        import cairosvg  # noqa: F401
+    except OSError:
+        return False
+    return True
+
+
 @pytest.fixture()
 def client():
     fd, path = tempfile.mkstemp(suffix=".sqlite")
@@ -224,14 +232,13 @@ def test_track_accepts_persian_serial_digits(client: TestClient):
     assert r.json()["tickets"][0]["serial"] == "4242"
 
 
+@pytest.mark.skipif(not _cairo_png_export_available(), reason="Cairo library not available")
 def test_ticket_can_open_inline_with_current_template(client: TestClient):
     ticket = client.get("/api/orders/track?serial=4242").json()["tickets"][0]
     r = client.get(f'{ticket["printUrl"]}?serial=4242&inline=true')
     assert r.status_code == 200
     assert r.headers["content-disposition"].startswith("inline;")
-    if r.headers["content-type"].startswith("image/svg"):
-        assert "Guest" in r.text
-        assert "Live in بندر انزلی" in r.text
+    assert r.headers["content-type"].startswith("image/png")
 
 
 def test_host_on_admin_events(client: TestClient):
@@ -242,16 +249,16 @@ def test_host_on_admin_events(client: TestClient):
     assert ev["city"] == "بندر انزلی"
 
 
+@pytest.mark.skipif(not _cairo_png_export_available(), reason="Cairo library not available")
 def test_admin_sample_ticket(client: TestClient):
     login = client.post("/api/admin/login", json={"password": "test-admin-pass"})
     headers = {"Authorization": f"Bearer {login.json()['token']}"}
     r = client.get("/api/admin/tickets/sample", headers=headers)
     assert r.status_code == 200
-    assert r.headers["content-type"].startswith("image/")
-    if r.headers["content-type"].startswith("image/png"):
-        assert r.content[:8] == b"\x89PNG\r\n\x1a\n"
+    assert r.headers["content-type"].startswith("image/png")
+    assert r.content[:8] == b"\x89PNG\r\n\x1a\n"
     disp = r.headers.get("content-disposition", "")
-    assert ".png" in disp or ".svg" in disp
+    assert ".png" in disp
 
 
 def test_admin_tickets_default_active_hides_revoked(client: TestClient):
@@ -283,12 +290,13 @@ def test_admin_tickets_default_active_hides_revoked(client: TestClient):
     assert any(x["id"] == tid and x["status"] == "revoked" for x in all_rows)
 
 
-def test_track_inline_svg_format(client: TestClient):
+def test_download_rejects_svg_format(client: TestClient):
     ticket = client.get("/api/orders/track?serial=4242").json()["tickets"][0]
-    r = client.get(f'{ticket["printUrl"]}?serial=4242&inline=true&format=svg')
-    assert r.status_code == 200
-    assert r.headers["content-type"].startswith("image/svg")
-    assert "Vazirmatn" in r.text or "4242" in r.text
+    r = client.get(f'{ticket["printUrl"]}?serial=4242&format=svg')
+    assert r.status_code == 400
+    body = r.json()
+    err = body.get("error") or (body.get("detail") or {}).get("error")
+    assert err == "svg_not_available"
 
 
 def test_support_requires_auth(client: TestClient):
@@ -349,14 +357,6 @@ def test_name_stub_visible_in_filled_svg():
     assert "display:none" not in stub_slice
     assert "سینا نزهتی" in svg
     assert svg.count("سینا نزهتی") == 2
-
-
-def _cairo_png_export_available() -> bool:
-    try:
-        import cairosvg  # noqa: F401
-    except OSError:
-        return False
-    return True
 
 
 @pytest.mark.skipif(not _cairo_png_export_available(), reason="Cairo library not available")

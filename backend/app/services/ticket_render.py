@@ -17,6 +17,7 @@ from app.config import ROOT
 from app.services.jalali_schedule import format_hero_schedule, ticket_city_line, ticket_locale
 
 SVG_NS = "http://www.w3.org/2000/svg"
+XML_NS = "http://www.w3.org/XML/1998/namespace"
 ET.register_namespace("", SVG_NS)
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,10 @@ _FONT_FACE_CSS: str | None = None
 
 class TicketFontError(FileNotFoundError):
     """Persian ticket font missing on server."""
+
+
+class TicketRenderError(RuntimeError):
+    """Server-side PNG ticket export failed."""
 
 
 def vazirmatn_font_path() -> Path:
@@ -149,16 +154,28 @@ def _value_for(
 def _apply_field_direction(el: ET.Element, field: str, value: str, locale: str) -> None:
     if field in ("name", "name_stub"):
         el.set("direction", "rtl")
+        el.set(f"{{{XML_NS}}}lang", "fa")
+        el.set("unicode-bidi", "embed")
         return
     if field == "time":
         el.set("direction", "ltr")
         el.set("unicode-bidi", "embed")
         return
     if field == "date":
-        el.set("direction", "rtl" if locale == "fa" else "ltr")
+        if locale == "fa":
+            el.set("direction", "rtl")
+            el.set(f"{{{XML_NS}}}lang", "fa")
+            el.set("unicode-bidi", "embed")
+        else:
+            el.set("direction", "ltr")
         return
     if field == "venue":
-        el.set("direction", "ltr" if ticket_locale(value, "") == "en" else "rtl")
+        if ticket_locale(value, "") == "en":
+            el.set("direction", "ltr")
+        else:
+            el.set("direction", "rtl")
+            el.set(f"{{{XML_NS}}}lang", "fa")
+            el.set("unicode-bidi", "embed")
 
 
 def normalize_ticket_svg_xml(xml_str: str) -> str:
@@ -291,8 +308,9 @@ def render_ticket_bytes(
     venue: str = "",
     city: str = "",
     output_format: str = "png",
+    allow_svg_export: bool = False,
 ) -> tuple[bytes, str, str]:
-    """Returns (body, media_type, filename_ext). output_format: png | pdf | svg."""
+    """Returns (body, media_type, filename_ext). User-facing exports must be PNG (or PDF)."""
     svg = fill_ticket_svg(
         group,
         holder_name,
@@ -303,14 +321,23 @@ def render_ticket_bytes(
         city=city,
     )
     fmt = (output_format or "png").lower().strip()
-    if fmt in ("png", "pdf") and prefer_png:
-        try:
-            ensure_vazirmatn_font()
-            png = render_ticket_png(svg)
-            if fmt == "pdf":
-                w, h = _svg_viewbox_size(svg)
-                return render_ticket_pdf_from_png(png, w, h), "application/pdf", "pdf"
-            return png, "image/png", "png"
-        except Exception as exc:
-            logger.warning("ticket PNG export failed, falling back to SVG: %s", exc)
-    return svg.encode("utf-8"), "image/svg+xml", "svg"
+    if fmt == "svg":
+        if not allow_svg_export:
+            raise TicketRenderError("SVG export is disabled for user-facing tickets")
+        return svg.encode("utf-8"), "image/svg+xml", "svg"
+    if fmt not in ("png", "pdf"):
+        raise TicketRenderError(f"unsupported ticket format: {fmt}")
+    if not prefer_png:
+        raise TicketRenderError("PNG export required")
+    try:
+        ensure_vazirmatn_font()
+        png = render_ticket_png(svg)
+    except TicketFontError:
+        raise
+    except Exception as exc:
+        logger.exception("ticket PNG export failed")
+        raise TicketRenderError(str(exc)) from exc
+    if fmt == "pdf":
+        w, h = _svg_viewbox_size(svg)
+        return render_ticket_pdf_from_png(png, w, h), "application/pdf", "pdf"
+    return png, "image/png", "png"

@@ -647,31 +647,27 @@
       var q = WwhPhone.isCompleteIranMobile(phone)
         ? ('phone=' + encodeURIComponent(phone))
         : ('serial=' + encodeURIComponent(serial));
-      return dl + '?' + q + '&inline=true&format=svg';
+      return dl + '?' + q + '&inline=true&format=png';
     }
 
     function fetchTicketInlineBlob(dl, serial) {
       if (!dl) return Promise.reject(new Error('no print url'));
-      var url = ticketInlineApiUrl(dl, serial);
-      return fetch(url).then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
+      return fetch(ticketInlineApiUrl(dl, serial)).then(function (r) {
+        if (!r.ok) {
+          return r.text().then(function (txt) {
+            var msg = txt;
+            try {
+              var j = JSON.parse(txt);
+              msg = (j && (j.message || j.detail || j.error)) || txt;
+            } catch (e) { /* ignore */ }
+            throw new Error(msg || ('HTTP ' + r.status));
+          });
+        }
         var ct = (r.headers.get('Content-Type') || '').toLowerCase();
-        return r.blob().then(function (blob) {
-          if (ct.indexOf('svg') >= 0 || (blob.type || '').toLowerCase().indexOf('svg') >= 0) {
-            return blob;
-          }
-          if (ct.indexOf('png') >= 0) {
-            return blob;
-          }
-          return blob;
-        });
-      }).catch(function (err) {
-        var pngUrl = url.replace(/format=svg/, 'format=png');
-        if (pngUrl === url) return Promise.reject(err);
-        return fetch(pngUrl).then(function (r) {
-          if (!r.ok) throw err;
-          return r.blob();
-        });
+        if (ct.indexOf('image/png') < 0) {
+          throw new Error('سرور PNG برنگرداند؛ Cairo/Vazirmatn را روی سرور نصب کنید.');
+        }
+        return r.blob();
       });
     }
 
@@ -910,21 +906,15 @@
           setTimeout(function () { URL.revokeObjectURL(viewUrl); }, 60000);
           return;
         }
-        if (res.ct.indexOf('image/png') >= 0 || res.ct.indexOf('application/pdf') >= 0) {
-          var ext = res.ct.indexOf('pdf') >= 0 ? 'pdf' : 'png';
-          triggerBlobDownload(res.blob, 'ticket-' + serial + '.' + ext);
+        if (res.ct.indexOf('image/png') >= 0) {
+          triggerBlobDownload(res.blob, 'ticket-' + serial + '.png');
           return;
         }
-        return res.blob.text().then(function (svgText) {
-          var parser = new DOMParser();
-          var doc = parser.parseFromString(svgText, 'image/svg+xml');
-          var svgEl = doc.documentElement;
-          return svgToJpegDataUrl(svgEl, 4).then(function (dataUrl) {
-            return fetch(dataUrl).then(function (r) { return r.blob(); }).then(function (blob) {
-              triggerBlobDownload(blob, 'ticket-' + serial + '.jpg');
-            });
-          });
-        });
+        if (res.ct.indexOf('application/pdf') >= 0) {
+          triggerBlobDownload(res.blob, 'ticket-' + serial + '.pdf');
+          return;
+        }
+        throw new Error('فقط PNG از سرور پشتیبانی می‌شود؛ خروجی SVG غیرفعال است.');
       });
     }
 

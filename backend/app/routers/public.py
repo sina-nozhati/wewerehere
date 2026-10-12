@@ -287,19 +287,34 @@ def download_ticket_png(
         raise HTTPException(403, "forbidden")
     ev = db.get(Event, t.event_id)
     out_fmt = (format or "png").lower().strip()
-    if out_fmt not in ("png", "pdf", "svg"):
+    if out_fmt == "svg":
+        raise HTTPException(400, {"error": "svg_not_available", "message": "Only PNG download is supported"})
+    if out_fmt not in ("png", "pdf"):
         raise HTTPException(400, {"error": "invalid format"})
-    body, media_type, ext = render_ticket_bytes(
-        t.group_name,
-        t.holder_name,
-        t.public_code,
-        t.display_number,
-        event_at=ev.event_at if ev else None,
-        venue=ticket_venue_from_event(ev),
-        city=ev.city if ev else "",
-        output_format=out_fmt,
-        prefer_png=out_fmt != "svg",
-    )
+    from app.services.ticket_render import TicketRenderError
+
+    try:
+        body, media_type, ext = render_ticket_bytes(
+            t.group_name,
+            t.holder_name,
+            t.public_code,
+            t.display_number,
+            event_at=ev.event_at if ev else None,
+            venue=ticket_venue_from_event(ev),
+            city=ev.city if ev else "",
+            output_format=out_fmt,
+            prefer_png=True,
+            allow_svg_export=False,
+        )
+    except TicketRenderError as e:
+        raise HTTPException(
+            503,
+            {
+                "error": "ticket_png_unavailable",
+                "message": "PNG export failed; install Cairo/Pango and Vazirmatn on the server",
+                "detail": str(e),
+            },
+        )
     return Response(
         content=body,
         media_type=media_type,
