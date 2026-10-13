@@ -1,17 +1,29 @@
 /**
  * Hero stage spotlight — armed under loader; visible sequence starts after loader is gone.
+ *
+ * Soft scroll-lock while the sequence runs so eager mobile scroll doesn't break the show,
+ * with tap-to-skip on the overlay (user freedom). Targets remeasure live; unlock + cue after.
  */
 (function () {
   var TRAVEL_MS = 820;
   var TITLE_HOLD_MS = 1350;
   var TITLE_HOLD_LITE_MS = 1000;
   var TITLE_HOLD_REDUCED_MS = 480;
-
   var baseSpot = { x: 0, y: 0, r: 140 };
   var wobbleOn = false;
   var wobbleRaf = 0;
   var wobbleSeed = Math.random() * 2000;
   var wobbleDim = null;
+
+  var session = {
+    active: false,
+    aborted: false,
+    hero: null,
+    dim: null,
+    reduceMotion: false,
+    scrollLocked: false,
+    skipBound: false,
+  };
 
   var EASE = function (t) {
     return 1 - Math.pow(1 - t, 3);
@@ -19,11 +31,24 @@
 
   function wait(ms) {
     return new Promise(function (resolve) {
-      setTimeout(resolve, ms);
+      var t0 = performance.now();
+      function tick(now) {
+        if (session.aborted) {
+          resolve();
+          return;
+        }
+        if (now - t0 >= ms) {
+          resolve();
+          return;
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
     });
   }
 
   function measureEl(hero, el, padX, padY) {
+    if (!el) return null;
     var er = el.getBoundingClientRect();
     if (!er.width && !er.height) return null;
     var px = padX != null ? padX : 40;
@@ -114,6 +139,7 @@
   }
 
   function applySpot(dim, spot) {
+    if (!spot) return;
     baseSpot.x = spot.x;
     baseSpot.y = spot.y;
     baseSpot.r = spot.r;
@@ -141,25 +167,161 @@
     }
   }
 
-  function tween(dim, from, to, ms, done) {
-    if (ms <= 0) {
-      applySpot(dim, to);
-      if (done) done();
-      return;
+  function preventScrollEvent(e) {
+    if (!session.scrollLocked) return;
+    e.preventDefault();
+  }
+
+  function lockScroll() {
+    if (session.scrollLocked) return;
+    session.scrollLocked = true;
+    document.documentElement.classList.add('wwh-spotlight-scroll-lock');
+    window.scrollTo(0, 0);
+    window.addEventListener('wheel', preventScrollEvent, { passive: false });
+    window.addEventListener('touchmove', preventScrollEvent, { passive: false });
+  }
+
+  function unlockScroll() {
+    if (!session.scrollLocked) return;
+    session.scrollLocked = false;
+    document.documentElement.classList.remove('wwh-spotlight-scroll-lock');
+    window.removeEventListener('wheel', preventScrollEvent);
+    window.removeEventListener('touchmove', preventScrollEvent);
+  }
+
+  function bindSkipTap(dim) {
+    if (!dim || session.skipBound) return;
+    session.skipBound = true;
+    dim.style.cursor = 'pointer';
+    dim.setAttribute('role', 'button');
+    dim.setAttribute('tabindex', '0');
+    dim.setAttribute('aria-label', 'رد کردن معرفی');
+    function skip() {
+      if (!session.active || session.aborted) return;
+      session.aborted = true;
+      finishSpotlight(true);
     }
-    var t0 = performance.now();
-    function frame(now) {
-      var t = Math.min(1, (now - t0) / ms);
-      var e = EASE(t);
-      applySpot(dim, {
-        x: from.x + (to.x - from.x) * e,
-        y: from.y + (to.y - from.y) * e,
-        r: from.r + (to.r - from.r) * e,
-      });
-      if (t < 1) requestAnimationFrame(frame);
-      else if (done) done();
+    dim.addEventListener('click', skip);
+    dim.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+        e.preventDefault();
+        skip();
+      }
+    });
+  }
+
+  function showScrollCue() {
+    if (document.querySelector('.wwh-scroll-cue')) return;
+    var cue = document.createElement('p');
+    cue.className = 'wwh-scroll-cue';
+    cue.setAttribute('aria-hidden', 'true');
+    cue.textContent = 'اسکرول کن';
+    document.body.appendChild(cue);
+    requestAnimationFrame(function () {
+      cue.classList.add('is-visible');
+    });
+    window.setTimeout(function () {
+      cue.classList.remove('is-visible');
+      window.setTimeout(function () {
+        if (cue.parentNode) cue.parentNode.removeChild(cue);
+      }, 400);
+    }, 2400);
+  }
+
+  function finishSpotlight(instant) {
+    var dim = session.dim;
+    unlockScroll();
+    session.active = false;
+    stopHandheld();
+    if (dim) {
+      dim.removeAttribute('role');
+      dim.removeAttribute('tabindex');
+      dim.removeAttribute('aria-label');
+      dim.style.cursor = '';
+      dim.classList.remove('is-active');
     }
-    requestAnimationFrame(frame);
+    if (!dim) {
+      document.documentElement.classList.remove('wwh-spotlight-active');
+      showScrollCue();
+      return Promise.resolve();
+    }
+    if (instant) {
+      dim.classList.remove('is-exit');
+      dim.classList.add('is-done');
+      dim.setAttribute('hidden', '');
+      document.documentElement.classList.remove('wwh-spotlight-active');
+      showScrollCue();
+      return Promise.resolve();
+    }
+    dim.classList.add('is-exit');
+    return wait(session.reduceMotion ? 450 : 700).then(function () {
+      dim.classList.remove('is-exit');
+      dim.classList.add('is-done');
+      dim.setAttribute('hidden', '');
+      document.documentElement.classList.remove('wwh-spotlight-active');
+      showScrollCue();
+    });
+  }
+
+  /** Tween while remeasuring the destination each frame (survives small layout shifts). */
+  function tweenToIndex(hero, dim, toIdx, ms) {
+    return new Promise(function (resolve) {
+      if (session.aborted) {
+        resolve();
+        return;
+      }
+      var start = {
+        x: baseSpot.x,
+        y: baseSpot.y,
+        r: baseSpot.r,
+      };
+      if (ms <= 0) {
+        var spots0 = collectSpots(hero);
+        if (spots0[toIdx]) applySpot(dim, spots0[toIdx]);
+        resolve();
+        return;
+      }
+      var t0 = performance.now();
+      function frame(now) {
+        if (session.aborted) {
+          resolve();
+          return;
+        }
+        var t = Math.min(1, (now - t0) / ms);
+        var e = EASE(t);
+        var live = collectSpots(hero);
+        var end = live[toIdx] || start;
+        applySpot(dim, {
+          x: start.x + (end.x - start.x) * e,
+          y: start.y + (end.y - start.y) * e,
+          r: start.r + (end.r - start.r) * e,
+        });
+        if (t < 1) requestAnimationFrame(frame);
+        else resolve();
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  /** Hold on a spot while remeasuring so address-bar / minor shifts stay aligned. */
+  function holdOnIndex(hero, dim, idx, ms) {
+    return new Promise(function (resolve) {
+      var t0 = performance.now();
+      function tick(now) {
+        if (session.aborted) {
+          resolve();
+          return;
+        }
+        var spots = collectSpots(hero);
+        if (spots[idx]) applySpot(dim, spots[idx]);
+        if (now - t0 >= ms) {
+          resolve();
+          return;
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
   }
 
   function prepareDim(dim, reduceMotion) {
@@ -178,6 +340,16 @@
     startHandheld(dim, reduceMotion);
   }
 
+  function beginSession(hero, dim, reduceMotion) {
+    session.hero = hero;
+    session.dim = dim;
+    session.reduceMotion = reduceMotion;
+    session.aborted = false;
+    session.active = true;
+    bindSkipTap(dim);
+    lockScroll();
+  }
+
   function travelMs(reduceMotion) {
     if (reduceMotion) return 0;
     var lite = document.documentElement.classList.contains('wwh-perf-lite');
@@ -192,6 +364,7 @@
 
   /** Under loader: drift toward title while overlay still visible */
   function armUnderLoader(hero, dim, reduceMotion) {
+    beginSession(hero, dim, reduceMotion);
     prepareDim(dim, reduceMotion);
     var spots = collectSpots(hero);
     if (!spots.length) return;
@@ -199,7 +372,7 @@
     var travel = travelMs(reduceMotion);
     applySpot(dim, open);
     if (spots[0] && travel > 0) {
-      tween(dim, open, spots[0], travel, function () {});
+      tweenToIndex(hero, dim, 0, travel);
     } else if (spots[0]) {
       applySpot(dim, spots[0]);
     }
@@ -207,8 +380,11 @@
 
   /** After loader gone: lock on «ما اینجا بودیم», then date block, then capacity + CTA */
   function playVisibleSequence(hero, dim, reduceMotion) {
+    beginSession(hero, dim, reduceMotion);
     var spots = collectSpots(hero);
-    if (spots.length < 2) return Promise.resolve();
+    if (spots.length < 2) {
+      return finishSpotlight(true);
+    }
 
     var lite = document.documentElement.classList.contains('wwh-perf-lite');
     var legHolds = reduceMotion ? [520, 420] : lite ? [920, 780] : [1050, 900];
@@ -216,34 +392,25 @@
 
     applySpot(dim, spots[0]);
 
-    var chain = wait(titleHoldMs(reduceMotion));
+    var chain = holdOnIndex(hero, dim, 0, titleHoldMs(reduceMotion));
 
     for (var i = 0; i < spots.length - 1; i++) {
       (function (idx) {
         chain = chain.then(function () {
-          return new Promise(function (resolve) {
-            tween(dim, spots[idx], spots[idx + 1], travel, resolve);
-          });
+          if (session.aborted) return;
+          return tweenToIndex(hero, dim, idx + 1, travel);
         });
         chain = chain.then(function () {
-          return wait(legHolds[idx] != null ? legHolds[idx] : 400);
+          if (session.aborted) return;
+          return holdOnIndex(hero, dim, idx + 1, legHolds[idx] != null ? legHolds[idx] : 400);
         });
       })(i);
     }
 
-    return chain
-      .then(function () {
-        stopHandheld();
-        dim.classList.remove('is-active');
-        dim.classList.add('is-exit');
-        return wait(reduceMotion ? 450 : 700);
-      })
-      .then(function () {
-        dim.classList.remove('is-exit');
-        dim.classList.add('is-done');
-        dim.setAttribute('hidden', '');
-        document.documentElement.classList.remove('wwh-spotlight-active');
-      });
+    return chain.then(function () {
+      if (session.aborted) return;
+      return finishSpotlight(false);
+    });
   }
 
   function init() {
@@ -282,6 +449,7 @@
         loaderGone = true;
         if (!armed) {
           armed = true;
+          beginSession(hero, dim, reduceMotion);
           prepareDim(dim, reduceMotion);
           var spots = collectSpots(hero);
           if (spots[0]) applySpot(dim, spots[0]);
@@ -294,6 +462,7 @@
     if (window.__wwhLoaderDone) {
       loaderGone = true;
       armed = true;
+      beginSession(hero, dim, reduceMotion);
       prepareDim(dim, reduceMotion);
       var spots = collectSpots(hero);
       if (spots[0]) applySpot(dim, spots[0]);
