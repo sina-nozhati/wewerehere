@@ -46,22 +46,26 @@ export GIT_SSH_COMMAND='ssh -i /root/.ssh/id_ed25519_wwh -o IdentitiesOnly=yes'
 
 ## نصب اولیه `wwh-deploy`
 
+CLI به‌صورت یک **فایل واقعی** در `/usr/local/bin/wwh-deploy` نصب می‌شود (نه symlink داخل ریپو)، تا `git pull` آن را پاک نکند. هر بار که اسکریپت با `sudo` اجرا شود، همین فایل دوباره ترمیم می‌شود.
+
 ```bash
 sudo mkdir -p /etc/wewerehere
 sudo cp /opt/wewerehere/scripts/deploy/wwh-deploy.conf.example /etc/wewerehere/deploy.conf
 sudo chmod 600 /etc/wewerehere/deploy.conf
 # مقادیر APP_DIR، GIT_BRANCH و غیره را در صورت نیاز ویرایش کنید
-sudo ln -sf /opt/wewerehere/scripts/deploy/wwh-deploy.sh /usr/local/bin/wwh-deploy
-sudo chmod +x /opt/wewerehere/scripts/deploy/wwh-deploy.sh
+
+# یک‌بار از مسیر کامل (حتی اگر command not found باشد):
+sudo bash /opt/wewerehere/scripts/deploy/wwh-deploy.sh update
+# از این به بعد: sudo wwh-deploy update
 ```
 
-اگر `wwh-deploy: command not found` دیدید، یا لینک بالا را بزنید یا مستقیم:
+اگر `wwh-deploy: command not found` دیدید، **همین یک دستور** کافی است — دوباره symlink دستی لازم نیست:
 
 ```bash
 sudo bash /opt/wewerehere/scripts/deploy/wwh-deploy.sh update
 ```
 
-(`install` / `update` از نسخهٔ جدید اسکریپت خودکار `/usr/local/bin/wwh-deploy` را می‌سازند.)
+(`install` / `update` / هر دستور root اسکریپت، wrapper پایدار را در `/usr/local/bin` می‌نویسد.)
 
 واحد systemd (رمز ادمین را عوض کنید):
 

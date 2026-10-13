@@ -200,22 +200,41 @@ hint_systemd_unit() {
 }
 
 ensure_wwh_deploy_cli() {
+  # Install a durable wrapper OUTSIDE the git tree so `git pull` / checkout
+  # never remove /usr/local/bin/wwh-deploy (symlinks into the repo used to vanish
+  # or become unusable whenever the CLI was missing and could not self-heal).
   local script="$APP_DIR/scripts/deploy/wwh-deploy.sh"
-  local link="/usr/local/bin/wwh-deploy"
+  local bin="/usr/local/bin/wwh-deploy"
   [[ -f "$script" ]] || return 0
   run chmod +x "$script"
-  if [[ "$DRY_RUN" -eq 1 ]] || [[ "$(id -u)" -ne 0 ]]; then
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    log "would install durable CLI $bin -> $script"
     return 0
   fi
-  local target
-  target="$(readlink -f "$script" 2>/dev/null || echo "$script")"
-  local current=""
-  if [[ -L "$link" ]] || [[ -e "$link" ]]; then
-    current="$(readlink -f "$link" 2>/dev/null || true)"
+  if [[ "$(id -u)" -ne 0 ]]; then
+    return 0
   fi
-  if [[ "$current" != "$target" ]]; then
-    log "link $link -> $script"
-    run ln -sf "$script" "$link"
+  # Drop broken/legacy symlink into the repo; replace with a real wrapper file.
+  if [[ -L "$bin" ]]; then
+    rm -f "$bin"
+  fi
+  local expected_marker="# wewerehere-wwh-deploy-wrapper"
+  local need_write=1
+  if [[ -f "$bin" ]] && grep -qF "$expected_marker" "$bin" 2>/dev/null; then
+    if grep -qF "exec \"$script\"" "$bin" 2>/dev/null || grep -qF "exec '$script'" "$bin" 2>/dev/null; then
+      need_write=0
+    fi
+  fi
+  if [[ "$need_write" -eq 1 ]]; then
+    log "install durable CLI $bin -> $script"
+    cat >"$bin" <<EOF
+#!/usr/bin/env bash
+$expected_marker
+# Managed outside git. Refresh: sudo bash $script update
+set -euo pipefail
+exec "$script" "\$@"
+EOF
+    chmod 755 "$bin"
   fi
 }
 
@@ -435,6 +454,17 @@ cmd_update() {
   ensure_wwh_deploy_cli
   do_backup
   do_git_pull
+  # Re-install CLI after pull (new APP_DIR / script path) and re-exec once so
+  # the rest of update runs the freshly pulled wwh-deploy.sh when possible.
+  ensure_wwh_deploy_cli
+  if [[ "${WW_DEPLOY_REEXEC:-0}" != "1" ]]; then
+    local fresh="$APP_DIR/scripts/deploy/wwh-deploy.sh"
+    if [[ -f "$fresh" ]]; then
+      log "re-exec update with pulled script (no-git, no-backup)"
+      export WW_DEPLOY_REEXEC=1
+      exec bash "$fresh" update --no-git --no-backup
+    fi
+  fi
   check_python
   install_apt_runtime_deps
   pip_install
@@ -506,6 +536,11 @@ main() {
   parse_args "$@"
   load_config
   [[ "$NO_BACKUP" -eq 1 ]] && SKIP_BACKUP=1
+
+  # Any root invocation re-heals /usr/local/bin/wwh-deploy (even status/smoke).
+  if [[ "$(id -u)" -eq 0 ]]; then
+    ensure_wwh_deploy_cli
+  fi
 
   case "$CMD" in
     install) cmd_install ;;
