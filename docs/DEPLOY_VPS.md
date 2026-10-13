@@ -95,6 +95,21 @@ Nginx و SSL را طبق [`DEPLOY.md`](../DEPLOY.md) تنظیم کنید؛ `wwh-
 
 ---
 
+## پیامک sms.ir (بعد از تأیید بلیت + پنل ادمین)
+
+کلید را در گیت نگذارید. روی سرور:
+
+```bash
+sudo bash /opt/wewerehere/scripts/deploy/set-sms-env.sh \
+  --api-key 'YOUR_SMS_IR_KEY' \
+  --ticket-template TEMPLATE_ID_TICKET \
+  --admin-template TEMPLATE_ID_ADMIN
+```
+
+این فایل `/etc/wewerehere/sms.env` را می‌نویسد، در صورت نیاز `EnvironmentFile` را به unit اضافه می‌کند و سرویس را ری‌استارت می‌کند. تا قبل از ست کردن کلید، `SMS_PROVIDER=console` بماند.
+
+---
+
 ## آپدیت روزمره
 
 ```bash

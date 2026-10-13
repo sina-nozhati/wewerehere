@@ -164,6 +164,22 @@
 
     .empty-note { color: var(--muted); font-size: 0.85rem; padding: 24px 0; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius-md); }
 
+    /* ---- SMS panel (admin design tokens; spacing from design-system) ---- */
+    .sms-panel { margin-bottom: 8px; }
+    .sms-panel__hint { margin-bottom: 16px; line-height: 1.6; }
+    .sms-error-summary {
+      border: 1px solid var(--danger);
+      background: rgba(255, 90, 90, 0.08);
+      color: var(--danger);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+    }
+    .sms-error-summary ul { margin: 8px 0 0 0; padding-inline-start: 1.2rem; }
+    .sms-error-summary a { color: var(--accent-soft); }
+    #sms-form input.error, #sms-form select.error { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(255, 90, 90, 0.25); }
+
     #login-view { max-width: 380px; margin: 12vh auto 0; }
     #login-view form { display: flex; flex-direction: column; gap: 14px; }
     [hidden] { display: none !important; }
@@ -242,6 +258,35 @@
         <button type="button" class="ghost" id="refresh-support">تازه‌سازی</button>
       </div>
       <div class="orders-list" id="support-list"><p class="empty-note">در حال بارگذاری…</p></div>
+
+      <h2>ارسال پیامک</h2>
+      <div class="card sms-panel" id="sms-panel">
+        <p class="muted sms-panel__hint">ارسال با قالب خدماتی sms.ir (Verify). متن آزاد نیست — پیام آماده را انتخاب کنید و مقدار پارامتر را تا ۲۵ کاراکتر وارد کنید.</p>
+        <div id="sms-error-summary" class="sms-error-summary" role="alert" tabindex="-1" hidden>
+          <strong id="sms-error-title">مشکلی در فرم هست</strong>
+          <ul id="sms-error-list"></ul>
+        </div>
+        <form id="sms-form" class="form-grid" novalidate>
+          <div>
+            <label for="sms-phone">شماره موبایل</label>
+            <input type="tel" id="sms-phone" data-wwh-phone dir="ltr" placeholder="09123456789" autocomplete="tel" required aria-describedby="sms-phone-hint">
+            <p class="muted" id="sms-phone-hint" style="margin-top:6px;font-size:0.72rem;">فرمت ۱۱ رقمی ۰۹…</p>
+          </div>
+          <div>
+            <label for="sms-preset">پیام آماده</label>
+            <select id="sms-preset" required aria-describedby="sms-provider-hint"></select>
+            <p class="muted" id="sms-provider-hint" style="margin-top:6px;font-size:0.72rem;">در حال بارگذاری قالب‌ها…</p>
+          </div>
+          <div style="grid-column:1/-1;">
+            <label for="sms-value" id="sms-value-label">مقدار پارامتر (CODE)</label>
+            <input type="text" id="sms-value" dir="ltr" maxlength="25" placeholder="کد یا متن کوتاه" required>
+          </div>
+          <div class="toolbar" style="grid-column:1/-1;margin:0;">
+            <button type="submit" id="sms-send-btn">ارسال پیامک</button>
+            <span class="status" id="sms-status" role="status" aria-live="polite"></span>
+          </div>
+        </form>
+      </div>
 
       <!-- Tickets -->
       <h2>بلیت‌ها</h2>
@@ -424,7 +469,7 @@
     function showAdmin() {
       loginView.hidden = true; adminView.hidden = false;
       loadEvents().then(function () {
-        loadTickets(); loadMedia(); loadOrders(); loadSettings(); loadSupport();
+        loadTickets(); loadMedia(); loadOrders(); loadSettings(); loadSupport(); loadSmsPresets();
       });
     }
     function showLogin() { adminView.hidden = true; loginView.hidden = false; }
@@ -994,6 +1039,9 @@
             actions =
               '<button class="ok" data-approve="' + o.id + '">تایید و صدور بلیت</button>' +
               '<button class="danger" data-reject="' + o.id + '">رد</button>';
+          } else if (o.status === 'approved') {
+            actions =
+              '<button type="button" class="ghost small" data-resend-sms="' + o.id + '">ارسال مجدد پیامک</button>';
           } else {
             actions = '<span class="badge ' + statusClass(o.status) + '">' + statusLabel(o.status) + '</span>';
           }
@@ -1030,6 +1078,7 @@
     document.getElementById('orders-list').addEventListener('click', function (e) {
       var approveBtn = e.target.closest('[data-approve]');
       var rejectBtn = e.target.closest('[data-reject]');
+      var resendBtn = e.target.closest('[data-resend-sms]');
       if (approveBtn) {
         var id = approveBtn.getAttribute('data-approve');
         var ev = cachedEvents.find(function (e) { return Number(e.id) === Number(currentEventId); });
@@ -1041,7 +1090,13 @@
         api('/api/admin/orders/approve?id=' + id, { method: 'POST', headers: authHeaders() })
           .then(function (res) {
             var n = (res.tickets && res.tickets.length) || 0;
-            if (n) alert(toFa(n) + ' بلیت صادر شد.');
+            var sms = res.sms || {};
+            var msg = n ? (toFa(n) + ' بلیت صادر شد.') : 'تایید شد.';
+            if (!sms.skipped) {
+              msg += '\nپیامک: ' + toFa(sms.sent || 0) + ' موفق';
+              if (sms.failed) msg += '، ' + toFa(sms.failed) + ' ناموفق';
+            }
+            alert(msg);
             loadOrders(); loadTickets();
           })
           .catch(function (e2) { alert('خطا: ' + e2.message); approveBtn.disabled = false; });
@@ -1052,7 +1107,117 @@
         api('/api/admin/orders/reject?id=' + rid, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ note: note }) })
           .then(loadOrders)
           .catch(function (e2) { alert('خطا: ' + e2.message); });
+      } else if (resendBtn) {
+        var sid = resendBtn.getAttribute('data-resend-sms');
+        if (!confirm('پیامک کد بلیت دوباره به شمارهٔ ثبت‌شده روی سفارش ارسال شود؟')) return;
+        resendBtn.disabled = true;
+        api('/api/admin/orders/resend-sms?id=' + sid, { method: 'POST', headers: authHeaders() })
+          .then(function (res) {
+            var sms = res.sms || {};
+            alert('پیامک: ' + toFa(sms.sent || 0) + ' موفق' + (sms.failed ? ('، ' + toFa(sms.failed) + ' ناموفق') : ''));
+          })
+          .catch(function (e2) { alert('خطا: ' + e2.message); })
+          .then(function () { resendBtn.disabled = false; });
       }
+    });
+
+    // ---- SMS compose -------------------------------------------------------
+    var smsPresets = [];
+    var smsPhoneInput = document.getElementById('sms-phone');
+    if (window.WwhPhone && smsPhoneInput) {
+      WwhPhone.bindIranMobileInput(smsPhoneInput);
+    }
+
+    function loadSmsPresets() {
+      var select = document.getElementById('sms-preset');
+      var hint = document.getElementById('sms-provider-hint');
+      api('/api/admin/sms/presets').then(function (res) {
+        smsPresets = res.presets || [];
+        select.innerHTML = smsPresets.map(function (p) {
+          return '<option value="' + escapeHtml(p.id) + '">' + escapeHtml(p.label) + '</option>';
+        }).join('');
+        hint.textContent = 'ارائه‌دهنده: ' + (res.provider || 'console') +
+          (res.provider === 'console' ? ' (حالت توسعه — پیامک واقعی ارسال نمی‌شود)' : '');
+        updateSmsParamLabel();
+      }).catch(function (e) {
+        if (e.message === 'unauthorized') showLogin();
+        else hint.textContent = 'خطا در بارگذاری قالب‌ها';
+      });
+    }
+
+    function updateSmsParamLabel() {
+      var select = document.getElementById('sms-preset');
+      var p = smsPresets.find(function (x) { return x.id === select.value; });
+      var name = (p && p.paramName) || 'CODE';
+      document.getElementById('sms-value-label').textContent = 'مقدار پارامتر (' + name + ')';
+    }
+
+    document.getElementById('sms-preset').addEventListener('change', updateSmsParamLabel);
+
+    document.getElementById('sms-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var summary = document.getElementById('sms-error-summary');
+      var list = document.getElementById('sms-error-list');
+      var statusEl = document.getElementById('sms-status');
+      var phoneEl = document.getElementById('sms-phone');
+      var valueEl = document.getElementById('sms-value');
+      var presetEl = document.getElementById('sms-preset');
+      var btn = document.getElementById('sms-send-btn');
+      var errors = [];
+
+      phoneEl.classList.remove('error');
+      valueEl.classList.remove('error');
+      presetEl.classList.remove('error');
+      summary.hidden = true;
+      list.innerHTML = '';
+      statusEl.textContent = '';
+      statusEl.className = 'status';
+
+      var phone = window.WwhPhone ? WwhPhone.parseIranMobile(phoneEl.value) : String(phoneEl.value || '').trim();
+      if (!phone) {
+        errors.push({ id: 'sms-phone', text: 'شماره موبایل معتبر وارد کنید (۰۹…)' });
+        phoneEl.classList.add('error');
+      }
+      if (!presetEl.value) {
+        errors.push({ id: 'sms-preset', text: 'یک پیام آماده انتخاب کنید' });
+        presetEl.classList.add('error');
+      }
+      var value = String(valueEl.value || '').trim();
+      if (!value) {
+        errors.push({ id: 'sms-value', text: 'مقدار پارامتر را وارد کنید' });
+        valueEl.classList.add('error');
+      }
+
+      if (errors.length) {
+        list.innerHTML = errors.map(function (err) {
+          return '<li><a href="#' + err.id + '">' + escapeHtml(err.text) + '</a></li>';
+        }).join('');
+        summary.hidden = false;
+        summary.focus();
+        return;
+      }
+
+      btn.disabled = true;
+      statusEl.textContent = 'در حال ارسال…';
+      api('/api/admin/sms/send', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ phone: phone, presetId: presetEl.value, value: value.slice(0, 25) }),
+      })
+        .then(function (res) {
+          statusEl.className = 'status ok';
+          statusEl.textContent = 'ارسال شد به ' + (res.phoneMasked || '***') +
+            (res.provider === 'console' ? ' (کنسول)' : '');
+          valueEl.value = '';
+        })
+        .catch(function (err) {
+          statusEl.className = 'status err';
+          statusEl.textContent = 'خطا: ' + err.message;
+          list.innerHTML = '<li>' + escapeHtml(err.message) + '</li>';
+          summary.hidden = false;
+          summary.focus();
+        })
+        .then(function () { btn.disabled = false; });
     });
 
     // ---- payment settings (card shown on the landing page) -------------------

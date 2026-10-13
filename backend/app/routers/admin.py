@@ -9,13 +9,14 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth import create_session, require_admin, revoke_session, verify_admin_password
+from app.auth import check_rate_limit, create_session, require_admin, revoke_session, verify_admin_password
 from app.config import settings
 from app.storage_paths import receipt_path as _receipt_path
 from app.db import get_db
 from app.models import Event, Media, Order, PaymentReceipt, SiteSetting, SupportContact, SupportMessage, SupportTicket, Ticket
 from app.services.events import FEATURED_KEY, event_at_iso, get_featured_event_id, parse_event_at, set_featured_event_id
 from app.services.orders import approve_order, reject_order
+from app.services.notify import list_admin_presets, notify_tickets_issued, send_admin_preset
 from app.services.phone import normalize_phone, valid_phone
 from app.services.event_display import ticket_venue_from_event
 from app.services.ticket_render import TicketRenderError, render_ticket_bytes
@@ -65,6 +66,15 @@ class MediaCaptionBody(BaseModel):
 
 class RejectBody(BaseModel):
     note: str = ""
+
+
+class SmsSendBody(BaseModel):
+    phone: str = ""
+    presetId: str = ""
+    value: str = ""
+
+
+_sms_rate: dict[str, list[float]] = {}
 
 
 class EventBody(BaseModel):
@@ -552,12 +562,77 @@ def admin_receipt_file(order_id: int, db: Session = Depends(get_db), _: str = De
 @router.post("/orders/approve")
 def admin_approve(id: int = Query(...), db: Session = Depends(get_db), _: str = Depends(require_admin)):
     try:
-        order, tickets = approve_order(db, id)
+        order, tickets, freshly = approve_order(db, id)
     except LookupError:
         raise HTTPException(404, "not found")
     except ValueError as e:
         raise HTTPException(409, {"error": str(e)})
-    return {"id": order.id, "status": "approved", "tickets": tickets}
+    sms = {"sent": 0, "failed": 0, "skipped": True}
+    if freshly and tickets:
+        # Phone only from persisted order — never from request body.
+        sms = notify_tickets_issued(order.phone, tickets)
+        sms["skipped"] = False
+    return {"id": order.id, "status": "approved", "tickets": tickets, "sms": sms}
+
+
+@router.post("/orders/resend-sms")
+def admin_resend_order_sms(
+    id: int = Query(...),
+    db: Session = Depends(get_db),
+    token: str = Depends(require_admin),
+):
+    check_rate_limit(_sms_rate, f"resend:{token}", limit=10, window_sec=60)
+    order = db.get(Order, id)
+    if not order:
+        raise HTTPException(404, "not found")
+    if order.status != "approved":
+        raise HTTPException(409, {"error": "order not approved"})
+    tickets = [
+        {"serial": t.public_code, "name": t.holder_name, "group": t.group_name}
+        for t in order.tickets
+        if t.status == "active"
+    ]
+    if not tickets:
+        raise HTTPException(409, {"error": "no active tickets"})
+    sms = notify_tickets_issued(order.phone, tickets)
+    return {"id": order.id, "sms": sms}
+
+
+@router.get("/sms/presets")
+def admin_sms_presets(_: str = Depends(require_admin)):
+    presets = list_admin_presets()
+    return {
+        "provider": (settings.sms_provider or "console"),
+        "presets": [
+            {"id": p["id"], "label": p["label"], "paramName": p["paramName"]}
+            for p in presets
+        ],
+    }
+
+
+@router.post("/sms/send")
+def admin_sms_send(
+    body: SmsSendBody,
+    token: str = Depends(require_admin),
+):
+    check_rate_limit(_sms_rate, f"send:{token}", limit=10, window_sec=60)
+    phone = normalize_phone(body.phone)
+    if not valid_phone(phone):
+        raise HTTPException(400, {"error": "invalid phone"})
+    preset_id = (body.presetId or "").strip()
+    if not preset_id:
+        raise HTTPException(400, {"error": "preset required"})
+    result = send_admin_preset(phone, preset_id, body.value or "")
+    if not result.get("ok"):
+        kind = result.get("failure_kind") or "send_failed"
+        status = 400 if kind in ("invalid_phone", "unknown_preset", "empty_value") else 503
+        raise HTTPException(status, {"error": kind})
+    return {
+        "ok": True,
+        "provider": result.get("provider"),
+        "phoneMasked": result.get("phone_masked"),
+        "messageId": result.get("message_id"),
+    }
 
 
 @router.post("/orders/reject")

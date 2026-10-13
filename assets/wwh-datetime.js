@@ -148,15 +148,14 @@
       locWrap.textContent = [ev.city, ev.venue].filter(Boolean).join(' · ');
       locWrap.hidden = !(ev.city || ev.venue);
     }
-    if (ev.title) {
-      document.title = ev.title + ' — WE WERE HERE';
-      var meta = document.querySelector('meta[name="description"]');
-      if (meta && sched.tagline) {
-        meta.setAttribute(
-          'content',
-          ev.title + ' — ' + sched.tagline + '. ثبت‌نام و دریافت بلیت.'
-        );
-      }
+    /* Browser tab stays on brand; episode/date live in the hero, not document.title */
+    document.title = 'ما اینجا بودیم';
+    var meta = document.querySelector('meta[name="description"]');
+    if (meta && sched.tagline) {
+      meta.setAttribute(
+        'content',
+        'ما اینجا بودیم — ' + sched.tagline + '. ثبت‌نام و دریافت بلیت.'
+      );
     }
     global.__wwhEventAt = sched.eventDate;
     try {

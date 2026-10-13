@@ -17,6 +17,15 @@ class Settings(BaseSettings):
 
     cors_origins: str = ""
 
+    # SMS (sms.ir Verify) — secrets only via env / EnvironmentFile, never commit keys
+    sms_provider: str = "console"
+    sms_ir_api_key: str = ""
+    sms_ir_template_id_ticket_notify: int = 0
+    sms_ir_template_id_admin: int = 0
+    sms_ir_verify_parameter_name: str = "CODE"
+    sms_ir_timeout: float = 10.0
+    sms_ir_admin_presets: str = ""
+
     @property
     def receipts_dir(self) -> Path:
         return self.storage_root / "receipts"

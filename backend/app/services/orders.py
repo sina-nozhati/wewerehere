@@ -108,7 +108,8 @@ def create_order(
     return order
 
 
-def approve_order(db: Session, order_id: int) -> tuple[Order, list[dict]]:
+def approve_order(db: Session, order_id: int) -> tuple[Order, list[dict], bool]:
+    """Returns (order, tickets, freshly_issued). SMS is left to the caller when freshly_issued."""
     order = db.get(Order, order_id)
     if not order:
         raise LookupError("not found")
@@ -121,7 +122,7 @@ def approve_order(db: Session, order_id: int) -> tuple[Order, list[dict]]:
             }
             for t in order.tickets
         ]
-        return order, tickets
+        return order, tickets, False
     if order.status != "payment_submitted" and order.status != "pending":
         raise ValueError("این سفارش قبلاً بررسی شده است")
 
@@ -159,7 +160,7 @@ def approve_order(db: Session, order_id: int) -> tuple[Order, list[dict]]:
         db.rollback()
         raise
     db.refresh(order)
-    return order, issued
+    return order, issued, True
 
 
 def reject_order(db: Session, order_id: int, note: str) -> Order:

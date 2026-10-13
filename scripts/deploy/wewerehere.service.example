@@ -17,6 +17,8 @@ Environment=HOST=127.0.0.1
 Environment=PORT=5173
 Environment=ADMIN_PASSWORD=یک_رمز_قوی_عوض_کن
 Environment=CAPACITY=50
+# SMS secrets (create with scripts/deploy/set-sms-env.sh)
+EnvironmentFile=-/etc/wewerehere/sms.env
 # Environment=TICKET_PRICE=935000
 # Environment=PAYMENT_CARD_NUMBER=0000-0000-0000-0000
 # Environment=PAYMENT_CARD_HOLDER=نام
