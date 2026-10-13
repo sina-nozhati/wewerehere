@@ -5,8 +5,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SCRIPT="$ROOT/scripts/deploy/wwh-deploy.sh"
 
+ENSURE="$ROOT/scripts/deploy/ensure-wwh-deploy-cli.sh"
+
 echo "== bash -n =="
 bash -n "$SCRIPT"
+bash -n "$ENSURE"
+
+echo "== ensure script exists =="
+[[ -f "$ENSURE" ]]
+[[ -f "$ROOT/scripts/deploy/wwh-deploy-cli.service" ]]
 
 echo "== safety greps (must not match) =="
 if grep -E 'git clean|rm -rf storage|rsync.*--delete' "$SCRIPT" | grep -v '^[[:space:]]*#'; then

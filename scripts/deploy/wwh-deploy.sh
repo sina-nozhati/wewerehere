@@ -200,42 +200,19 @@ hint_systemd_unit() {
 }
 
 ensure_wwh_deploy_cli() {
-  # Install a durable wrapper OUTSIDE the git tree so `git pull` / checkout
-  # never remove /usr/local/bin/wwh-deploy (symlinks into the repo used to vanish
-  # or become unusable whenever the CLI was missing and could not self-heal).
-  local script="$APP_DIR/scripts/deploy/wwh-deploy.sh"
-  local bin="/usr/local/bin/wwh-deploy"
-  [[ -f "$script" ]] || return 0
-  run chmod +x "$script"
+  # Delegate to ensure-wwh-deploy-cli.sh (writes /usr/local/bin/wwh-deploy +
+  # enables wwh-deploy-cli.service so boot/restart always re-heals the CLI).
+  local helper="$APP_DIR/scripts/deploy/ensure-wwh-deploy-cli.sh"
+  [[ -f "$helper" ]] || return 0
   if [[ "$DRY_RUN" -eq 1 ]]; then
-    log "would install durable CLI $bin -> $script"
+    log "would run $helper"
     return 0
   fi
   if [[ "$(id -u)" -ne 0 ]]; then
     return 0
   fi
-  # Drop broken/legacy symlink into the repo; replace with a real wrapper file.
-  if [[ -L "$bin" ]]; then
-    rm -f "$bin"
-  fi
-  local expected_marker="# wewerehere-wwh-deploy-wrapper"
-  local need_write=1
-  if [[ -f "$bin" ]] && grep -qF "$expected_marker" "$bin" 2>/dev/null; then
-    if grep -qF "exec \"$script\"" "$bin" 2>/dev/null || grep -qF "exec '$script'" "$bin" 2>/dev/null; then
-      need_write=0
-    fi
-  fi
-  if [[ "$need_write" -eq 1 ]]; then
-    log "install durable CLI $bin -> $script"
-    cat >"$bin" <<EOF
-#!/usr/bin/env bash
-$expected_marker
-# Managed outside git. Refresh: sudo bash $script update
-set -euo pipefail
-exec "$script" "\$@"
-EOF
-    chmod 755 "$bin"
-  fi
+  run chmod +x "$helper"
+  APP_DIR="$APP_DIR" bash "$helper" || log "WARN: ensure-wwh-deploy-cli failed (non-fatal)"
 }
 
 cmd_install() {
@@ -505,6 +482,16 @@ cmd_status() {
   printf 'git=%s branch=%s\n' "$commit" "$GIT_BRANCH"
   printf 'data.sqlite=%s\n' "$dbsize"
   printf 'app_dir=%s\n' "$APP_DIR"
+  if [[ -x /usr/local/bin/wwh-deploy ]]; then
+    printf 'cli=/usr/local/bin/wwh-deploy ok\n'
+  else
+    printf 'cli=MISSING — run: sudo bash %s/scripts/deploy/ensure-wwh-deploy-cli.sh\n' "$APP_DIR"
+  fi
+  if systemctl is-enabled --quiet wwh-deploy-cli.service 2>/dev/null; then
+    printf 'cli_healer=enabled\n'
+  else
+    printf 'cli_healer=not-enabled\n'
+  fi
   local font_path="$APP_DIR/assets/fonts/Vazirmatn-Regular.ttf"
   if [[ -f "$font_path" ]]; then
     printf 'vazirmatn_font=ok (%s)\n' "$font_path"

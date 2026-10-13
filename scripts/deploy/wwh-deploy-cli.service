@@ -1,0 +1,13 @@
+[Unit]
+Description=Ensure We Were Here wwh-deploy CLI is installed
+Documentation=file:///opt/wewerehere/docs/DEPLOY_VPS.md
+After=local-fs.target
+ConditionPathExists=/opt/wewerehere/scripts/deploy/ensure-wwh-deploy-cli.sh
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/wewerehere/scripts/deploy/ensure-wwh-deploy-cli.sh
+
+[Install]
+WantedBy=multi-user.target
