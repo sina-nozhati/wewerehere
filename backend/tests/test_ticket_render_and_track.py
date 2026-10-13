@@ -19,6 +19,7 @@ from app.services.events import FEATURED_KEY
 from app.config import ROOT
 from app.services.ticket_render import (
     REQUIRED_TICKET_FIELDS,
+    _svg_for_non_harfbuzz_rasterizer,
     fill_ticket_svg,
     render_ticket_png,
     ticket_png_export_available,
@@ -416,6 +417,30 @@ def test_long_venue_keeps_anchor():
     assert live["venue"]["text-anchor"] == "start"
     assert live["venue"]["direction"] == "rtl"
     assert long_venue in svg
+
+
+def test_cairo_svg_shapes_persian_and_flips_anchor():
+    event_at = datetime(2026, 8, 25, 13, 30, tzinfo=timezone.utc)
+    svg = fill_ticket_svg(
+        "A",
+        "آرمان",
+        "0138",
+        2,
+        event_at=event_at,
+        venue="کافه گیلان‌شاه",
+        city="تهران",
+    )
+    assert "آرمان" in svg
+    assert "کافه گیلان‌شاه" in svg
+    shaped = _svg_for_non_harfbuzz_rasterizer(svg)
+    live = _parse_field_coords_from_xml(shaped)
+    assert live["venue"]["direction"] == "ltr"
+    assert live["venue"]["text-anchor"] == "end"
+    assert live["date"]["direction"] == "ltr"
+    assert live["date"]["text-anchor"] == "end"
+    assert live["name_stub"]["direction"] == "ltr"
+    assert live["name_stub"]["text-anchor"] == "start"
+    assert "کافه گیلان‌شاه" not in shaped
 
 
 def test_name_stub_visible_in_filled_svg():

@@ -440,9 +440,11 @@ def _render_ticket_png_cairo(svg_text: str, scale: float, out_w: int, out_h: int
     import cairosvg
 
     ensure_vazirmatn_font()
+    # CairoSVG lacks HarfBuzz joining; visual-order presentation forms are required.
+    shaped = _svg_for_non_harfbuzz_rasterizer(svg_text)
     with _cairo_fontconfig_scope():
         return cairosvg.svg2png(
-            bytestring=svg_text.encode("utf-8"),
+            bytestring=shaped.encode("utf-8"),
             output_width=out_w,
             output_height=out_h,
         )
@@ -525,7 +527,7 @@ def render_ticket_png(svg_text: str, scale: float = 4.0) -> bytes:
 
     if use_pymupdf and _pymupdf_png_available():
         try:
-            shaped = _svg_for_pymupdf_fallback(svg_text)
+            shaped = _svg_for_non_harfbuzz_rasterizer(svg_text)
             return _render_ticket_png_pymupdf(shaped, scale)
         except Exception as exc:
             pymupdf_error = exc
@@ -540,17 +542,38 @@ def render_ticket_png(svg_text: str, scale: float = 4.0) -> bytes:
     raise TicketRenderError(_cairo_unavailable_message())
 
 
-def _svg_for_pymupdf_fallback(svg_text: str) -> str:
-    """Last-resort: presentation forms for dumb SVG rasterizers."""
+def _svg_for_non_harfbuzz_rasterizer(svg_text: str) -> str:
+    """Presentation forms + visual order for CairoSVG / PyMuPDF (no HarfBuzz).
+
+    After get_display(), glyphs are already in left-to-right visual order, so
+    direction must be ltr and text-anchor flipped vs the logical-RTL layout.
+    Chromium must keep the original logical SVG — do not use this helper there.
+    """
     root = ET.fromstring(svg_text)
     for el in root.iter():
         field = el.attrib.get("data-field")
         if not field or not (el.text or "").strip():
             continue
+        original = el.text or ""
+        if not _ARABIC_CHARS.search(original):
+            continue
         locale = "fa"
-        if field == "date":
-            locale = "fa" if _ARABIC_CHARS.search(el.text or "") else "en"
-        el.text = _visible_field_text(field, el.text or "", locale)
+        if field == "date" and not _ARABIC_CHARS.search(original):
+            locale = "en"
+        shaped = _visible_field_text(field, original, locale)
+        if shaped == original:
+            continue
+        was_rtl = (el.attrib.get("direction") or "").lower() == "rtl"
+        anchor = (el.attrib.get("text-anchor") or "start").lower()
+        el.text = shaped
+        el.set("direction", "ltr")
+        el.set("unicode-bidi", "isolate")
+        el.attrib.pop(f"{{{XML_NS}}}lang", None)
+        if was_rtl:
+            if anchor == "start":
+                el.set("text-anchor", "end")
+            elif anchor == "end":
+                el.set("text-anchor", "start")
     return normalize_ticket_svg_xml(ET.tostring(root, encoding="unicode", xml_declaration=True))
 
 
