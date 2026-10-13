@@ -2,7 +2,7 @@
  * Hero stage spotlight — armed under loader; visible sequence starts after loader is gone.
  *
  * Soft scroll-lock while the sequence runs so eager mobile scroll doesn't break the show,
- * with tap-to-skip on the overlay (user freedom). Targets remeasure live; unlock + cue after.
+ * with tap-to-skip on the overlay (user freedom). Targets remeasure live; unlock after.
  */
 (function () {
   var TRAVEL_MS = 820;
@@ -210,24 +210,6 @@
     });
   }
 
-  function showScrollCue() {
-    if (document.querySelector('.wwh-scroll-cue')) return;
-    var cue = document.createElement('p');
-    cue.className = 'wwh-scroll-cue';
-    cue.setAttribute('aria-hidden', 'true');
-    cue.textContent = 'اسکرول کن';
-    document.body.appendChild(cue);
-    requestAnimationFrame(function () {
-      cue.classList.add('is-visible');
-    });
-    window.setTimeout(function () {
-      cue.classList.remove('is-visible');
-      window.setTimeout(function () {
-        if (cue.parentNode) cue.parentNode.removeChild(cue);
-      }, 400);
-    }, 2400);
-  }
-
   function finishSpotlight(instant) {
     var dim = session.dim;
     unlockScroll();
@@ -242,7 +224,6 @@
     }
     if (!dim) {
       document.documentElement.classList.remove('wwh-spotlight-active');
-      showScrollCue();
       return Promise.resolve();
     }
     if (instant) {
@@ -250,7 +231,6 @@
       dim.classList.add('is-done');
       dim.setAttribute('hidden', '');
       document.documentElement.classList.remove('wwh-spotlight-active');
-      showScrollCue();
       return Promise.resolve();
     }
     dim.classList.add('is-exit');
@@ -259,7 +239,6 @@
       dim.classList.add('is-done');
       dim.setAttribute('hidden', '');
       document.documentElement.classList.remove('wwh-spotlight-active');
-      showScrollCue();
     });
   }
 

@@ -420,39 +420,3 @@ html.wwh-spotlight-scroll-lock body {
   }
 }
 
-/* Soft cue after spotlight finishes naturally (not after user abort) */
-.wwh-scroll-cue {
-  position: fixed;
-  left: 50%;
-  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-  z-index: 90;
-  margin: 0;
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-family: var(--font, inherit);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: rgba(248, 244, 252, 0.92);
-  background: rgba(10, 6, 16, 0.72);
-  border: 1px solid rgba(212, 63, 90, 0.4);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-  transform: translate(-50%, 8px);
-  opacity: 0;
-  transition: opacity 280ms cubic-bezier(0.23, 1, 0.32, 1), transform 280ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.wwh-scroll-cue.is-visible {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .wwh-scroll-cue {
-    transition: opacity 160ms ease;
-    transform: translate(-50%, 0);
-  }
-}
