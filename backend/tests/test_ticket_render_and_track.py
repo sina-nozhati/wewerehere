@@ -313,11 +313,14 @@ def _layout_spec() -> list[dict]:
 
 
 def _parse_field_coords(svg_name: str) -> dict[str, dict]:
-    import re
+    raw = (ROOT / svg_name).read_text(encoding="utf-8")
+    return _parse_field_coords_from_xml(raw)
+
+
+def _parse_field_coords_from_xml(xml_str: str) -> dict[str, dict]:
     import xml.etree.ElementTree as ET
 
-    raw = (ROOT / svg_name).read_text(encoding="utf-8")
-    root = ET.fromstring(raw)
+    root = ET.fromstring(xml_str)
     out: dict[str, dict] = {}
     for el in root.iter():
         field = el.attrib.get("data-field")
@@ -328,9 +331,32 @@ def _parse_field_coords(svg_name: str) -> dict[str, dict]:
             "x": el.attrib.get("x"),
             "y": el.attrib.get("y"),
             "transform": el.attrib.get("transform"),
+            "text-anchor": el.attrib.get("text-anchor"),
+            "direction": el.attrib.get("direction"),
             "hidden": "display:none" in style,
         }
     return out
+
+
+def _baked_sample_paths_in_svg(xml_str: str) -> int:
+    import re
+    import xml.etree.ElementTree as ET
+
+    start_re = re.compile(r"^m\s*([-\d.]+)\s*,\s*([-\d.]+)", re.I)
+    root = ET.fromstring(xml_str)
+    count = 0
+    for el in root.iter():
+        if not el.tag.endswith("path"):
+            continue
+        if "cls-8" not in el.attrib.get("class", ""):
+            continue
+        m = start_re.match((el.attrib.get("d") or "").strip())
+        if not m:
+            continue
+        x, y = float(m.group(1)), float(m.group(2))
+        if x >= 125 and 58 <= y <= 95:
+            count += 1
+    return count
 
 
 def test_ticket_field_layout_matches_spec():
@@ -345,6 +371,51 @@ def test_ticket_field_layout_matches_spec():
                     assert live[field][key] is None
                 else:
                     assert live[field][key] == exp[key]
+
+
+def test_fill_applies_layout_from_json():
+    event_at = datetime(2026, 8, 25, 13, 30, tzinfo=timezone.utc)
+    for group, svg_file in (("A", "ticket-a.svg"), ("B", "ticket-b.svg")):
+        svg = fill_ticket_svg(
+            group,
+            "تست",
+            "4242",
+            7,
+            event_at=event_at,
+            venue="سالن",
+            city="شهر",
+        )
+        live = _parse_field_coords_from_xml(svg)
+        spec = next(e for e in _layout_spec() if e["file"] == svg_file)
+        for field, exp in spec["fields"].items():
+            assert field in live
+            for key in ("x", "y", "transform", "text-anchor", "direction"):
+                if key in ("x", "y", "transform"):
+                    if exp[key] is None:
+                        assert live[field][key] is None
+                    else:
+                        assert live[field][key] == exp[key]
+                elif exp.get(key):
+                    assert live[field][key] == exp[key]
+
+
+def test_fill_has_no_baked_sample_paths():
+    event_at = datetime(2026, 8, 25, 13, 30, tzinfo=timezone.utc)
+    for group in ("A", "B"):
+        svg = fill_ticket_svg(group, "تست", "1111", 1, event_at=event_at, venue="V", city="C")
+        assert _baked_sample_paths_in_svg(svg) == 0
+
+
+def test_long_venue_keeps_anchor():
+    event_at = datetime(2026, 8, 25, 13, 30, tzinfo=timezone.utc)
+    long_venue = "سالن بسیار بزرگ مول پلاس و فضای باز کنار دریا با نام طولانی"
+    svg = fill_ticket_svg("A", "نام", "4242", 1, event_at=event_at, venue=long_venue, city="تهران")
+    live = _parse_field_coords_from_xml(svg)
+    assert live["venue"]["x"] == "199"
+    assert live["venue"]["y"] == "88.75"
+    assert live["venue"]["text-anchor"] == "start"
+    assert live["venue"]["direction"] == "rtl"
+    assert long_venue in svg
 
 
 def test_name_stub_visible_in_filled_svg():

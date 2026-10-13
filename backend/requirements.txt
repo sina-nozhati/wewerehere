@@ -8,4 +8,6 @@ python-multipart>=0.0.17
 bcrypt>=4.2.0
 cairosvg>=2.7.0
 pymupdf>=1.25.0
+arabic-reshaper>=3.0.0
+python-bidi>=0.6.0
 fpdf2>=2.8.0

@@ -56,11 +56,14 @@ def health(db: Session = Depends(get_db)):
     from sqlalchemy import func
 
     total = db.scalar(select(func.count()).select_from(Ticket)) or 0
+    from app.services.ticket_render import ticket_png_diagnostics
+
     return {
         "ok": True,
         "tickets": total,
         "backend": "fastapi",
         "ticketDownload": True,
+        "ticketPng": ticket_png_diagnostics(),
     }
 
 
@@ -316,7 +319,7 @@ def download_ticket_png(
             503,
             {
                 "error": "ticket_png_unavailable",
-                "message": "PNG export failed; on server: libcairo2/libpango + Vazirmatn — local dev: pip install pymupdf",
+                "message": str(e),
                 "detail": str(e),
             },
         )

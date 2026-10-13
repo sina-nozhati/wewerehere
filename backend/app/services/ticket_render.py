@@ -6,6 +6,7 @@ import base64
 import logging
 import os
 import re
+import sys
 from contextlib import contextmanager
 from io import BytesIO
 import xml.etree.ElementTree as ET
@@ -15,6 +16,19 @@ from datetime import datetime
 
 from app.config import ROOT
 from app.services.jalali_schedule import format_hero_schedule, ticket_city_line, ticket_locale
+from app.services.ticket_layout import apply_field_layout
+from app.services.ticket_png_headless import (
+    headless_chromium_available,
+    render_svg_png_headless,
+)
+
+_ARABIC_CHARS = re.compile(r"[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]")
+
+_WINDOWS_GTK_BIN_DIRS = (
+    Path(os.environ.get("GTK_BIN", "")),
+    Path(r"C:\Program Files\GTK3-Runtime Win64\bin"),
+    Path(r"C:\GTK3-Runtime Win64\bin"),
+)
 
 SVG_NS = "http://www.w3.org/2000/svg"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
@@ -97,6 +111,49 @@ def _cairo_fontconfig_scope():
             os.environ["FONTCONFIG_FILE"] = prev
 
 
+def _prepare_windows_cairo_dll() -> None:
+    """Allow cairocffi to load libcairo on Windows when GTK3 runtime is installed."""
+    if sys.platform != "win32":
+        return
+    for bin_dir in _WINDOWS_GTK_BIN_DIRS:
+        if not bin_dir.is_dir():
+            continue
+        bin_str = str(bin_dir.resolve())
+        if hasattr(os, "add_dll_directory"):
+            try:
+                os.add_dll_directory(bin_str)
+            except OSError:
+                pass
+        path_env = os.environ.get("PATH", "")
+        if bin_str.lower() not in path_env.lower():
+            os.environ["PATH"] = bin_str + os.pathsep + path_env
+        break
+
+
+def _shape_fa_text(text: str) -> str:
+    """Presentation forms + bidi for renderers without HarfBuzz (e.g. PyMuPDF)."""
+    if not text or not _ARABIC_CHARS.search(text):
+        return text
+    try:
+        import arabic_reshaper
+        from bidi.algorithm import get_display
+    except ImportError:
+        return text
+    return get_display(arabic_reshaper.reshape(text))
+
+
+def _visible_field_text(field: str, value: str, locale: str) -> str:
+    if field in ("name", "name_stub"):
+        return _shape_fa_text(value)
+    if field == "date" and locale == "fa":
+        return _shape_fa_text(value)
+    if field == "venue" and ticket_locale(value, "") != "en":
+        return _shape_fa_text(value)
+    if field == "city_line":
+        return _shape_fa_text(value)
+    return value
+
+
 def _inject_persian_font(root: ET.Element) -> None:
     ensure_vazirmatn_font()
     css = _embedded_vazirmatn_css()
@@ -116,6 +173,70 @@ def _inject_persian_font(root: ET.Element) -> None:
         root.insert(0, defs)
     style = ET.SubElement(defs, f"{{{SVG_NS}}}style")
     style.text = css
+
+
+_M_PATH_START = re.compile(r"^m\s*([-\d.]+)\s*,\s*([-\d.]+)", re.I)
+
+
+def _path_start_xy(d: str) -> tuple[float, float] | None:
+    m = _M_PATH_START.match((d or "").strip())
+    if not m:
+        return None
+    try:
+        return float(m.group(1)), float(m.group(2))
+    except ValueError:
+        return None
+
+
+def _strip_baked_sample_lettering(root: ET.Element) -> None:
+    """Remove vector-outlined sample date/venue (سوم شهریور، مول پلاس، …) baked into ticket-b."""
+    kill: list[tuple[ET.Element, ET.Element]] = []
+    for parent in root.iter():
+        for child in list(parent):
+            if not child.tag.endswith("path"):
+                continue
+            cls = child.attrib.get("class", "")
+            if "cls-8" not in cls:
+                continue
+            pt = _path_start_xy(child.attrib.get("d", ""))
+            if pt is None:
+                continue
+            x, y = pt
+            if x >= 125 and 58 <= y <= 95:
+                kill.append((parent, child))
+    for parent, child in kill:
+        parent.remove(child)
+
+    for parent in root.iter():
+        for child in list(parent):
+            cls = child.attrib.get("class", "")
+            if "wwh-ticket-static-meta-values" in cls:
+                parent.remove(child)
+
+    for g in list(root.iter()):
+        if g.attrib.get("id") == "wwh-ticket-dynamic-meta":
+            gp = next((p for p in root.iter() if g in list(p)), None)
+            if gp is not None:
+                gp.remove(g)
+
+
+def _inject_ticket_base_fill(root: ET.Element) -> None:
+    """Flat ticket paper behind artwork (PyMuPDF skips many complex paths)."""
+    for el in root.iter():
+        if el.tag.endswith("rect") and el.attrib.get("data-wwh-ticket-base") == "1":
+            return
+    vb = root.attrib.get("viewBox", "0 0 362 128").split()
+    w, h = 362.0, 128.0
+    if len(vb) >= 4:
+        w, h = float(vb[2]), float(vb[3])
+    rect = ET.Element(f"{{{SVG_NS}}}rect")
+    rect.set("data-wwh-ticket-base", "1")
+    rect.set("x", "0")
+    rect.set("y", "0")
+    rect.set("width", str(w))
+    rect.set("height", str(h))
+    rect.set("fill", "#e3e3e3")
+    root.insert(0, rect)
 
 
 def _template_path(group: str) -> Path:
@@ -214,7 +335,10 @@ def fill_ticket_svg(
         raise FileNotFoundError(f"ticket template missing: {path.name}")
     raw = normalize_ticket_svg_xml(path.read_text(encoding="utf-8"))
     root = ET.fromstring(raw)
+    _strip_baked_sample_lettering(root)
+    _inject_ticket_base_fill(root)
     _inject_persian_font(root)
+    apply_field_layout(root, path.name)
     code = re.sub(r"\D", "", public_code or "").zfill(4)[-4:]
     venue_line = venue or ""
     sched = format_hero_schedule(event_at, venue=venue_line, city=city or "")
@@ -247,9 +371,7 @@ def fill_ticket_svg(
     )
 
 
-def ticket_png_export_available() -> bool:
-    if _cairo_png_available():
-        return True
+def _pymupdf_png_available() -> bool:
     try:
         import fitz  # noqa: F401
     except ImportError:
@@ -257,12 +379,61 @@ def ticket_png_export_available() -> bool:
     return True
 
 
+def ticket_png_export_available() -> bool:
+    if _cairo_png_available():
+        return True
+    if headless_chromium_available():
+        return True
+    return _pymupdf_png_available()
+
+
+def ticket_png_diagnostics() -> dict[str, object]:
+    """Which PNG pipeline auto mode will prefer (for /api/health and local debugging)."""
+    from app.services.ticket_png_headless import headless_chromium_path
+
+    forced = _ticket_png_backend()
+    cairo = _cairo_png_available()
+    chromium = headless_chromium_available()
+    pymupdf = _pymupdf_png_available()
+    if forced == "cairo":
+        preferred = "cairo" if cairo else "unavailable"
+    elif forced == "chromium":
+        preferred = "chromium" if chromium else "unavailable"
+    elif forced == "pymupdf":
+        preferred = "pymupdf" if pymupdf else "unavailable"
+    elif cairo:
+        preferred = "cairo"
+    elif chromium:
+        preferred = "chromium"
+    elif pymupdf:
+        preferred = "pymupdf"
+    else:
+        preferred = "none"
+    chrome_path = headless_chromium_path()
+    return {
+        "backendEnv": forced,
+        "preferred": preferred,
+        "cairo": cairo,
+        "chromium": chromium,
+        "chromiumPath": str(chrome_path) if chrome_path else None,
+        "pymupdf": pymupdf,
+    }
+
+
 def _cairo_png_available() -> bool:
+    _prepare_windows_cairo_dll()
     try:
         import cairocffi  # noqa: F401
     except OSError:
         return False
     return True
+
+
+def _ticket_png_backend() -> str:
+    forced = (os.environ.get("WW_TICKET_PNG_BACKEND") or "auto").strip().lower()
+    if forced in ("cairo", "chromium", "browser", "pymupdf"):
+        return "chromium" if forced == "browser" else forced
+    return "auto"
 
 
 def _render_ticket_png_cairo(svg_text: str, scale: float, out_w: int, out_h: int) -> bytes:
@@ -288,26 +459,99 @@ def _render_ticket_png_pymupdf(svg_text: str, scale: float) -> bytes:
     return pix.tobytes("png")
 
 
+def _pymupdf_failure_message(exc: Exception) -> str:
+    if isinstance(exc, ImportError):
+        return (
+            "PNG export unavailable: pip install -r backend/requirements.txt "
+            "(package pymupdf provides the fitz module)"
+        )
+    return f"PNG export failed: {exc}"
+
+
+def _cairo_unavailable_message() -> str:
+    if sys.platform == "win32":
+        return (
+            "PNG quality on Windows needs GTK3/Cairo (same as browser preview): install "
+            "GTK3-Runtime Win64, add its bin folder to PATH, restart dev — or use PyMuPDF "
+            "fallback (WW_TICKET_PNG_BACKEND=pymupdf) with reduced Persian/artwork fidelity"
+        )
+    return (
+        "PNG export unavailable: install libcairo2/libpango (Linux) or pip install pymupdf"
+    )
+
+
+def _try_headless_chromium(svg_text: str, out_w: int, out_h: int) -> bytes | None:
+    if not headless_chromium_available():
+        return None
+    try:
+        return render_svg_png_headless(svg_text, out_w, out_h)
+    except Exception as exc:
+        logger.warning("Headless browser PNG failed: %s", exc)
+        return None
+
+
 def render_ticket_png(svg_text: str, scale: float = 4.0) -> bytes:
     w, h = _svg_viewbox_size(svg_text)
     out_w, out_h = int(w * scale), int(h * scale)
+    backend = _ticket_png_backend()
     cairo_error: Exception | None = None
-    if _cairo_png_available():
+    pymupdf_error: Exception | None = None
+
+    use_cairo = backend in ("auto", "cairo")
+    use_chromium = backend in ("auto", "chromium")
+    use_pymupdf = backend in ("auto", "pymupdf")
+
+    if use_cairo and _cairo_png_available():
         try:
             return _render_ticket_png_cairo(svg_text, scale, out_w, out_h)
-        except TicketFontError:
-            raise
+        except TicketFontError as exc:
+            cairo_error = exc
+            logger.warning("Cairo font setup failed, trying headless browser: %s", exc)
         except Exception as exc:
             cairo_error = exc
-            logger.warning("Cairo PNG export failed, trying PyMuPDF: %s", exc)
-    try:
-        return _render_ticket_png_pymupdf(svg_text, scale)
-    except ImportError as exc:
-        raise TicketRenderError(
-            "PNG export unavailable: install pymupdf (pip) or libcairo2/libpango (Linux server)"
-        ) from (cairo_error or exc)
-    except Exception as exc:
-        raise TicketRenderError(str(exc)) from (cairo_error or exc)
+            logger.warning("Cairo PNG export failed, trying headless browser: %s", exc)
+    elif backend == "cairo":
+        raise TicketRenderError(_cairo_unavailable_message())
+
+    if use_chromium:
+        png = _try_headless_chromium(svg_text, out_w, out_h)
+        if png is not None:
+            logger.info("ticket PNG via headless Chromium (%sx%s)", out_w, out_h)
+            return png
+        if backend == "chromium":
+            raise TicketRenderError(
+                "PNG export via browser failed; set WW_CHROMIUM_PATH to chrome.exe or msedge.exe"
+            )
+
+    if use_pymupdf and _pymupdf_png_available():
+        try:
+            shaped = _svg_for_pymupdf_fallback(svg_text)
+            return _render_ticket_png_pymupdf(shaped, scale)
+        except Exception as exc:
+            pymupdf_error = exc
+            if backend == "pymupdf":
+                raise TicketRenderError(_pymupdf_failure_message(exc)) from exc
+            logger.warning("PyMuPDF PNG export failed: %s", exc)
+
+    if cairo_error is not None:
+        raise TicketRenderError(str(cairo_error)) from cairo_error
+    if pymupdf_error is not None:
+        raise TicketRenderError(_pymupdf_failure_message(pymupdf_error)) from pymupdf_error
+    raise TicketRenderError(_cairo_unavailable_message())
+
+
+def _svg_for_pymupdf_fallback(svg_text: str) -> str:
+    """Last-resort: presentation forms for dumb SVG rasterizers."""
+    root = ET.fromstring(svg_text)
+    for el in root.iter():
+        field = el.attrib.get("data-field")
+        if not field or not (el.text or "").strip():
+            continue
+        locale = "fa"
+        if field == "date":
+            locale = "fa" if _ARABIC_CHARS.search(el.text or "") else "en"
+        el.text = _visible_field_text(field, el.text or "", locale)
+    return normalize_ticket_svg_xml(ET.tostring(root, encoding="unicode", xml_declaration=True))
 
 
 def _svg_viewbox_size(svg_text: str) -> tuple[float, float]:

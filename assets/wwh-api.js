@@ -13,9 +13,9 @@
     var d = body.detail;
     if (typeof d === 'string' && d) return d;
     if (d && typeof d === 'object' && !Array.isArray(d)) {
+      if (typeof d.detail === 'string' && d.detail) return d.detail;
       if (typeof d.message === 'string' && d.message) return d.message;
       if (typeof d.error === 'string' && d.error) return d.error;
-      if (typeof d.detail === 'string' && d.detail) return d.detail;
     }
     if (Array.isArray(d)) {
       var parts = d.map(function (x) {

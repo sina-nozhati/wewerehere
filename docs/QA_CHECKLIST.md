@@ -51,7 +51,7 @@ pytest -q
 
 ## بلیت بصری (دسکتاپ)
 
-- [ ] گروه A و B هر دو اسلات‌های `data-field` یکسان دارند (`ticket-field-layout.json`)
+- [ ] گروه A و B هر دو اسلات‌های `data-field` یکسان دارند (`ticket-field-layout.json`؛ در هر fill از JSON اعمال می‌شود — `apply_field_layout`)
 - [ ] نام عمودی با opacity پایین؛ `name_stub` روی stub دیده می‌شود (بدون `display:none`)
 - [ ] `no1`/`no2` و `code1`/`code2` یکسان؛ مختصات داخل ناحیهٔ stub / پانچ
 - [ ] متن‌های نمونه ثابت «سوم شهریور» / `17:00` / `Same old place` در خروجی داینامیک نیستند
