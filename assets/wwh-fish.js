@@ -43,22 +43,39 @@
       });
   }
 
-  function makeWaypoints(fish, h, w) {
-    var ltr = Math.random() < 0.5;
+  function otherSwimmingFish(fish) {
+    for (var i = 0; i < fishEls.length; i++) {
+      var f = fishEls[i];
+      if (f !== fish && f._swimming && f._motion) return f;
+    }
+    return null;
+  }
+
+  function makeWaypoints(fish, h, w, forceLtr, avoidY) {
+    var ltr = forceLtr != null ? !!forceLtr : Math.random() < 0.5;
     var startX = ltr ? w + margin : -margin;
     var endX = ltr ? -margin : w + margin;
-    if (fish._laneY == null) fish._laneY = rand(h * 0.26, h * 0.68);
-    fish._laneY += rand(-h * 0.05, h * 0.05);
-    fish._laneY = clamp(fish._laneY, h * 0.18, h * 0.74);
+
+    /* Fresh lane every swim — avoid clustering with the mate */
+    var yMin = h * 0.12;
+    var yMax = h * 0.86;
+    var y = rand(yMin, yMax);
+    if (avoidY != null) {
+      var tries = 0;
+      while (Math.abs(y - avoidY) < h * 0.22 && tries < 12) {
+        y = rand(yMin, yMax);
+        tries += 1;
+      }
+    }
+    fish._laneY = y;
 
     var count = 5 + Math.floor(Math.random() * 4);
     var pts = [];
-    var y = fish._laneY;
     for (var i = 0; i < count; i++) {
       var t = i / (count - 1);
-      var x = startX + (endX - startX) * t + rand(-w * 0.015, w * 0.015);
-      if (i > 0) y += rand(-h * 0.028, h * 0.028);
-      y = clamp(y, h * 0.16, h * 0.8);
+      var x = startX + (endX - startX) * t + rand(-w * 0.04, w * 0.04);
+      if (i > 0) y += rand(-h * 0.06, h * 0.06);
+      y = clamp(y, yMin, yMax);
       pts.push({ x: x, y: y });
     }
     return { points: pts, ltr: ltr, wp: 0 };
@@ -69,7 +86,18 @@
     var w = window.innerWidth;
     var width = rand(58, 96);
     var baseOpacity = rand(0.36, 0.5).toFixed(2);
-    var path = makeWaypoints(fish, h, w);
+    var mate = otherSwimmingFish(fish);
+    var forceLtr = null;
+    var avoidY = null;
+    if (mate && mate._motion && mate._motion.path) {
+      /* Opposite entry side + different vertical lane so they don't twin */
+      forceLtr = !mate._motion.path.ltr;
+      avoidY = mate._motion.y;
+    } else if (fish._lastLtr != null && Math.random() < 0.65) {
+      forceLtr = !fish._lastLtr;
+    }
+    var path = makeWaypoints(fish, h, w, forceLtr, avoidY);
+    fish._lastLtr = path.ltr;
     var p0 = path.points[0];
 
     fish.style.width = width.toFixed(0) + 'px';
@@ -142,9 +170,10 @@
   }
 
   function scheduleNext(fish) {
+    /* Short gap so at least one fish is usually on screen while scrolling */
     fish._timer = window.setTimeout(function () {
       runSwim(fish);
-    }, rand(1800, 14000));
+    }, rand(350, 1600));
   }
 
   function steerToward(m, tx, ty, speedMul) {
@@ -488,20 +517,8 @@ var JOKES = [
     return document.documentElement.classList.contains('wwh-perf-lite');
   }
 
-  function shouldRunFish() {
-    if (typeof window.__wwhHeroInView === 'function') {
-      return window.__wwhHeroInView();
-    }
-    return !document.documentElement.classList.contains('wwh-spotlight-active');
-  }
-
   function gameLoop(now) {
     if (!lastTick) lastTick = now;
-    if (!shouldRunFish()) {
-      lastTick = now;
-      loopRaf = requestAnimationFrame(gameLoop);
-      return;
-    }
     if (isPerfLite() && now - lastTick < 32) {
       loopRaf = requestAnimationFrame(gameLoop);
       return;
@@ -517,7 +534,7 @@ var JOKES = [
       return f._swimming && f._motion;
     });
     if (active.length === 2) {
-      tryRandomSeek(active[0], active[1], now);
+      /* No seek/meetup — keep paths independent and random */
       resolveCollision(active[0], active[1], now);
     }
 
@@ -541,12 +558,13 @@ var JOKES = [
   function boot() {
     if (reduceMotion) return;
     fishEls.forEach(bindFish);
+    /* Start as soon as the page loads — do not wait for spotlight */
     fishEls[0]._timer = window.setTimeout(function () {
       runSwim(fishEls[0]);
-    }, rand(1200, 3500));
+    }, rand(60, 280));
     fishEls[1]._timer = window.setTimeout(function () {
       runSwim(fishEls[1]);
-    }, rand(3500, 9000));
+    }, rand(480, 1100));
     loopRaf = requestAnimationFrame(gameLoop);
   }
 

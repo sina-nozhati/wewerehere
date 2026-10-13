@@ -26,6 +26,10 @@
   margin-top: calc(var(--wwh-moon-top, 6vh) + var(--wwh-moon-size, 220px) * 0.1);
   margin-bottom: 6px;
   text-align: center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 @media (min-width: 769px) {
@@ -36,6 +40,18 @@
 
 .hero__title-stage .hero__title {
   margin-bottom: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.hero__episode-chip,
+.hero__tagline,
+.hero__subline {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* Stage spotlight — full viewport dim (fixed), hole reveals sharp hero */

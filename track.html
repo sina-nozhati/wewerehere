@@ -155,6 +155,36 @@
       color: var(--color-warning);
       font-size: 0.9rem;
     }
+    .track-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 20px;
+      padding: 28px 20px;
+      border-radius: var(--radius-md);
+      border: 1px dashed var(--color-border);
+      background: rgba(255, 255, 255, 0.03);
+      text-align: center;
+    }
+    .track-loading__text {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--color-secondary);
+      line-height: 1.6;
+    }
+    .track-loading__hint {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--color-muted);
+    }
+    .track-loading .spinner {
+      width: 28px;
+      height: 28px;
+      border-width: 2.5px;
+    }
     .lookup__group { display: flex; }
     .lookup__input {
       flex: 1;
@@ -193,11 +223,17 @@
       font-weight: 700;
       font-size: 0.9rem;
       cursor: pointer;
-      transition: background var(--transition-base), color var(--transition-base);
+      transition: background var(--transition-base), color var(--transition-base), transform 100ms ease-out;
       white-space: nowrap;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
     }
-    .lookup__btn:hover { background: transparent; color: var(--color-primary); }
+    .lookup__btn:active { transform: scale(0.98); }
     .lookup__btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+    @media (hover: hover) and (pointer: fine) {
+      .lookup__btn:hover { background: transparent; color: var(--color-primary); }
+    }
     .lookup__error { color: var(--color-danger); font-size: 0.8rem; text-align: center; margin-top: 12px; display: none; }
     .lookup__error.visible { display: block; }
     .lookup__hint { font-size: 0.78rem; color: var(--color-muted); text-align: center; margin-top: 12px; }
@@ -276,7 +312,7 @@
     }
 
     /* ---- tickets ---- */
-    .tickets-block { margin-top: 34px; }
+    .tickets-block { margin-top: 34px; margin-bottom: 40px; }
     .tickets-block__title {
       font-size: 1.15rem;
       font-weight: 800;
@@ -368,7 +404,15 @@
     }
     .ticket__summary-name { color: var(--color-primary); font-weight: 800; }
     .ticket__summary-meta { margin-top: 6px; color: var(--color-muted); font-size: 0.82rem; direction: ltr; }
-    .ticket__actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
+    .ticket__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 16px;
+      margin-bottom: 28px;
+      padding-bottom: 8px;
+    }
 
     .btn {
       display: inline-flex;
@@ -737,6 +781,21 @@
       '</div>';
     }
 
+    function showTrackLoading() {
+      results.setAttribute('aria-busy', 'true');
+      results.innerHTML =
+        '<div class="track-loading" role="status">' +
+          '<span class="spinner" aria-hidden="true"></span>' +
+          '<p class="track-loading__text">در حال پیدا کردن بلیت…</p>' +
+          '<p class="track-loading__hint">لطفاً چند لحظه صبر کن</p>' +
+        '</div>';
+      results.classList.add('visible');
+    }
+
+    function clearTrackBusy() {
+      results.removeAttribute('aria-busy');
+    }
+
     var serialInput = document.getElementById('lookup-serial');
 
     form.addEventListener('submit', function (e) {
@@ -753,7 +812,6 @@
       btnText.style.display = 'none';
       spinner.style.display = 'block';
       btn.disabled = true;
-      results.classList.remove('visible');
 
       var eid = selectedEventId();
       if (!eid) {
@@ -764,6 +822,9 @@
         btn.disabled = false;
         return;
       }
+      showTrackLoading();
+      results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
       var url = '/api/orders/track?eventId=' + encodeURIComponent(String(eid)) + '&';
       if (hasSerial) url += 'serial=' + encodeURIComponent(serial);
       else url += 'phone=' + encodeURIComponent(phone);
@@ -787,6 +848,7 @@
             (ev.isFeatured ? ' <span style="color:var(--color-accent-soft);">(همین اجرا)</span>' : '') +
             '</div>';
           if (!res.orders.length && !res.tickets.length) {
+            clearTrackBusy();
             results.innerHTML = scopeHtml + '<div class="empty">برای این اپیزود و این شماره/سریال چیزی پیدا نشد.<br>اگه هنوز ثبت‌نام نکردی، <a href="/#register" style="color:var(--color-primary);">از اینجا شروع کن</a>.</div>';
             results.classList.add('visible');
             results.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -796,8 +858,7 @@
           if (res.orders.length && res.orders.every(function (o) { return o.status === 'pending'; })) {
             html += '<div class="track-pending-banner">رسید شما ثبت شده و در انتظار تأیید ادمین است.</div>';
           }
-          res.orders.forEach(function (o) { html += orderHtml(o); });
-          Promise.all(res.tickets.map(ticketHtml)).then(function (cards) {
+          return Promise.all(res.tickets.map(ticketHtml)).then(function (cards) {
             if (cards.length) {
               html += '<div class="tickets-block">' +
                 '<h2 class="tickets-block__title">بلیت‌های تو آماده‌ست ♥</h2>' +
@@ -806,15 +867,19 @@
                 '<div class="tickets-list">' + cards.map(function (c) { return c.outerHTML; }).join('') + '</div>' +
               '</div>';
             }
+            res.orders.forEach(function (o) { html += orderHtml(o); });
+            clearTrackBusy();
             results.innerHTML = html;
             results.classList.add('visible');
             results.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }).catch(function (err) {
+            clearTrackBusy();
             results.innerHTML = html + '<div class="empty">خطا در نمایش بلیت: ' + escapeHtml(err && err.message ? err.message : 'نامشخص') + '</div>';
             results.classList.add('visible');
           });
         })
         .catch(function (err) {
+          clearTrackBusy();
           results.innerHTML = '<div class="empty">خطا در ارتباط با سرور: ' + escapeHtml(err.message) + '</div>';
           results.classList.add('visible');
         })

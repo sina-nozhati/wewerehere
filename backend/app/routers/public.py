@@ -25,7 +25,7 @@ from app.services.orders import create_order, status_for_ui
 from app.services.phone import normalize_phone, normalize_serial, valid_phone
 from app.services.event_display import ticket_venue_from_event
 from app.services.jalali_schedule import format_hero_schedule, ticket_city_line
-from app.services.tickets import verify_ticket_access
+from app.services.tickets import active_rank_map, public_number, verify_ticket_access
 
 router = APIRouter(tags=["public"])
 
@@ -187,15 +187,18 @@ def orders_for_event(event_id: int, body: OrderCreateBody, db: Session = Depends
     return {"orderId": order.id, "status": "pending"}
 
 
-def _ticket_track_payload(t: Ticket, ev: Event | None = None) -> dict:
+def _ticket_track_payload(t: Ticket, ev: Event | None, rank_map: dict[int, int]) -> dict:
     venue = ticket_venue_from_event(ev)
     sched = format_hero_schedule(
         ev.event_at if ev else None,
         venue=venue,
         city=(ev.city or "") if ev else "",
     )
+    number = public_number(t, rank_map)
+    if number is None:
+        number = t.display_number
     return {
-        "number": t.display_number,
+        "number": number,
         "serial": t.public_code,
         "name": t.holder_name,
         "group": t.group_name,
@@ -244,7 +247,8 @@ def _track_tickets_by_serial(db: Session, serial: str, event_id: int) -> list[di
             select(Event).where(Event.id.in_({ticket.event_id for ticket in tickets}))
         ).all()
     } if tickets else {}
-    return [_ticket_track_payload(ticket, events.get(ticket.event_id)) for ticket in tickets]
+    ranks = active_rank_map(db, event_id)
+    return [_ticket_track_payload(ticket, events.get(ticket.event_id), ranks) for ticket in tickets]
 
 
 @router.get("/api/tickets/track")
@@ -254,14 +258,19 @@ def track_by_serial(serial: str = Query(""), phone: str = Query(""), db: Session
     phone_n = normalize_phone(phone) if phone else ""
     raw = normalize_serial(serial)
     tickets_out: list[dict] = []
+    rank_by_event: dict[int, dict[int, int]] = {}
     if re.fullmatch(r"\d{4}", raw):
-        tickets_out.extend(_track_tickets_by_serial(db, raw))
+        featured_id = get_featured_event_id(db)
+        if featured_id:
+            tickets_out.extend(_track_tickets_by_serial(db, raw, featured_id))
     if valid_phone(phone_n):
         for t in db.scalars(
             select(Ticket).where(Ticket.phone == phone_n, Ticket.status == "active").order_by(Ticket.id.desc())
         ).all():
+            if t.event_id not in rank_by_event:
+                rank_by_event[t.event_id] = active_rank_map(db, t.event_id)
             ev_row = db.get(Event, t.event_id)
-            payload = _ticket_track_payload(t, ev_row)
+            payload = _ticket_track_payload(t, ev_row, rank_by_event[t.event_id])
             if not any(x["serial"] == payload["serial"] and x["eventId"] == payload["eventId"] for x in tickets_out):
                 tickets_out.append(payload)
     if not tickets_out and not valid_phone(phone_n) and not re.fullmatch(r"\d{4}", raw):
@@ -294,6 +303,8 @@ def download_ticket_png(
     else:
         raise HTTPException(403, "forbidden")
     ev = db.get(Event, t.event_id)
+    ranks = active_rank_map(db, t.event_id)
+    ticket_number = public_number(t, ranks) or t.display_number
     out_fmt = (format or "png").lower().strip()
     if out_fmt == "svg":
         raise HTTPException(400, {"error": "svg_not_available", "message": "Only PNG download is supported"})
@@ -306,7 +317,7 @@ def download_ticket_png(
             t.group_name,
             t.holder_name,
             t.public_code,
-            t.display_number,
+            ticket_number,
             event_at=ev.event_at if ev else None,
             venue=ticket_venue_from_event(ev),
             city=ev.city if ev else "",
@@ -395,7 +406,8 @@ def track_orders(
         .where(Ticket.phone == phone_n, Ticket.status == "active", Ticket.event_id == ev.id)
         .order_by(Ticket.id.desc())
     ).all()
-    ticket_payload = [_ticket_track_payload(t, ev) for t in tickets]
+    ranks = active_rank_map(db, ev.id)
+    ticket_payload = [_ticket_track_payload(t, ev, ranks) for t in tickets]
     return {"orders": order_payload, "tickets": ticket_payload, "event": event_summary}
 
 
@@ -422,10 +434,12 @@ def ticket_legacy(serial: str = Query(""), db: Session = Depends(get_db)):
         "exp": datetime.now(timezone.utc).timestamp() + 3600,
     }
     media = _archive_media_list(db, ev.id, session=session)
+    ranks = active_rank_map(db, ev.id)
+    number = public_number(ticket, ranks) or ticket.display_number
     return {
         "found": True,
         "ticket": {
-            "number": ticket.display_number,
+            "number": number,
             "serial": ticket.public_code,
             "name": ticket.holder_name,
             "group": ticket.group_name,
@@ -478,12 +492,14 @@ def archive_access(body: ArchiveAccessBody, db: Session = Depends(get_db)):
 
     session = secrets.token_urlsafe(24)
     _archive_sessions[session] = {"event_id": event_id, "ticket_id": ticket.id, "exp": datetime.now(timezone.utc).timestamp() + 3600}
+    ranks = active_rank_map(db, event_id)
+    number = public_number(ticket, ranks) or ticket.display_number
     return {
         "ok": True,
         "found": True,
         "session": session,
         "ticket": {
-            "number": ticket.display_number,
+            "number": number,
             "serial": ticket.public_code,
             "name": ticket.holder_name,
             "group": ticket.group_name,

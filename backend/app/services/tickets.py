@@ -43,6 +43,40 @@ def next_display_number(db: Session, event_id: int) -> int:
     return (current or 0) + 1
 
 
+def active_rank_map(db: Session, event_id: int) -> dict[int, int]:
+    """Dense 1..N ranks among active tickets, ordered by issuance (display_number, id)."""
+    rows = db.scalars(
+        select(Ticket.id)
+        .where(Ticket.event_id == event_id, Ticket.status == "active")
+        .order_by(Ticket.display_number.asc(), Ticket.id.asc())
+    ).all()
+    return {tid: rank for rank, tid in enumerate(rows, start=1)}
+
+
+def public_number(ticket: Ticket, rank_map: dict[int, int]) -> int | None:
+    if ticket.status != "active":
+        return None
+    return rank_map.get(ticket.id)
+
+
+def pick_balanced_group(db: Session, event_id: int) -> str:
+    count_a = db.scalar(
+        select(func.count())
+        .select_from(Ticket)
+        .where(Ticket.event_id == event_id, Ticket.status == "active", Ticket.group_name == "A")
+    ) or 0
+    count_b = db.scalar(
+        select(func.count())
+        .select_from(Ticket)
+        .where(Ticket.event_id == event_id, Ticket.status == "active", Ticket.group_name == "B")
+    ) or 0
+    if count_a < count_b:
+        return "A"
+    if count_b < count_a:
+        return "B"
+    return "A"
+
+
 def issue_ticket(
     db: Session,
     *,
@@ -54,7 +88,7 @@ def issue_ticket(
     group_name: str | None = None,
 ) -> tuple[Ticket, str]:
     code = public_code or unique_public_code(db, event_id)
-    group = group_name if group_name in ("A", "B") else group_for_code(code)
+    group = group_name if group_name in ("A", "B") else pick_balanced_group(db, event_id)
     token = generate_access_token()
     ticket = Ticket(
         event_id=event_id,

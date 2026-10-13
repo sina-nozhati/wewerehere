@@ -20,7 +20,7 @@ from app.services.phone import normalize_phone, valid_phone
 from app.services.event_display import ticket_venue_from_event
 from app.services.ticket_render import TicketRenderError, render_ticket_bytes
 from app.services.support_contacts import contact_display_name
-from app.services.tickets import group_for_code, issue_ticket, unique_public_code
+from app.services.tickets import active_rank_map, group_for_code, issue_ticket, public_number, unique_public_code
 
 _ACTIVE_SUPPORT = frozenset({"open", "waiting_admin", "waiting_user"})
 
@@ -277,6 +277,7 @@ def admin_tickets(
     if status != "all":
         q = q.where(Ticket.status == status)
     rows = db.scalars(q.order_by(Ticket.id.desc())).all()
+    ranks = active_rank_map(db, eid)
     return {
         "tickets": [
             {
@@ -287,7 +288,8 @@ def admin_tickets(
                 "group_name": t.group_name,
                 "created_at": t.issued_at.isoformat() if t.issued_at else "",
                 "eventId": t.event_id,
-                "displayNumber": t.display_number,
+                "displayNumber": public_number(t, ranks) if t.status == "active" else None,
+                "issuanceNumber": t.display_number,
                 "status": t.status,
             }
             for t in rows
@@ -314,7 +316,7 @@ def admin_ticket_create(body: TicketBody, db: Session = Depends(get_db), _: str 
             raise HTTPException(409, {"error": "serial already exists"})
     else:
         serial = unique_public_code(db, eid)
-    group = body.group if body.group in ("A", "B") else group_for_code(serial)
+    group = body.group if body.group in ("A", "B") else None
     ticket, _ = issue_ticket(
         db,
         event_id=eid,
@@ -372,12 +374,17 @@ def _ticket_export_response(t: Ticket, db: Session, sample: bool = False):
     if t.status != "active" and not sample:
         raise HTTPException(409, {"error": "ticket not printable"})
     ev = db.get(Event, t.event_id)
+    if sample:
+        ticket_number = t.display_number
+    else:
+        ranks = active_rank_map(db, t.event_id)
+        ticket_number = public_number(t, ranks) or t.display_number
     try:
         body, media_type, ext = render_ticket_bytes(
             t.group_name,
             t.holder_name,
             t.public_code,
-            t.display_number,
+            ticket_number,
             event_at=ev.event_at if ev else None,
             venue=ticket_venue_from_event(ev),
             city=ev.city if ev else "",
@@ -454,14 +461,16 @@ def admin_tickets_export_zip(
     if not rows:
         raise HTTPException(404, {"error": "no printable tickets"})
     ev = db.get(Event, eid)
+    ranks = active_rank_map(db, eid)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for t in rows:
+            ticket_number = public_number(t, ranks) or t.display_number
             body, _, ext = render_ticket_bytes(
                 t.group_name,
                 t.holder_name,
                 t.public_code,
-                t.display_number,
+                ticket_number,
                 event_at=ev.event_at if ev else None,
                 venue=ticket_venue_from_event(ev),
                 city=ev.city if ev else "",

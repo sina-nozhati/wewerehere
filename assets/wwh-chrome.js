@@ -100,7 +100,7 @@
     });
 
     nav.addEventListener('click', function (e) {
-      if (e.target.closest('.wwh-topbar__link')) setMenuOpen(bar, false);
+      if (e.target.closest('.wwh-topbar__link') || e.target === nav) setMenuOpen(bar, false);
     });
 
     document.addEventListener('keydown', function (e) {

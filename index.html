@@ -161,6 +161,10 @@
       margin-bottom: 28px;
       animation: titleGlow 4s ease-in-out infinite, fadeInUp 0.8s ease forwards;
       animation-delay: 0s, 0.3s;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
     .hero__title span { display: block; }
 
@@ -173,6 +177,10 @@
       opacity: 0;
       animation: fadeInUp 0.8s ease forwards;
       animation-delay: 0.5s;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
 
     .hero__date {
@@ -183,6 +191,10 @@
       opacity: 0;
       animation: fadeInUp 0.8s ease forwards;
       animation-delay: 0.65s;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
 
     .hero__capacity {
@@ -1769,7 +1781,7 @@
   <script src="/assets/wwh-scroll.js"></script>
   <script src="/assets/wwh-spotlight.js"></script>
   <script src="/assets/wwh-atmosphere.js"></script>
-  <script src="/assets/wwh-fish.js"></script>
+  <script src="/assets/wwh-fish.js?v=swim-always"></script>
   <script>
     // ---- Countdown ---------------------------------------------------------
     (function initCountdown() {

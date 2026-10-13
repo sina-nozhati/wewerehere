@@ -17,17 +17,34 @@
   position: fixed;
   z-index: 1;
   pointer-events: none;
+  min-width: 48px;
+  min-height: 48px;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .wwh-fish-layer .fish.is-swimming {
   pointer-events: auto;
   cursor: pointer;
+  /* Expand hit target beyond visual body for mobile taps */
+  padding: 12px;
+  margin: -12px;
+  box-sizing: content-box;
 }
 
-.wwh-fish-layer .fish.is-swimming:hover,
+@media (hover: hover) and (pointer: fine) {
+  .wwh-fish-layer .fish.is-swimming:hover,
+  .wwh-fish-layer .fish.is-swimming:focus-visible {
+    filter: blur(0) drop-shadow(0 0 12px rgba(212, 63, 90, 0.6));
+    outline: none;
+  }
+}
+
 .wwh-fish-layer .fish.is-swimming:focus-visible {
-  filter: blur(0) drop-shadow(0 0 12px rgba(212, 63, 90, 0.6));
-  outline: none;
+  outline: 2px solid rgba(212, 63, 90, 0.7);
+  outline-offset: 4px;
 }
 
 .wwh-fish-layer .fish.fish--invite,
