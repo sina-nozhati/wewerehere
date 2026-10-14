@@ -598,6 +598,47 @@ def admin_resend_order_sms(
     return {"id": order.id, "sms": sms}
 
 
+@router.post("/tickets/resend-sms")
+def admin_resend_ticket_sms(
+    id: int = Query(...),
+    db: Session = Depends(get_db),
+    token: str = Depends(require_admin),
+):
+    """Resend issue SMS for this ticket's phone: all active same-phone tickets in the event."""
+    check_rate_limit(_sms_rate, f"resend-ticket:{token}", limit=10, window_sec=60)
+    ticket = db.get(Ticket, id)
+    if not ticket:
+        raise HTTPException(404, "not found")
+    if ticket.status != "active":
+        raise HTTPException(409, {"error": "ticket not active"})
+
+    rows = db.scalars(
+        select(Ticket)
+        .where(
+            Ticket.event_id == ticket.event_id,
+            Ticket.phone == ticket.phone,
+            Ticket.status == "active",
+        )
+        .order_by(Ticket.issued_at.asc(), Ticket.id.asc())
+    ).all()
+    payload = [
+        {"serial": t.public_code, "name": t.holder_name, "group": t.group_name}
+        for t in rows
+    ]
+    if not payload:
+        raise HTTPException(409, {"error": "no active tickets"})
+
+    sms = notify_tickets_issued(ticket.phone, payload)
+    phone = ticket.phone or ""
+    masked = (phone[:4] + "****" + phone[-3:]) if len(phone) >= 7 else "***"
+    return {
+        "ok": True,
+        "phoneMasked": masked,
+        "namesCount": len(payload),
+        "sms": sms,
+    }
+
+
 @router.get("/sms/presets")
 def admin_sms_presets(_: str = Depends(require_admin)):
     presets = list_admin_presets()

@@ -167,6 +167,12 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Iris closed: hole filled — hide soft beam while reveal radius is 0 */
+.hero-spotlight.is-iris-closed .hero-spotlight__glow {
+  opacity: 0 !important;
+  transition: none !important;
+}
+
 /* Soft lock only while spotlight runs — unlocks when sequence ends or user taps to skip */
 html.wwh-spotlight-scroll-lock,
 html.wwh-spotlight-scroll-lock body {

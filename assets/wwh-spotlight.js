@@ -23,6 +23,10 @@
     reduceMotion: false,
     scrollLocked: false,
     skipBound: false,
+    flickerTimers: [],
+    shutterLoopOn: false,
+    /** 1 = hole open (reveal), 0 = hole filled (full black dim) */
+    irisOpen: 1,
   };
 
   var EASE = function (t) {
@@ -45,6 +49,113 @@
       }
       requestAnimationFrame(tick);
     });
+  }
+
+  function clearFlickerTimers() {
+    (session.flickerTimers || []).forEach(function (id) {
+      window.clearTimeout(id);
+    });
+    session.flickerTimers = [];
+  }
+
+  function setIrisOpen(dim, open) {
+    session.irisOpen = open ? 1 : 0;
+    if (dim) {
+      dim.classList.toggle('is-iris-closed', !open);
+      paintSpot(dim);
+    }
+  }
+
+  function stopFlicker(dim) {
+    session.shutterLoopOn = false;
+    clearFlickerTimers();
+    session.irisOpen = 1;
+    if (!dim) return;
+    dim.classList.remove('is-iris-closed');
+    paintSpot(dim);
+  }
+
+  function randMs(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  /** Closed iris — brief blink; mostly soft, rarely a heavier slap. */
+  function shutterClosedMs() {
+    var roll = Math.random();
+    if (roll < 0.65) return randMs(28, 48);
+    if (roll < 0.9) return randMs(48, 72);
+    return randMs(72, 100);
+  }
+
+  /** Long open rests so the reveal stays readable; gaps stay uneven. */
+  function shutterGapMs() {
+    var roll = Math.random();
+    if (roll < 0.45) return randMs(280, 520);
+    if (roll < 0.8) return randMs(520, 900);
+    return randMs(900, 1400);
+  }
+
+  /** Usually one click; rare soft double — never a machine-gun triple. */
+  function appendShutterBurst(steps, endOpenMs) {
+    var n = Math.random() < 0.18 ? 2 : 1;
+    var i;
+    for (i = 0; i < n; i++) {
+      steps.push({ closed: true, ms: shutterClosedMs() });
+      if (i < n - 1) {
+        steps.push({ closed: false, ms: randMs(40, 70) });
+      } else {
+        steps.push({ closed: false, ms: endOpenMs });
+      }
+    }
+  }
+
+  function scheduleFlicker(ms, fn) {
+    var id = window.setTimeout(fn, ms);
+    session.flickerTimers.push(id);
+  }
+
+  /**
+   * Soft continuous shutter for the whole spotlight life — including travel.
+   * Sparse + random so the hole stays readable (showcase, not strobe).
+   */
+  function startContinuousShutter(dim) {
+    if (!dim || session.reduceMotion || session.shutterLoopOn) return;
+    session.shutterLoopOn = true;
+
+    function alive() {
+      return session.shutterLoopOn && session.active && !session.aborted;
+    }
+
+    function playSteps(steps, onDone) {
+      var i = 0;
+      function next() {
+        if (!alive()) {
+          setIrisOpen(dim, true);
+          return;
+        }
+        if (i >= steps.length) {
+          onDone();
+          return;
+        }
+        var step = steps[i++];
+        setIrisOpen(dim, !step.closed);
+        scheduleFlicker(Math.max(1, step.ms || 1), next);
+      }
+      next();
+    }
+
+    function loop() {
+      if (!alive()) {
+        setIrisOpen(dim, true);
+        return;
+      }
+      var steps = [];
+      appendShutterBurst(steps, shutterGapMs());
+      playSteps(steps, loop);
+    }
+
+    /* Settle on the hole first, then a gentle first blink */
+    scheduleFlicker(randMs(220, 480), loop);
   }
 
   function measureEl(hero, el, padX, padY) {
@@ -133,9 +244,11 @@
       oy = (Math.cos(t * 0.00131) * 1.75 + Math.sin(t * 0.00088) * 1.15) * amp;
       dr = Math.sin(t * 0.00162) * 2.2 * amp;
     }
+    var open = session.irisOpen == null ? 1 : session.irisOpen;
+    var r = Math.max(0, (baseSpot.r + dr) * open);
     dim.style.setProperty('--spot-x', baseSpot.x + ox + 'px');
     dim.style.setProperty('--spot-y', baseSpot.y + oy + 'px');
-    dim.style.setProperty('--spot-r', baseSpot.r + dr + 'px');
+    dim.style.setProperty('--spot-r', r + 'px');
   }
 
   function applySpot(dim, spot) {
@@ -215,6 +328,7 @@
     unlockScroll();
     session.active = false;
     stopHandheld();
+    stopFlicker(dim);
     if (dim) {
       dim.removeAttribute('role');
       dim.removeAttribute('tabindex');
@@ -350,6 +464,7 @@
     var open = openingSpot(hero);
     var travel = travelMs(reduceMotion);
     applySpot(dim, open);
+    startContinuousShutter(dim);
     if (spots[0] && travel > 0) {
       tweenToIndex(hero, dim, 0, travel);
     } else if (spots[0]) {
@@ -370,6 +485,7 @@
     var travel = travelMs(reduceMotion);
 
     applySpot(dim, spots[0]);
+    startContinuousShutter(dim);
 
     var chain = holdOnIndex(hero, dim, 0, titleHoldMs(reduceMotion));
 

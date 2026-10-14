@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#0A0A0B">
   <link rel="stylesheet" href="/assets/wwh-theme.css">
   <title>پنل مدیریت — ما اینجا بودیم</title>
+  <link rel="icon" href="/assets/wwh-favicon.jpg?v=1" type="image/jpeg">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg?v=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
@@ -828,6 +830,7 @@
           var actions = revoked
             ? '<span class="muted">—</span>'
             : '<div class="actions">' +
+              '<button type="button" class="ok small" data-resend-issue-sms="' + t.id + '">ارسال مجدد صدور بلیت</button>' +
               '<button class="small ghost" data-edit="' + t.id + '">ویرایش</button>' +
               '<button class="small ghost" data-export="' + t.id + '">چاپ/خروجی</button>' +
               '<button class="danger" data-del="' + t.id + '">حذف</button>' +
@@ -901,7 +904,23 @@
       var delBtn = e.target.closest('[data-del]');
       var editBtn = e.target.closest('[data-edit]');
       var exportBtn = e.target.closest('[data-export]');
-      if (exportBtn) {
+      var resendIssueBtn = e.target.closest('[data-resend-issue-sms]');
+      if (resendIssueBtn) {
+        var rid = resendIssueBtn.getAttribute('data-resend-issue-sms');
+        if (!confirm('پیامک صدور بلیت برای این شماره (همه بلیت‌های فعال هم‌شماره در این رویداد) دوباره ارسال شود؟')) return;
+        resendIssueBtn.disabled = true;
+        api('/api/admin/tickets/resend-sms?id=' + rid, { method: 'POST', headers: authHeaders() })
+          .then(function (res) {
+            var sms = res.sms || {};
+            var n = res.namesCount != null ? res.namesCount : 0;
+            var msg = 'پیامک برای ' + toFa(n) + ' نام';
+            if (sms.sent) msg += ' — ارسال شد';
+            if (sms.failed) msg += ' — ناموفق';
+            alert(msg);
+          })
+          .catch(function (e2) { alert('خطا: ' + e2.message); })
+          .then(function () { resendIssueBtn.disabled = false; });
+      } else if (exportBtn) {
         var tid = exportBtn.getAttribute('data-export');
         fetch('/api/admin/tickets/' + tid + '/export', { headers: { Authorization: 'Bearer ' + TOKEN } })
           .then(function (r) { return downloadFromFetchResponse(r, 'ticket-' + tid); })
@@ -1041,7 +1060,7 @@
               '<button class="danger" data-reject="' + o.id + '">رد</button>';
           } else if (o.status === 'approved') {
             actions =
-              '<button type="button" class="ghost small" data-resend-sms="' + o.id + '">ارسال مجدد پیامک</button>';
+              '<button type="button" class="ok small" data-resend-sms="' + o.id + '">ارسال مجدد صدور بلیت</button>';
           } else {
             actions = '<span class="badge ' + statusClass(o.status) + '">' + statusLabel(o.status) + '</span>';
           }

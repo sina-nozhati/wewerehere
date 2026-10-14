@@ -14,10 +14,48 @@ from app.services.phone import normalize_phone, valid_phone
 log = logging.getLogger("wwh.notify")
 
 _CONSOLE_LOG = ROOT / "storage" / "sms-console.log"
+_SMS_PARAM_MAX = 25
+_FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹"
 
 
 def _param_name() -> str:
     return (settings.sms_ir_verify_parameter_name or "CODE").strip() or "CODE"
+
+
+def _to_fa_digits(n: int) -> str:
+    return "".join(_FA_DIGITS[int(ch)] if ch.isdigit() else ch for ch in str(n))
+
+
+def format_fa_name_list(names: list[str], *, max_len: int = _SMS_PARAM_MAX) -> str:
+    """Join names for SMS: «آنا»، «آنا و هستی»، «آنا، هستی و امیرعلی». Cap at max_len."""
+    cleaned = [str(n).strip() for n in (names or []) if n and str(n).strip()]
+    if not cleaned:
+        return ""
+
+    def join_fa(parts: list[str]) -> str:
+        if len(parts) == 1:
+            return parts[0]
+        if len(parts) == 2:
+            return f"{parts[0]} و {parts[1]}"
+        return "، ".join(parts[:-1]) + " و " + parts[-1]
+
+    full = join_fa(cleaned)
+    if len(full) <= max_len:
+        return full
+
+    # Smart shorten: «آنا و ۲ نفر دیگر» (fits sms.ir 25-char parameter limit)
+    first = cleaned[0]
+    others = len(cleaned) - 1
+    if others <= 0:
+        return first[:max_len]
+
+    suffix = f" و {_to_fa_digits(others)} نفر دیگر"
+    if len(first) + len(suffix) <= max_len:
+        return first + suffix
+    room = max_len - len(suffix)
+    if room < 1:
+        return first[:max_len]
+    return first[:room] + suffix
 
 
 def list_admin_presets() -> list[dict[str, Any]]:
@@ -140,40 +178,38 @@ def send_verify_dispatch(
 
 
 def notify_tickets_issued(phone: str, tickets: list[dict[str, Any]]) -> dict[str, Any]:
-    """One verify SMS per ticket serial. Phone from server record only."""
+    """One verify SMS per order: #NAMES# + #PHONE# (track link built in sms.ir template)."""
     phone = normalize_phone(phone)
     if not valid_phone(phone):
         return {"sent": 0, "failed": 0, "failure_kind": "invalid_phone"}
+    if not tickets:
+        return {"sent": 0, "failed": 0, "failure_kind": "no_tickets"}
 
     template_id = int(settings.sms_ir_template_id_ticket_notify or 0)
     if (settings.sms_provider or "").lower() == "smsir" and not template_id:
         log.warning("ticket notify skipped: missing template id")
-        return {"sent": 0, "failed": len(tickets), "failure_kind": "missing_template"}
+        return {"sent": 0, "failed": 1, "failure_kind": "missing_template"}
 
-    param = _param_name()
-    sent = 0
-    failed = 0
-    last_fail = None
-    for t in tickets:
-        serial = str(t.get("serial") or "")[:25]
-        if not serial:
-            failed += 1
-            last_fail = "missing_serial"
-            continue
-        result = send_verify_dispatch(
-            mobile=phone,
-            template_id=template_id,
-            parameters=[{"name": param, "value": serial}],
-        )
-        if result.get("ok"):
-            sent += 1
-        else:
-            failed += 1
-            last_fail = result.get("failure_kind")
-    out: dict[str, Any] = {"sent": sent, "failed": failed}
-    if last_fail and failed:
-        out["failure_kind"] = last_fail
-    return out
+    names = [str(t.get("name") or "").strip() for t in tickets if t.get("name")]
+    names_value = format_fa_name_list(names)
+    if not names_value:
+        return {"sent": 0, "failed": 1, "failure_kind": "missing_names"}
+
+    result = send_verify_dispatch(
+        mobile=phone,
+        template_id=template_id,
+        parameters=[
+            {"name": "NAMES", "value": names_value[:_SMS_PARAM_MAX]},
+            {"name": "PHONE", "value": phone[:_SMS_PARAM_MAX]},
+        ],
+    )
+    if result.get("ok"):
+        return {"sent": 1, "failed": 0}
+    return {
+        "sent": 0,
+        "failed": 1,
+        "failure_kind": result.get("failure_kind") or "send_failed",
+    }
 
 
 def send_admin_preset(phone: str, preset_id: str, value: str) -> dict[str, Any]:

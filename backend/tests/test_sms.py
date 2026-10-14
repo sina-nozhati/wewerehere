@@ -145,7 +145,19 @@ def test_send_verify_api_fail(monkeypatch):
     assert "api_status" in out["failure_kind"]
 
 
-def test_approve_sends_console_sms(client: TestClient, monkeypatch):
+def test_format_fa_name_list_join_and_truncate():
+    assert notify.format_fa_name_list(["آنا"]) == "آنا"
+    assert notify.format_fa_name_list(["آنا", "هستی"]) == "آنا و هستی"
+    assert notify.format_fa_name_list(["آنا", "هستی", "امیرعلی"]) == "آنا، هستی و امیرعلی"
+    long = notify.format_fa_name_list(
+        ["نام‌خیلی‌بلندبرایتست", "دوم", "سوم", "چهارم"],
+        max_len=25,
+    )
+    assert len(long) <= 25
+    assert "نفر دیگر" in long
+
+
+def test_approve_sends_one_sms_with_names_and_phone(client: TestClient, monkeypatch):
     object.__setattr__(settings, "sms_provider", "console")
     object.__setattr__(settings, "sms_ir_template_id_ticket_notify", 12345)
     calls = []
@@ -160,7 +172,7 @@ def test_approve_sends_console_sms(client: TestClient, monkeypatch):
         "/api/orders",
         json={
             "phone": "09123456789",
-            "names": ["علی"],
+            "names": ["آنا", "هستی", "امیرعلی"],
             "receiptText": " رسید تست",
             "eventId": client.event_id,
         },
@@ -174,6 +186,10 @@ def test_approve_sends_console_sms(client: TestClient, monkeypatch):
     assert body["sms"]["skipped"] is False
     assert len(calls) == 1
     assert calls[0]["mobile"] == "09123456789"
+    params = {p["name"]: p["value"] for p in calls[0]["parameters"]}
+    assert params["PHONE"] == "09123456789"
+    assert params["NAMES"] == "آنا، هستی و امیرعلی"
+    assert len(params["NAMES"]) <= 25
 
 
 def test_sms_send_requires_auth(client: TestClient):
@@ -208,3 +224,57 @@ def test_sms_presets_ok(client: TestClient):
     r = client.get("/api/admin/sms/presets", headers=headers)
     assert r.status_code == 200
     assert "presets" in r.json()
+
+
+def test_ticket_resend_sms_groups_same_phone(client: TestClient, monkeypatch):
+    object.__setattr__(settings, "sms_provider", "console")
+    object.__setattr__(settings, "sms_ir_template_id_ticket_notify", 12345)
+    calls = []
+
+    def fake_dispatch(**kwargs):
+        calls.append(kwargs)
+        return {"ok": True, "message_id": "console", "provider": "console"}
+
+    monkeypatch.setattr(notify, "send_verify_dispatch", fake_dispatch)
+    headers = _auth(client)
+    phone = "09121112233"
+    created_ids = []
+    for name in ("آنا", "هستی", "امیرعلی"):
+        r = client.post(
+            "/api/admin/tickets",
+            headers=headers,
+            json={"name": name, "phone": phone, "eventId": client.event_id},
+        )
+        assert r.status_code == 200
+        created_ids.append(r.json()["id"])
+
+    # Click any of the three — should group all names into one SMS
+    res = client.post(f"/api/admin/tickets/resend-sms?id={created_ids[1]}", headers=headers)
+    assert res.status_code == 200
+    body = res.json()
+    assert body["namesCount"] == 3
+    assert body["sms"]["sent"] == 1
+    assert len(calls) == 1
+    params = {p["name"]: p["value"] for p in calls[0]["parameters"]}
+    assert params["PHONE"] == phone
+    assert params["NAMES"] == "آنا، هستی و امیرعلی"
+
+
+def test_ticket_resend_sms_revoked_409(client: TestClient):
+    headers = _auth(client)
+    r = client.post(
+        "/api/admin/tickets",
+        headers=headers,
+        json={"name": "تست", "phone": "09120001122", "eventId": client.event_id},
+    )
+    assert r.status_code == 200
+    tid = r.json()["id"]
+    deleted = client.delete(f"/api/admin/tickets?id={tid}", headers=headers)
+    assert deleted.status_code == 200
+    again = client.post(f"/api/admin/tickets/resend-sms?id={tid}", headers=headers)
+    assert again.status_code == 409
+
+
+def test_ticket_resend_sms_requires_auth(client: TestClient):
+    r = client.post("/api/admin/tickets/resend-sms?id=1")
+    assert r.status_code == 401
