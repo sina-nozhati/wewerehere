@@ -16,6 +16,7 @@ from app.db import get_db
 from app.models import Event, Media, Order, PaymentReceipt, SiteSetting, SupportContact, SupportMessage, SupportTicket, Ticket
 from app.services.events import FEATURED_KEY, event_at_iso, get_featured_event_id, parse_event_at, set_featured_event_id
 from app.services.orders import approve_order, reject_order
+from app.services import notify as notify_svc
 from app.services.notify import list_admin_presets, notify_tickets_issued, send_admin_preset
 from app.services.phone import normalize_phone, valid_phone
 from app.services.event_display import ticket_venue_from_event
@@ -26,6 +27,15 @@ from app.services.tickets import active_rank_map, group_for_code, issue_ticket, 
 _ACTIVE_SUPPORT = frozenset({"open", "waiting_admin", "waiting_user"})
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+def _iso_utc(dt: datetime | None) -> str | None:
+    """Always emit timezone-aware UTC ISO so JS Date parses correctly."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
 
 class LoginBody(BaseModel):
@@ -296,7 +306,7 @@ def admin_tickets(
                 "name": t.holder_name,
                 "phone": t.phone,
                 "group_name": t.group_name,
-                "created_at": t.issued_at.isoformat() if t.issued_at else "",
+                "created_at": _iso_utc(t.issued_at) or "",
                 "eventId": t.event_id,
                 "displayNumber": public_number(t, ranks) if t.status == "active" else None,
                 "issuanceNumber": t.display_number,
@@ -424,17 +434,38 @@ def admin_ticket_sample(
     db: Session = Depends(get_db),
     _: str = Depends(require_admin),
 ):
+    """Sample PNG: A+B tickets on gothic mountain stage (headless), else single A PNG."""
+    from fastapi.responses import Response
+
+    from app.services.ticket_png_headless import headless_chromium_available, render_html_png_headless
+    from app.services.ticket_render import fill_ticket_svg
     from app.services.tickets import group_for_code
 
     eid = eventId or _default_event_id(db)
     ev = db.get(Event, eid)
     if not ev:
         raise HTTPException(404, "not found")
+    venue = ticket_venue_from_event(ev)
+    city = ev.city or ""
+    event_at = ev.event_at
+    svg_a = fill_ticket_svg("A", "پویان احمدی مقدم", "0001", 1, event_at=event_at, venue=venue, city=city)
+    svg_b = fill_ticket_svg("B", "علی رضایی", "0002", 2, event_at=event_at, venue=venue, city=city)
+    if headless_chromium_available():
+        try:
+            html = _gothic_sample_html(svg_a, svg_b)
+            body = render_html_png_headless(html, out_w=820, out_h=420)
+            return Response(
+                content=body,
+                media_type="image/png",
+                headers={"Content-Disposition": 'attachment; filename="ticket-sample-ab.png"'},
+            )
+        except Exception:
+            pass
     fake = Ticket(
         id=0,
         event_id=eid,
         order_id=None,
-        holder_name="نمونه — علی رضایی",
+        holder_name="پویان احمدی مقدم",
         phone="09120000000",
         public_code="0001",
         display_number=1,
@@ -445,12 +476,46 @@ def admin_ticket_sample(
     return _ticket_export_response(fake, db, sample=True)
 
 
-@router.get("/tickets/{ticket_id}/export")
-def admin_ticket_export(ticket_id: int, db: Session = Depends(get_db), _: str = Depends(require_admin)):
-    t = db.get(Ticket, ticket_id)
-    if not t:
-        raise HTTPException(404, "not found")
-    return _ticket_export_response(t, db)
+def _gothic_sample_html(svg_a: str, svg_b: str) -> str:
+    """Gothic frame with B stacked above A so mountains and pairing W meet at the join."""
+    return f"""<!DOCTYPE html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8">
+<style>
+html,body{{margin:0;padding:0;background:#0b0a0e;}}
+.stage{{
+  box-sizing:border-box;width:820px;min-height:420px;padding:28px 24px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:
+    radial-gradient(ellipse 95% 75% at 50% 26%, rgba(104,82,128,0.16), transparent 68%),
+    linear-gradient(180deg,#131016,#0b0a0e);
+}}
+.gothic-frame{{
+  position:relative;padding:14px;width:100%;max-width:740px;box-sizing:border-box;
+  background:
+    radial-gradient(ellipse 95% 75% at 50% 26%, rgba(104,82,128,0.16), transparent 68%),
+    linear-gradient(180deg,#131016,#0b0a0e);
+  border:1px solid #322a40;
+  box-shadow:inset 0 0 70px rgba(0,0,0,0.75),0 24px 60px rgba(0,0,0,0.55),0 0 0 1px rgba(212,63,90,0.12);
+}}
+.pair-stack{{
+  display:flex;flex-direction:column;align-items:stretch;gap:0;width:100%;
+}}
+.pair-stack svg{{display:block;width:100%;height:auto;}}
+.pair-caption{{
+  margin:14px 0 0;text-align:center;font:600 13px/1.4 Consolas,'Courier New',monospace;
+  color:#c4bcb0;letter-spacing:0.04em;
+}}
+</style></head><body>
+<div class="stage">
+  <div class="gothic-frame">
+    <div class="pair-stack">
+      {svg_b}
+      {svg_a}
+    </div>
+    <p class="pair-caption">B above A — mountains + W</p>
+  </div>
+</div>
+</body></html>"""
 
 
 @router.get("/tickets/export")
@@ -469,29 +534,47 @@ def admin_tickets_export_zip(
         select(Ticket).where(Ticket.event_id == eid, Ticket.status == "active").order_by(Ticket.id.asc())
     ).all()
     if not rows:
-        raise HTTPException(404, {"error": "no printable tickets"})
+        raise HTTPException(404, {"error": "no printable tickets", "message": "بلیتی برای خروجی نیست"})
     ev = db.get(Event, eid)
     ranks = active_rank_map(db, eid)
     buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        for t in rows:
-            ticket_number = public_number(t, ranks) or t.display_number
-            body, _, ext = render_ticket_bytes(
-                t.group_name,
-                t.holder_name,
-                t.public_code,
-                ticket_number,
-                event_at=ev.event_at if ev else None,
-                venue=ticket_venue_from_event(ev),
-                city=ev.city if ev else "",
-            )
-            safe_name = re.sub(r"[^\w\-]+", "_", t.holder_name)[:40]
-            zf.writestr(f"{t.public_code}-{safe_name}.{ext}", body)
+    try:
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for t in rows:
+                ticket_number = public_number(t, ranks) or t.display_number
+                body, _, ext = render_ticket_bytes(
+                    t.group_name,
+                    t.holder_name,
+                    t.public_code,
+                    ticket_number,
+                    event_at=ev.event_at if ev else None,
+                    venue=ticket_venue_from_event(ev),
+                    city=ev.city if ev else "",
+                )
+                safe_name = re.sub(r"[^\w\-]+", "_", t.holder_name)[:40]
+                zf.writestr(f"{t.public_code}-{safe_name}.{ext}", body)
+    except TicketRenderError as e:
+        raise HTTPException(
+            503,
+            {
+                "error": "ticket_png_unavailable",
+                "message": str(e),
+                "detail": str(e),
+            },
+        )
     return Response(
         content=buf.getvalue(),
         media_type="application/zip",
         headers={"Content-Disposition": 'attachment; filename="wewerehere-tickets.zip"'},
     )
+
+
+@router.get("/tickets/{ticket_id}/export")
+def admin_ticket_export(ticket_id: int, db: Session = Depends(get_db), _: str = Depends(require_admin)):
+    t = db.get(Ticket, ticket_id)
+    if not t:
+        raise HTTPException(404, "not found")
+    return _ticket_export_response(t, db)
 
 
 @router.delete("/tickets")
@@ -538,8 +621,8 @@ def admin_orders(
                 "receiptText": receipt.text if receipt else "",
                 "receiptImageUrl": img_url,
                 "adminNote": o.admin_note or "",
-                "createdAt": o.created_at.isoformat() if o.created_at else "",
-                "reviewedAt": o.reviewed_at.isoformat() if o.reviewed_at else None,
+                "createdAt": _iso_utc(o.created_at) or "",
+                "reviewedAt": _iso_utc(o.reviewed_at),
                 "eventId": o.event_id,
             }
         )
@@ -568,10 +651,13 @@ def admin_approve(id: int = Query(...), db: Session = Depends(get_db), _: str = 
     except ValueError as e:
         raise HTTPException(409, {"error": str(e)})
     sms = {"sent": 0, "failed": 0, "skipped": True}
-    if freshly and tickets:
+    if freshly and tickets and notify_svc.SMS_ENABLED:
         # Phone only from persisted order — never from request body.
+        # (SMS parked until enamad / sms.ir template approval — see notify.SMS_ENABLED)
         sms = notify_tickets_issued(order.phone, tickets)
         sms["skipped"] = False
+    elif freshly and tickets and not notify_svc.SMS_ENABLED:
+        sms = {"sent": 0, "failed": 0, "skipped": True, "disabled": True}
     return {"id": order.id, "status": "approved", "tickets": tickets, "sms": sms}
 
 
@@ -581,6 +667,9 @@ def admin_resend_order_sms(
     db: Session = Depends(get_db),
     token: str = Depends(require_admin),
 ):
+    # SMS UI/API parked until enamad / sms.ir template approval
+    if not notify_svc.SMS_ENABLED:
+        raise HTTPException(503, {"error": "sms_disabled"})
     check_rate_limit(_sms_rate, f"resend:{token}", limit=10, window_sec=60)
     order = db.get(Order, id)
     if not order:
@@ -605,6 +694,8 @@ def admin_resend_ticket_sms(
     token: str = Depends(require_admin),
 ):
     """Resend issue SMS for this ticket's phone: all active same-phone tickets in the event."""
+    if not notify_svc.SMS_ENABLED:
+        raise HTTPException(503, {"error": "sms_disabled"})
     check_rate_limit(_sms_rate, f"resend-ticket:{token}", limit=10, window_sec=60)
     ticket = db.get(Ticket, id)
     if not ticket:
@@ -641,6 +732,8 @@ def admin_resend_ticket_sms(
 
 @router.get("/sms/presets")
 def admin_sms_presets(_: str = Depends(require_admin)):
+    if not notify_svc.SMS_ENABLED:
+        raise HTTPException(503, {"error": "sms_disabled"})
     presets = list_admin_presets()
     return {
         "provider": (settings.sms_provider or "console"),
@@ -656,6 +749,8 @@ def admin_sms_send(
     body: SmsSendBody,
     token: str = Depends(require_admin),
 ):
+    if not notify_svc.SMS_ENABLED:
+        raise HTTPException(503, {"error": "sms_disabled"})
     check_rate_limit(_sms_rate, f"send:{token}", limit=10, window_sec=60)
     phone = normalize_phone(body.phone)
     if not valid_phone(phone):

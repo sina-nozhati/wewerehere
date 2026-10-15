@@ -342,7 +342,9 @@ def download_ticket_png(
                 f'inline; filename="ticket-{t.public_code}.{ext}"'
                 if inline
                 else f'attachment; filename="ticket-{t.public_code}.{ext}"'
-            )
+            ),
+            # Ticket art is rendered on each request; avoid stale A/B/W after deploy.
+            "Cache-Control": "no-store",
         },
     )
 

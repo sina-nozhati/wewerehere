@@ -167,7 +167,30 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Iris closed: hole filled — hide soft beam while reveal radius is 0 */
+/*
+ * Iris shutter disc — sits ON the spotlight hole only.
+ * Mask / outer dim stay fixed so backdrop-filter does not flash the whole hero.
+ */
+.hero-spotlight__shutter {
+  position: fixed;
+  left: var(--spot-x, 50%);
+  top: var(--spot-y, 38%);
+  width: calc(var(--spot-r, 140px) * 2);
+  height: calc(var(--spot-r, 140px) * 2);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  background: rgba(4, 2, 8, 0.96);
+  box-shadow: 0 0 0 2px rgba(4, 2, 8, 0.55);
+  transition: none;
+}
+
+.hero-spotlight.is-iris-closed .hero-spotlight__shutter {
+  opacity: 1;
+}
+
 .hero-spotlight.is-iris-closed .hero-spotlight__glow {
   opacity: 0 !important;
   transition: none !important;

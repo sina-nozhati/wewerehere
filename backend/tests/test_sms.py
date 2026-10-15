@@ -23,6 +23,11 @@ from app.services import notify, sms_ir
 from app.services.events import FEATURED_KEY
 
 
+def _enable_sms(monkeypatch):
+    """Re-enable for unit tests of the parked SMS paths."""
+    monkeypatch.setattr(notify, "SMS_ENABLED", True)
+
+
 @pytest.fixture()
 def client():
     fd, path = tempfile.mkstemp(suffix=".sqlite")
@@ -79,6 +84,13 @@ def client():
 def _auth(client: TestClient) -> dict:
     login = client.post("/api/admin/login", json={"password": "test-admin-pass"})
     return {"Authorization": f"Bearer {login.json()['token']}"}
+
+
+def test_sms_disabled_by_default():
+    assert notify.SMS_ENABLED is False
+    out = notify.notify_tickets_issued("09123456789", [{"name": "آنا", "serial": "0001"}])
+    assert out.get("disabled") is True
+    assert out["sent"] == 0
 
 
 def test_send_verify_success(monkeypatch):
@@ -158,6 +170,7 @@ def test_format_fa_name_list_join_and_truncate():
 
 
 def test_approve_sends_one_sms_with_names_and_phone(client: TestClient, monkeypatch):
+    _enable_sms(monkeypatch)
     object.__setattr__(settings, "sms_provider", "console")
     object.__setattr__(settings, "sms_ir_template_id_ticket_notify", 12345)
     calls = []
@@ -192,12 +205,14 @@ def test_approve_sends_one_sms_with_names_and_phone(client: TestClient, monkeypa
     assert len(params["NAMES"]) <= 25
 
 
-def test_sms_send_requires_auth(client: TestClient):
+def test_sms_send_requires_auth(client: TestClient, monkeypatch):
+    _enable_sms(monkeypatch)
     r = client.post("/api/admin/sms/send", json={"phone": "09123456789", "presetId": "ticket", "value": "1"})
     assert r.status_code == 401
 
 
-def test_sms_send_invalid_phone(client: TestClient):
+def test_sms_send_invalid_phone(client: TestClient, monkeypatch):
+    _enable_sms(monkeypatch)
     headers = _auth(client)
     r = client.post(
         "/api/admin/sms/send",
@@ -208,6 +223,7 @@ def test_sms_send_invalid_phone(client: TestClient):
 
 
 def test_sms_send_unknown_preset(client: TestClient, monkeypatch):
+    _enable_sms(monkeypatch)
     object.__setattr__(settings, "sms_provider", "console")
     monkeypatch.setattr(notify, "list_admin_presets", lambda: [{"id": "ticket", "label": "t", "paramName": "CODE", "templateId": 1}])
     headers = _auth(client)
@@ -219,14 +235,26 @@ def test_sms_send_unknown_preset(client: TestClient, monkeypatch):
     assert r.status_code == 400
 
 
-def test_sms_presets_ok(client: TestClient):
+def test_sms_presets_ok(client: TestClient, monkeypatch):
+    _enable_sms(monkeypatch)
     headers = _auth(client)
     r = client.get("/api/admin/sms/presets", headers=headers)
     assert r.status_code == 200
     assert "presets" in r.json()
 
 
+def test_sms_endpoints_disabled_without_flag(client: TestClient):
+    headers = _auth(client)
+    assert client.get("/api/admin/sms/presets", headers=headers).status_code == 503
+    assert client.post(
+        "/api/admin/sms/send",
+        headers=headers,
+        json={"phone": "09123456789", "presetId": "ticket", "value": "x"},
+    ).status_code == 503
+
+
 def test_ticket_resend_sms_groups_same_phone(client: TestClient, monkeypatch):
+    _enable_sms(monkeypatch)
     object.__setattr__(settings, "sms_provider", "console")
     object.__setattr__(settings, "sms_ir_template_id_ticket_notify", 12345)
     calls = []
@@ -260,7 +288,8 @@ def test_ticket_resend_sms_groups_same_phone(client: TestClient, monkeypatch):
     assert params["NAMES"] == "آنا، هستی و امیرعلی"
 
 
-def test_ticket_resend_sms_revoked_409(client: TestClient):
+def test_ticket_resend_sms_revoked_409(client: TestClient, monkeypatch):
+    _enable_sms(monkeypatch)
     headers = _auth(client)
     r = client.post(
         "/api/admin/tickets",
@@ -275,6 +304,7 @@ def test_ticket_resend_sms_revoked_409(client: TestClient):
     assert again.status_code == 409
 
 
-def test_ticket_resend_sms_requires_auth(client: TestClient):
+def test_ticket_resend_sms_requires_auth(client: TestClient, monkeypatch):
+    _enable_sms(monkeypatch)
     r = client.post("/api/admin/tickets/resend-sms?id=1")
     assert r.status_code == 401

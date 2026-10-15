@@ -27,7 +27,7 @@ def layout_fields_for_template(template_name: str) -> dict[str, dict]:
     return fields
 
 
-def _merge_style_font_size(style: str, font_size: str | None) -> str:
+def merge_style_font_size(style: str, font_size: str | None) -> str:
     if not font_size:
         return style
     if not style:
@@ -54,7 +54,7 @@ def apply_field_layout(root: ET.Element, template_name: str) -> None:
         cfg = spec[field]
         style = el.attrib.get("style", "")
         style = re.sub(r"display\s*:\s*none\s*;?", "", style, flags=re.I)
-        style = _merge_style_font_size(style, cfg.get("font-size"))
+        style = merge_style_font_size(style, cfg.get("font-size"))
         if style:
             el.attrib["style"] = style
         elif "style" in el.attrib and not el.attrib["style"].strip():

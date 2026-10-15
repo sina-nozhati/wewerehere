@@ -59,10 +59,10 @@
   }
 
   function setIrisOpen(dim, open) {
+    /* Only toggle shutter disc class — never change --spot-r / mask. */
     session.irisOpen = open ? 1 : 0;
     if (dim) {
       dim.classList.toggle('is-iris-closed', !open);
-      paintSpot(dim);
     }
   }
 
@@ -72,7 +72,6 @@
     session.irisOpen = 1;
     if (!dim) return;
     dim.classList.remove('is-iris-closed');
-    paintSpot(dim);
   }
 
   function randMs(min, max) {
@@ -244,8 +243,7 @@
       oy = (Math.cos(t * 0.00131) * 1.75 + Math.sin(t * 0.00088) * 1.15) * amp;
       dr = Math.sin(t * 0.00162) * 2.2 * amp;
     }
-    var open = session.irisOpen == null ? 1 : session.irisOpen;
-    var r = Math.max(0, (baseSpot.r + dr) * open);
+    var r = Math.max(0, baseSpot.r + dr);
     dim.style.setProperty('--spot-x', baseSpot.x + ox + 'px');
     dim.style.setProperty('--spot-y', baseSpot.y + oy + 'px');
     dim.style.setProperty('--spot-r', r + 'px');

@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import tempfile
 
 import pytest
@@ -116,6 +117,98 @@ def test_fill_ticket_svg_has_fields():
     assert "سوم شهریور" in svg
     assert "۱۷:۰۰" in svg
     assert "سالن کنار دریا" in svg
+    # mountain relief must contrast with paper (cls-11 was same #e3e3e3 → invisible)
+    assert "#c4bcb0" in svg
+    assert re.search(r"\.cls-11\s*\{[^}]*fill:\s*#c4bcb0", svg, re.I | re.S)
+
+
+def test_mountains_flipped_to_perforation_not_stub():
+    from app.services.ticket_layout import _layout_index
+
+    _layout_index.cache_clear()
+    for group in ("A", "B"):
+        svg = fill_ticket_svg(group, "آنا", "3863", 6, city="انزلی")
+        assert 'data-wwh-mountains="1"' in svg
+        assert "translate(284.93 0) scale(-1 1)" in svg
+        assert "scale(-0.396" not in svg and "scale(-0.34" not in svg
+        assert "wwh-mountains-main-clip" in svg
+        live = _parse_field_coords_from_xml(svg)
+        assert live["name_stub"]["x"] == "318.75"
+        assert live["name_stub"]["y"] == "95"
+        assert live["name_stub"]["text-anchor"] == "end"
+        assert 'opacity="0.24"' in svg  # name watermark on main mountains
+
+
+def test_group_letter_stub_and_pairing_w_halves():
+    """Stub shows A/B; main shows half-W (no A/B body label); halves differ by group."""
+    import xml.etree.ElementTree as ET
+
+    from app.services.ticket_layout import _layout_index
+
+    _layout_index.cache_clear()
+    event_at = datetime(2026, 8, 25, 13, 30, tzinfo=timezone.utc)
+    for group, half, cy in (("A", "bottom", 0.0), ("B", "top", 128.0)):
+        svg = fill_ticket_svg(
+            group,
+            "نام",
+            "4242",
+            7,
+            event_at=event_at,
+            venue="سالن",
+            city="انزلی",
+        )
+        live = _parse_field_coords_from_xml(svg)
+        assert live["group_letter"]["x"] == "342"
+        assert live["group_letter"]["y"] == "38"
+        assert live["group_letter"]["text-anchor"] == "middle"
+        assert live["group_letter"]["direction"] == "ltr"
+        letter_m = re.search(
+            r'<text[^>]*data-field="group_letter"[^>]*>([^<]*)</text>',
+            svg,
+        )
+        assert letter_m is not None
+        assert letter_m.group(1).strip() == group
+        assert f'data-wwh-pairing-half="{half}"' in svg
+        root = ET.fromstring(svg)
+        w_nodes = [
+            el
+            for el in root.iter()
+            if el.attrib.get("data-wwh-pairing-w") == "1" and (el.tag.endswith("text") or el.tag == "text")
+        ]
+        assert len(w_nodes) == 1
+        assert (w_nodes[0].text or "").strip() == "W"
+        assert float(w_nodes[0].attrib["y"]) == cy
+        assert 'data-field="group"' not in svg
+
+
+def test_fill_ticket_svg_long_name_fits():
+    event_at = datetime(2026, 8, 25, 13, 30, tzinfo=timezone.utc)
+    short = fill_ticket_svg(
+        "A",
+        "علی",
+        "0001",
+        1,
+        event_at=event_at,
+        venue="سالن",
+        city="انزلی",
+    )
+    long = fill_ticket_svg(
+        "A",
+        "پویان احمدی مقدم",
+        "0001",
+        1,
+        event_at=event_at,
+        venue="سالن",
+        city="انزلی",
+    )
+    assert 'data-field="name"' in short
+    assert "font-size:12px" in short
+    # short names: extra left of tear line; long names keep base tx + lower ty
+    assert "translate(262.5, 54.5) rotate(90)" in short
+    assert "font-size:8.5px" in long
+    assert "translate(266.5, 88" in long
+    assert 'x="300' in long  # name_stub: left of edge, not over-pulled
+    assert "font-size:6.5px" in long
 
 
 def test_fill_ticket_svg_latin_venue_uses_ascii_time():
@@ -259,6 +352,35 @@ def test_admin_sample_ticket(client: TestClient):
     assert ".png" in disp
 
 
+def test_gothic_sample_stacks_b_above_a():
+    from app.routers.admin import _gothic_sample_html
+
+    html = _gothic_sample_html('<svg id="ticket-a"/>', '<svg id="ticket-b"/>')
+    assert "pair-stack" in html
+    assert html.index('id="ticket-b"') < html.index('id="ticket-a"')
+    assert "B above A" in html
+
+
+def test_admin_tickets_export_zip_route_not_captured_as_id(client: TestClient):
+    """GET /tickets/export must not be parsed as ticket_id='export'."""
+    login = client.post("/api/admin/login", json={"password": "test-admin-pass"})
+    headers = {"Authorization": f"Bearer {login.json()['token']}"}
+    r = client.get("/api/admin/tickets/export", headers=headers)
+    # 200 zip, 404 empty, or 503 if PNG backend missing — never 422 from int path param
+    assert r.status_code != 422
+    if r.status_code == 200:
+        assert r.headers["content-type"].startswith("application/zip")
+        assert r.content[:2] == b"PK"
+
+
+def test_admin_tickets_created_at_is_utc_offset(client: TestClient):
+    login = client.post("/api/admin/login", json={"password": "test-admin-pass"})
+    headers = {"Authorization": f"Bearer {login.json()['token']}"}
+    rows = client.get("/api/admin/tickets", headers=headers).json()["tickets"]
+    assert rows
+    assert rows[0]["created_at"].endswith("+00:00")
+
+
 def test_admin_tickets_default_active_hides_revoked(client: TestClient):
     from datetime import timezone as tz
 
@@ -306,6 +428,40 @@ def test_ticket_templates_have_required_fields():
     for group in ("A", "B"):
         fields = ticket_template_field_names(group)
         assert REQUIRED_TICKET_FIELDS <= fields
+
+
+def test_ticket_b_static_chrome_matches_a():
+    """B inherits A layout/fonts for all non-mountain chrome; only terrain art differs."""
+    import xml.etree.ElementTree as ET
+
+    def static_labels(svg_name: str):
+        root = ET.fromstring((ROOT / svg_name).read_text(encoding="utf-8"))
+        rows = []
+        for el in root.iter():
+            if not el.tag.endswith("text") or el.attrib.get("data-field"):
+                continue
+            rows.append(
+                (
+                    "".join(el.itertext()).strip(),
+                    el.attrib.get("x"),
+                    el.attrib.get("y"),
+                    el.attrib.get("transform"),
+                    el.attrib.get("class"),
+                    el.attrib.get("style"),
+                )
+            )
+        return rows
+
+    assert static_labels("ticket-a.svg") == static_labels("ticket-b.svg")
+    raw_a = (ROOT / "ticket-a.svg").read_text(encoding="utf-8")
+    raw_b = (ROOT / "ticket-b.svg").read_text(encoding="utf-8")
+    assert 'class="cls-11"' in raw_a
+    assert 'class="cls-12"' in raw_b
+    assert raw_b.count('class="cls-12"') >= 50
+    assert 'class="cls-11"' not in raw_b.replace(".cls-11", "")  # ignore CSS selector text
+    # paths only: no cls-11 path nodes in B
+    assert re.search(r'<path class="cls-11"', raw_b) is None
+    assert re.search(r'<path class="cls-12"', raw_b) is not None
 
 
 def _layout_spec() -> list[dict]:
@@ -377,9 +533,10 @@ def test_ticket_field_layout_matches_spec():
 def test_fill_applies_layout_from_json():
     event_at = datetime(2026, 8, 25, 13, 30, tzinfo=timezone.utc)
     for group, svg_file in (("A", "ticket-a.svg"), ("B", "ticket-b.svg")):
+        # Mid-length single token: neither short-nudge nor medium/long fit adjusts layout.
         svg = fill_ticket_svg(
             group,
-            "تست",
+            "پویان",
             "4242",
             7,
             event_at=event_at,

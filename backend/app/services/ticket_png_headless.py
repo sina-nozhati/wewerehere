@@ -37,7 +37,7 @@ def headless_chromium_available() -> bool:
     return headless_chromium_path() is not None
 
 
-def render_svg_png_headless(svg_text: str, out_w: int, out_h: int) -> bytes:
+def render_html_png_headless(html: str, out_w: int, out_h: int) -> bytes:
     browser = headless_chromium_path()
     if browser is None:
         raise RuntimeError("headless Chromium/Edge not found")
@@ -46,15 +46,6 @@ def render_svg_png_headless(svg_text: str, out_w: int, out_h: int) -> bytes:
         td_path = Path(td)
         html_path = td_path / "ticket.html"
         png_path = td_path / "ticket.png"
-        # Inline SVG so @font-face data URIs and RTL layout match track/admin preview.
-        html = (
-            "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-            "<style>html,body{margin:0;padding:0;background:#e3e3e3;}"
-            f"svg{{display:block;width:{out_w}px;height:{out_h}px}}</style>"
-            "</head><body>"
-            f"{svg_text}"
-            "</body></html>"
-        )
         html_path.write_text(html, encoding="utf-8")
         uri = html_path.resolve().as_uri()
         cmd = [
@@ -81,3 +72,16 @@ def render_svg_png_headless(svg_text: str, out_w: int, out_h: int) -> bytes:
             err = (proc.stderr or proc.stdout or "").strip()[:500]
             raise RuntimeError(f"headless screenshot failed (code {proc.returncode}): {err}")
         return png_path.read_bytes()
+
+
+def render_svg_png_headless(svg_text: str, out_w: int, out_h: int) -> bytes:
+    # Inline SVG so @font-face data URIs and RTL layout match track/admin preview.
+    html = (
+        "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+        "<style>html,body{margin:0;padding:0;background:#e3e3e3;}"
+        f"svg{{display:block;width:{out_w}px;height:{out_h}px}}</style>"
+        "</head><body>"
+        f"{svg_text}"
+        "</body></html>"
+    )
+    return render_html_png_headless(html, out_w, out_h)

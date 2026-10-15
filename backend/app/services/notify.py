@@ -13,6 +13,9 @@ from app.services.phone import normalize_phone, valid_phone
 
 log = logging.getLogger("wwh.notify")
 
+# SMS disabled until enamad / sms.ir template approval — set True to re-enable.
+SMS_ENABLED = False
+
 _CONSOLE_LOG = ROOT / "storage" / "sms-console.log"
 _SMS_PARAM_MAX = 25
 _FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹"
@@ -163,6 +166,9 @@ def send_verify_dispatch(
     template_id: int,
     parameters: list[dict[str, str]],
 ) -> dict[str, Any]:
+    # --- SMS provider body (kept for later; enamad / template approval) ---
+    if not SMS_ENABLED:
+        return {"ok": False, "failure_kind": "sms_disabled", "provider": "disabled"}
     provider = (settings.sms_provider or "console").strip().lower()
     if provider == "smsir":
         result = sms_ir.send_verify(
@@ -179,6 +185,8 @@ def send_verify_dispatch(
 
 def notify_tickets_issued(phone: str, tickets: list[dict[str, Any]]) -> dict[str, Any]:
     """One verify SMS per order: #NAMES# + #PHONE# (track link built in sms.ir template)."""
+    if not SMS_ENABLED:
+        return {"sent": 0, "failed": 0, "failure_kind": "sms_disabled", "disabled": True}
     phone = normalize_phone(phone)
     if not valid_phone(phone):
         return {"sent": 0, "failed": 0, "failure_kind": "invalid_phone"}
@@ -213,6 +221,8 @@ def notify_tickets_issued(phone: str, tickets: list[dict[str, Any]]) -> dict[str
 
 
 def send_admin_preset(phone: str, preset_id: str, value: str) -> dict[str, Any]:
+    if not SMS_ENABLED:
+        return {"ok": False, "failure_kind": "sms_disabled", "provider": "disabled"}
     phone = normalize_phone(phone)
     if not valid_phone(phone):
         return {"ok": False, "failure_kind": "invalid_phone"}

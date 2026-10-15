@@ -261,6 +261,8 @@
       </div>
       <div class="orders-list" id="support-list"><p class="empty-note">در حال بارگذاری…</p></div>
 
+      <!-- SMS panel hidden until enamad / sms.ir template approval (re-enable with notify.SMS_ENABLED) -->
+      <div id="sms-admin-section" hidden>
       <h2>ارسال پیامک</h2>
       <div class="card sms-panel" id="sms-panel">
         <p class="muted sms-panel__hint">ارسال با قالب خدماتی sms.ir (Verify). متن آزاد نیست — پیام آماده را انتخاب کنید و مقدار پارامتر را تا ۲۵ کاراکتر وارد کنید.</p>
@@ -288,6 +290,7 @@
             <span class="status" id="sms-status" role="status" aria-live="polite"></span>
           </div>
         </form>
+      </div>
       </div>
 
       <!-- Tickets -->
@@ -471,7 +474,10 @@
     function showAdmin() {
       loginView.hidden = true; adminView.hidden = false;
       loadEvents().then(function () {
-        loadTickets(); loadMedia(); loadOrders(); loadSettings(); loadSupport(); loadSmsPresets();
+        loadTickets(); loadMedia(); loadOrders(); loadSettings(); loadSupport();
+        /* SMS panel hidden until enamad — skip presets fetch
+        loadSmsPresets();
+        */
       });
     }
     function showLogin() { adminView.hidden = true; loginView.hidden = false; }
@@ -779,6 +785,7 @@
       if (t === 'image/png') return 'png';
       if (t === 'image/svg+xml') return 'svg';
       if (t === 'application/pdf') return 'pdf';
+      if (t === 'application/zip' || t === 'application/x-zip-compressed') return 'zip';
       return 'bin';
     }
 
@@ -794,7 +801,11 @@
           var msg = txt;
           try {
             var j = JSON.parse(txt);
-            msg = (window.WwhApi && WwhApi.errorMessage(j, txt)) || txt;
+            if (j && j.error === 'ticket_png_unavailable') {
+              msg = j.message || j.detail || 'رندر PNG بلیت در دسترس نیست (Cairo یا Chromium لازم است).';
+            } else {
+              msg = (window.WwhApi && WwhApi.errorMessage(j, txt)) || j.message || j.detail || txt;
+            }
           } catch (e) { /* ignore */ }
           throw new Error(msg || ('HTTP ' + r.status));
         });
@@ -821,8 +832,7 @@
           return;
         }
         body.innerHTML = res.tickets.map(function (t) {
-          var d = new Date(t.created_at);
-          var time = isNaN(d) ? t.created_at : d.toLocaleString('fa-IR');
+          var time = fmtDate(t.created_at);
           var revoked = t.status === 'revoked';
           var st = revoked
             ? '<span class="badge badge--revoked">لغو شده</span>'
@@ -830,7 +840,9 @@
           var actions = revoked
             ? '<span class="muted">—</span>'
             : '<div class="actions">' +
+              /* SMS resend parked until enamad — keep markup commented for later
               '<button type="button" class="ok small" data-resend-issue-sms="' + t.id + '">ارسال مجدد صدور بلیت</button>' +
+              */
               '<button class="small ghost" data-edit="' + t.id + '">ویرایش</button>' +
               '<button class="small ghost" data-export="' + t.id + '">چاپ/خروجی</button>' +
               '<button class="danger" data-del="' + t.id + '">حذف</button>' +
@@ -904,23 +916,8 @@
       var delBtn = e.target.closest('[data-del]');
       var editBtn = e.target.closest('[data-edit]');
       var exportBtn = e.target.closest('[data-export]');
-      var resendIssueBtn = e.target.closest('[data-resend-issue-sms]');
-      if (resendIssueBtn) {
-        var rid = resendIssueBtn.getAttribute('data-resend-issue-sms');
-        if (!confirm('پیامک صدور بلیت برای این شماره (همه بلیت‌های فعال هم‌شماره در این رویداد) دوباره ارسال شود؟')) return;
-        resendIssueBtn.disabled = true;
-        api('/api/admin/tickets/resend-sms?id=' + rid, { method: 'POST', headers: authHeaders() })
-          .then(function (res) {
-            var sms = res.sms || {};
-            var n = res.namesCount != null ? res.namesCount : 0;
-            var msg = 'پیامک برای ' + toFa(n) + ' نام';
-            if (sms.sent) msg += ' — ارسال شد';
-            if (sms.failed) msg += ' — ناموفق';
-            alert(msg);
-          })
-          .catch(function (e2) { alert('خطا: ' + e2.message); })
-          .then(function () { resendIssueBtn.disabled = false; });
-      } else if (exportBtn) {
+      /* SMS resend parked — buttons not rendered while SMS_ENABLED=False */
+      if (exportBtn) {
         var tid = exportBtn.getAttribute('data-export');
         fetch('/api/admin/tickets/' + tid + '/export', { headers: { Authorization: 'Bearer ' + TOKEN } })
           .then(function (r) { return downloadFromFetchResponse(r, 'ticket-' + tid); })
@@ -947,21 +944,15 @@
     document.getElementById('export-tickets-zip').addEventListener('click', function () {
       var q = currentEventId ? ('?eventId=' + currentEventId) : '';
       fetch('/api/admin/tickets/export' + q, { headers: { Authorization: 'Bearer ' + TOKEN } })
-        .then(function (r) {
-          if (!r.ok) throw new Error('export failed');
-          return r.blob();
-        })
-        .then(function (blob) {
-          var a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = 'wewerehere-tickets.zip';
-          a.click();
-          URL.revokeObjectURL(a.href);
-        })
-        .catch(function (e2) { alert(e2.message); });
+        .then(function (r) { return downloadFromFetchResponse(r, 'wewerehere-tickets'); })
+        .catch(function (e2) { alert('خطا در ZIP: ' + e2.message); });
     });
 
     document.getElementById('export-csv').addEventListener('click', function () {
+      if (!cachedTickets || !cachedTickets.length) {
+        alert('بلیتی برای خروجی نیست.');
+        return;
+      }
       var rows = [['serial', 'name', 'phone', 'group', 'created_at']];
       cachedTickets.forEach(function (t) { rows.push([t.serial, t.name, t.phone, t.group_name, t.created_at]); });
       var csv = '\uFEFF' + rows.map(function (r) {
@@ -984,8 +975,19 @@
     var ordersFilter = 'all';
 
     function fmtDate(iso) {
-      var d = new Date(iso);
-      return isNaN(d) ? iso : d.toLocaleString('fa-IR');
+      if (!iso) return '';
+      var raw = String(iso);
+      /* Ensure UTC if server sent naive ISO */
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw) && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)) {
+        raw += 'Z';
+      }
+      var d = new Date(raw);
+      if (isNaN(d)) return iso;
+      return d.toLocaleString('fa-IR', {
+        timeZone: 'Asia/Tehran',
+        dateStyle: 'short',
+        timeStyle: 'short',
+      });
     }
 
     function statusLabel(s) {
@@ -1060,7 +1062,10 @@
               '<button class="danger" data-reject="' + o.id + '">رد</button>';
           } else if (o.status === 'approved') {
             actions =
+              /* SMS resend parked until enamad
               '<button type="button" class="ok small" data-resend-sms="' + o.id + '">ارسال مجدد صدور بلیت</button>';
+              */
+              '';
           } else {
             actions = '<span class="badge ' + statusClass(o.status) + '">' + statusLabel(o.status) + '</span>';
           }
@@ -1097,7 +1102,6 @@
     document.getElementById('orders-list').addEventListener('click', function (e) {
       var approveBtn = e.target.closest('[data-approve]');
       var rejectBtn = e.target.closest('[data-reject]');
-      var resendBtn = e.target.closest('[data-resend-sms]');
       if (approveBtn) {
         var id = approveBtn.getAttribute('data-approve');
         var ev = cachedEvents.find(function (e) { return Number(e.id) === Number(currentEventId); });
@@ -1111,7 +1115,8 @@
             var n = (res.tickets && res.tickets.length) || 0;
             var sms = res.sms || {};
             var msg = n ? (toFa(n) + ' بلیت صادر شد.') : 'تایید شد.';
-            if (!sms.skipped) {
+            /* SMS parked (enamad) — never claim a send succeeded while disabled */
+            if (sms && !sms.disabled && sms.skipped === false && (sms.sent || sms.failed)) {
               msg += '\nپیامک: ' + toFa(sms.sent || 0) + ' موفق';
               if (sms.failed) msg += '، ' + toFa(sms.failed) + ' ناموفق';
             }
@@ -1126,17 +1131,6 @@
         api('/api/admin/orders/reject?id=' + rid, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ note: note }) })
           .then(loadOrders)
           .catch(function (e2) { alert('خطا: ' + e2.message); });
-      } else if (resendBtn) {
-        var sid = resendBtn.getAttribute('data-resend-sms');
-        if (!confirm('پیامک کد بلیت دوباره به شمارهٔ ثبت‌شده روی سفارش ارسال شود؟')) return;
-        resendBtn.disabled = true;
-        api('/api/admin/orders/resend-sms?id=' + sid, { method: 'POST', headers: authHeaders() })
-          .then(function (res) {
-            var sms = res.sms || {};
-            alert('پیامک: ' + toFa(sms.sent || 0) + ' موفق' + (sms.failed ? ('، ' + toFa(sms.failed) + ' ناموفق') : ''));
-          })
-          .catch(function (e2) { alert('خطا: ' + e2.message); })
-          .then(function () { resendBtn.disabled = false; });
       }
     });
 
@@ -1175,6 +1169,8 @@
 
     document.getElementById('sms-form').addEventListener('submit', function (e) {
       e.preventDefault();
+      /* SMS parked until enamad — form is hidden; ignore submits */
+      if (document.getElementById('sms-admin-section').hidden) return;
       var summary = document.getElementById('sms-error-summary');
       var list = document.getElementById('sms-error-list');
       var statusEl = document.getElementById('sms-status');

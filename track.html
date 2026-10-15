@@ -323,6 +323,7 @@
       margin-bottom: 6px;
     }
     .tickets-block__sub { font-size: 0.82rem; color: var(--color-muted); text-align: center; margin-bottom: 24px; }
+    .tickets-block__sub--pair { color: var(--color-text); max-width: 36em; margin-left: auto; margin-right: auto; }
 
     .tickets-list { display: grid; gap: 30px; max-width: 720px; margin: 0 auto; }
 
@@ -866,6 +867,7 @@
                 '<h2 class="tickets-block__title">بلیت‌های تو آماده‌ست ♥</h2>' +
                 '<p class="tickets-block__sub">تیکت‌هات رو ذخیره کن — شماره سریال، کلید خاطره‌های اون شبه.</p>' +
                 '<p class="tickets-block__sub">همراه داشتن بلیت الزامی نیست؛ کافیه اسمت رو در ورودی بگی.</p>' +
+                '<p class="tickets-block__sub tickets-block__sub--pair">بلیت‌های A و B جفت‌اند: بلیت B را بالای A بگذار تا کوه‌ها و حرف W کامل شوند — بهانه‌ای برای پیدا کردن همدیگر آن شب.</p>' +
                 '<div class="tickets-list">' + cards.map(function (c) { return c.outerHTML; }).join('') + '</div>' +
               '</div>';
             }

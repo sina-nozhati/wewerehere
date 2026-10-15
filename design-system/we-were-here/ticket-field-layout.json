@@ -42,7 +42,7 @@
       "name": {
         "x": null,
         "y": null,
-        "transform": "translate(272.5, 54.5) rotate(90)",
+        "transform": "translate(266.5, 54.5) rotate(90)",
         "text-anchor": "start",
         "direction": "rtl",
         "hidden": false,
@@ -92,6 +92,15 @@
         "direction": "rtl",
         "hidden": false,
         "font-size": "9px"
+      },
+      "group_letter": {
+        "x": "342",
+        "y": "38",
+        "transform": null,
+        "text-anchor": "middle",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "16px"
       }
     }
   },
@@ -138,7 +147,7 @@
       "name": {
         "x": null,
         "y": null,
-        "transform": "translate(272.5, 54.5) rotate(90)",
+        "transform": "translate(266.5, 54.5) rotate(90)",
         "text-anchor": "start",
         "direction": "rtl",
         "hidden": false,
@@ -188,6 +197,15 @@
         "direction": "rtl",
         "hidden": false,
         "font-size": "9px"
+      },
+      "group_letter": {
+        "x": "342",
+        "y": "38",
+        "transform": null,
+        "text-anchor": "middle",
+        "direction": "ltr",
+        "hidden": false,
+        "font-size": "16px"
       }
     }
   }

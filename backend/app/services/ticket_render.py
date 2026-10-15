@@ -16,7 +16,7 @@ from datetime import datetime
 
 from app.config import ROOT
 from app.services.jalali_schedule import format_hero_schedule, ticket_city_line, ticket_locale
-from app.services.ticket_layout import apply_field_layout
+from app.services.ticket_layout import apply_field_layout, merge_style_font_size
 from app.services.ticket_png_headless import (
     headless_chromium_available,
     render_svg_png_headless,
@@ -37,8 +37,29 @@ ET.register_namespace("", SVG_NS)
 logger = logging.getLogger(__name__)
 
 REQUIRED_TICKET_FIELDS = frozenset(
-    {"name", "name_stub", "date", "time", "venue", "city_line", "code1", "code2", "no1", "no2"}
+    {
+        "name",
+        "name_stub",
+        "date",
+        "time",
+        "venue",
+        "city_line",
+        "code1",
+        "code2",
+        "no1",
+        "no2",
+        "group_letter",
+    }
 )
+
+# Pairing glyph: B above A at the shared edge completes letter W (We Were Here).
+_PAIRING_W_CX = 155.0
+_PAIRING_W_SIZE = "56px"
+_PAIRING_W_OPACITY = "0.20"
+_PAIRING_W_FILL = "#1a1520"
+_TICKET_HEIGHT = 128.0
+_TICKET_MAIN_WIDTH = 284.93  # perforation / tear x — mountains must stay left of this
+_MOUNTAIN_CLIP_ID = "wwh-mountains-main-clip"
 
 _VAZIRMATN_TTF = ROOT / "assets" / "fonts" / "Vazirmatn-Regular.ttf"
 _FONTCONFIG_PATH = ROOT / "storage" / "fonts" / "fonts.conf"
@@ -220,6 +241,12 @@ def _strip_baked_sample_lettering(root: ET.Element) -> None:
                 gp.remove(g)
 
 
+_PAPER_FILL = "#e3e3e3"
+_MOUNTAIN_FILL = "#c4bcb0"
+# Template classes that hold the jagged mountain / terrain artwork
+_MOUNTAIN_STYLE_CLASSES = ("cls-11", "cls-12")
+
+
 def _inject_ticket_base_fill(root: ET.Element) -> None:
     """Flat ticket paper behind artwork (PyMuPDF skips many complex paths)."""
     for el in root.iter():
@@ -235,8 +262,114 @@ def _inject_ticket_base_fill(root: ET.Element) -> None:
     rect.set("y", "0")
     rect.set("width", str(w))
     rect.set("height", str(h))
-    rect.set("fill", "#e3e3e3")
+    rect.set("fill", _PAPER_FILL)
     root.insert(0, rect)
+
+
+def _reveal_mountain_fills(root: ET.Element) -> None:
+    """Ensure mountain path fills are not the same as paper (would render invisible)."""
+    for el in root.iter():
+        if not el.tag.endswith("style") or not (el.text or ""):
+            continue
+        text = el.text
+        for cls in _MOUNTAIN_STYLE_CLASSES:
+            text = re.sub(
+                rf"(\.{re.escape(cls)}\s*\{{[^}}]*?fill:\s*)#[0-9a-fA-F]{{3,8}}",
+                rf"\g<1>{_MOUNTAIN_FILL}",
+                text,
+                count=1,
+                flags=re.I | re.S,
+            )
+        el.text = text
+
+
+def _clip_mountains_to_main(root: ET.Element) -> None:
+    """Keep flipped mountains in the main panel; stub stays paper-white."""
+    defs = root.find(f"{{{SVG_NS}}}defs")
+    if defs is None:
+        defs = ET.Element(f"{{{SVG_NS}}}defs")
+        root.insert(0, defs)
+
+    # Idempotent clipPath
+    existing = None
+    for el in defs:
+        if el.attrib.get("id") == _MOUNTAIN_CLIP_ID:
+            existing = el
+            break
+    if existing is None:
+        clip = ET.SubElement(defs, f"{{{SVG_NS}}}clipPath")
+        clip.set("id", _MOUNTAIN_CLIP_ID)
+        clip.set("data-wwh-mountain-clip", "1")
+        rect = ET.SubElement(clip, f"{{{SVG_NS}}}rect")
+        rect.set("x", "0")
+        rect.set("y", "0")
+        rect.set("width", str(_TICKET_MAIN_WIDTH))
+        rect.set("height", str(_TICKET_HEIGHT))
+
+    for el in root.iter():
+        if el.attrib.get("data-wwh-mountains") == "1":
+            el.set("clip-path", f"url(#{_MOUNTAIN_CLIP_ID})")
+            # Enforce pin-to-perforation horizontal flip (no stub scale).
+            el.set("transform", f"translate({_TICKET_MAIN_WIDTH} 0) scale(-1 1)")
+
+
+def _remove_pairing_w(root: ET.Element) -> None:
+    """Drop previously injected pairing-W nodes (idempotent re-fill)."""
+    for parent in root.iter():
+        for child in list(parent):
+            if child.attrib.get("data-wwh-pairing-w") == "1":
+                parent.remove(child)
+
+
+def _inject_pairing_w(root: ET.Element, group: str) -> None:
+    """Inject half of a W watermark at the shared horizontal edge (B above A → full W).
+
+    B: top half of W, centered on the bottom edge.
+    A: bottom half of W, centered on the top edge.
+    """
+    _remove_pairing_w(root)
+    g = str(group).upper()
+    is_b = g == "B"
+    # Center of full W sits on the edge that will touch the partner ticket.
+    cy = _TICKET_HEIGHT if is_b else 0.0
+    clip_id = "wwh-pairing-w-clip-b" if is_b else "wwh-pairing-w-clip-a"
+
+    defs = root.find(f"{{{SVG_NS}}}defs")
+    if defs is None:
+        defs = ET.Element(f"{{{SVG_NS}}}defs")
+        root.insert(0, defs)
+
+    clip = ET.SubElement(defs, f"{{{SVG_NS}}}clipPath")
+    clip.set("id", clip_id)
+    clip.set("data-wwh-pairing-w", "1")
+    clip_rect = ET.SubElement(clip, f"{{{SVG_NS}}}rect")
+    clip_rect.set("x", "0")
+    clip_rect.set("y", "0")
+    clip_rect.set("width", str(_TICKET_MAIN_WIDTH))
+    clip_rect.set("height", str(_TICKET_HEIGHT))
+
+    layer = ET.SubElement(root, f"{{{SVG_NS}}}g")
+    layer.set("data-wwh-pairing-w", "1")
+    layer.set("data-wwh-pairing-half", "top" if is_b else "bottom")
+    layer.set("clip-path", f"url(#{clip_id})")
+
+    text = ET.SubElement(layer, f"{{{SVG_NS}}}text")
+    text.set("data-wwh-pairing-w", "1")
+    text.set("x", str(_PAIRING_W_CX))
+    text.set("y", str(cy))
+    text.set("text-anchor", "middle")
+    text.set("dominant-baseline", "middle")
+    text.set("fill", _PAIRING_W_FILL)
+    text.set("opacity", _PAIRING_W_OPACITY)
+    text.set(
+        "style",
+        (
+            "font-family:Consolas,'Courier New',monospace;"
+            f"font-weight:700;font-size:{_PAIRING_W_SIZE};"
+        ),
+    )
+    text.set("direction", "ltr")
+    text.text = "W"
 
 
 def _template_path(group: str) -> Path:
@@ -254,6 +387,7 @@ def _value_for(
     time_hm: str = "",
     venue: str = "",
     city: str = "",
+    group: str = "",
 ) -> str:
     if field in ("name", "name_stub"):
         return name
@@ -261,6 +395,8 @@ def _value_for(
         return code
     if field in ("no1", "no2"):
         return str(number)
+    if field == "group_letter":
+        return "B" if str(group).upper() == "B" else "A"
     if field == "date":
         return date_tagline
     if field == "time":
@@ -279,6 +415,10 @@ def _apply_field_direction(el: ET.Element, field: str, value: str, locale: str) 
         el.set("unicode-bidi", "embed")
         return
     if field == "time":
+        el.set("direction", "ltr")
+        el.set("unicode-bidi", "embed")
+        return
+    if field == "group_letter":
         el.set("direction", "ltr")
         el.set("unicode-bidi", "embed")
         return
@@ -337,6 +477,9 @@ def fill_ticket_svg(
     root = ET.fromstring(raw)
     _strip_baked_sample_lettering(root)
     _inject_ticket_base_fill(root)
+    _reveal_mountain_fills(root)
+    _clip_mountains_to_main(root)
+    _inject_pairing_w(root, group)
     _inject_persian_font(root)
     apply_field_layout(root, path.name)
     code = re.sub(r"\D", "", public_code or "").zfill(4)[-4:]
@@ -355,11 +498,15 @@ def fill_ticket_svg(
             time_hm=sched.time_hm,
             venue=venue_line,
             city=city or "",
+            group=group,
         )
         el.text = value
         if field == "name":
+            # Overlay on flipped mountains (main body, against perforation).
             el.set("opacity", "0.24")
             el.set("fill", "#1a1520")
+        if field in ("name", "name_stub"):
+            _fit_long_name_field(el, field, holder_name)
         _apply_field_direction(el, field, value, sched.locale)
         if field == "city_line":
             _apply_city_line_direction(el, value)
@@ -369,6 +516,42 @@ def fill_ticket_svg(
     return normalize_ticket_svg_xml(
         ET.tostring(root, encoding="unicode", xml_declaration=True)
     )
+
+
+def _name_length_stats(name: str) -> tuple[int, int]:
+    parts = [p for p in re.split(r"\s+", (name or "").strip()) if p]
+    chars = sum(len(p) for p in parts)
+    return chars, len(parts)
+
+
+def _fit_long_name_field(el: ET.Element, field: str, holder_name: str) -> None:
+    """Keep watermark clear of the tear line; shrink/shift long names inside the ticket."""
+    chars, words = _name_length_stats(holder_name)
+    long = chars >= 12 or words >= 3
+    medium = chars >= 9 or words >= 2
+    short = chars <= 4 and words <= 1
+    # Base layout is translate(266.5, …); short names sit as a tight block — nudge further left
+    tx = 262.5 if short else 266.5
+    style = el.attrib.get("style", "")
+    if field == "name":
+        if short:
+            el.set("transform", f"translate({tx}, 54.5) rotate(90)")
+            return
+        if not medium:
+            return
+        # rotate(90)+RTL: push anchor down so «مقدم» stays in-frame; keep type readable
+        fs = "8.5px" if long else "10px"
+        ty = 88.0 if long else 60.0
+        el.set("transform", f"translate({tx}, {ty}) rotate(90)")
+        el.set("style", merge_style_font_size(style, fs))
+    elif field == "name_stub":
+        if not medium:
+            return
+        # text-anchor=end: slight left nudge from layout x=318.75
+        fs = "6.5px" if long else "7.5px"
+        x = 300.0 if long else 308.0
+        el.set("x", str(x))
+        el.set("style", merge_style_font_size(style, fs))
 
 
 def _pymupdf_png_available() -> bool:
