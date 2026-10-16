@@ -202,3 +202,30 @@ def test_track_returns_location_for_ticket_holder_when_published(client: TestCli
 
     by_phone = client.get("/api/orders/track?phone=09121112222").json()
     assert by_phone["event"]["location"]["lat"] == pytest.approx(35.6892)
+
+
+def test_track_serial_miss_falls_back_to_phone(client: TestClient):
+    headers = _auth(client)
+    ev_id, body = _event_patch_base(client, headers)
+    body["locationLat"] = 35.7
+    body["locationLng"] = 51.4
+    body["locationLabel"] = "fallback"
+    body["locationPublished"] = True
+    assert client.patch(f"/api/admin/events/{ev_id}", headers=headers, json=body).status_code == 200
+
+    # Wrong serial alone → empty tickets
+    alone = client.get("/api/orders/track?serial=9999").json()
+    assert alone["tickets"] == []
+    assert "location" not in alone["event"]
+
+    # Wrong serial + correct phone → phone path
+    both = client.get("/api/orders/track?serial=9999&phone=09121112222").json()
+    assert both["tickets"]
+    assert both["tickets"][0]["serial"] == "5555"
+    assert both["event"]["location"]["label"] == "fallback"
+
+    # Correct serial wins even if phone also sent
+    prefer = client.get("/api/orders/track?serial=5555&phone=09121112222").json()
+    assert prefer["tickets"]
+    assert prefer["tickets"][0]["serial"] == "5555"
+    assert prefer["event"]["location"]

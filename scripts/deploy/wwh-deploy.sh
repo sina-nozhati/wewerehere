@@ -393,6 +393,7 @@ run_smoke_checks() {
     "/assets/wwh-theme.css"
     "/assets/wwh-shell.css"
     "/assets/wwh-chrome.js"
+    "/assets/wwh-map.js"
     "/ticket-a.svg"
   )
   local p url code
@@ -457,6 +458,7 @@ cmd_update() {
   fi
   ensure_wwh_deploy_cli
   log "update finished"
+  log "NOTE: venue map on /track needs admin publish — set lat/lng + locationPublished for the event"
 }
 
 cmd_migrate() {

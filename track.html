@@ -189,6 +189,23 @@
       border-width: 2.5px;
     }
     .lookup__group { display: flex; }
+    .lookup__or {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 4px 0 12px;
+      color: var(--color-muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .lookup__or::before,
+    .lookup__or::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--color-border);
+    }
     .lookup__input {
       flex: 1;
       background: var(--color-surface);
@@ -598,9 +615,10 @@
       <form class="lookup" id="lookup-form" novalidate>
         <label class="lookup__episode-label" for="track-event">اپیزود / اجرا</label>
         <select class="lookup__episode-select" id="track-event" aria-label="انتخاب اپیزود"></select>
-        <div class="lookup__group" style="margin-bottom:10px;">
+        <div class="lookup__group" style="margin-bottom:0;">
           <input class="lookup__input" type="tel" id="lookup-phone" data-wwh-phone placeholder="09123456789" dir="ltr" aria-label="شماره تماس" autocomplete="tel">
         </div>
+        <div class="lookup__or" aria-hidden="true">یا</div>
         <div class="lookup__group">
           <input class="lookup__input" type="text" id="lookup-serial" placeholder="کد پیگیری / سریال (۴ رقم)" maxlength="4" inputmode="numeric" dir="ltr" aria-label="کد سریال بلیت">
           <button type="submit" class="lookup__btn" id="lookup-btn">
@@ -609,7 +627,7 @@
           </button>
         </div>
         <p class="lookup__error" id="lookup-error">شماره 09123456789 (۱۱ رقم) یا کد سریال ۴ رقمی معتبر وارد کن.</p>
-        <p class="lookup__hint">پیگیری فقط برای اپیزود انتخاب‌شده است — با شماره تماس یا کد ۴ رقمی همان اجرا. <a href="/support" style="color:var(--color-accent-soft);">پشتیبانی و گفتگو</a></p>
+        <p class="lookup__hint">یکی کافی است؛ می‌توانی هر دو را هم بزنی. پیگیری فقط برای اپیزود انتخاب‌شده است. <a href="/support" style="color:var(--color-accent-soft);">پشتیبانی و گفتگو</a></p>
       </form>
     </section>
 
@@ -1006,9 +1024,9 @@
       showTrackLoading();
       results.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-      var url = '/api/orders/track?eventId=' + encodeURIComponent(String(eid)) + '&';
-      if (hasSerial) url += 'serial=' + encodeURIComponent(serial);
-      else url += 'phone=' + encodeURIComponent(phone);
+      var url = '/api/orders/track?eventId=' + encodeURIComponent(String(eid));
+      if (hasPhone) url += '&phone=' + encodeURIComponent(phone);
+      if (hasSerial) url += '&serial=' + encodeURIComponent(serial);
 
       fetch(url)
         .then(function (r) {

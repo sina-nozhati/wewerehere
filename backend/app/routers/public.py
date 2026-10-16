@@ -361,33 +361,7 @@ def download_ticket_png(
     )
 
 
-@router.get("/api/orders/track")
-def track_orders(
-    phone: str = Query(""),
-    serial: str = Query(""),
-    eventId: int | None = Query(None),
-    request: Request = None,
-    db: Session = Depends(get_db),
-):
-    ip = "unknown"
-    featured_id = get_featured_event_id(db)
-    ev = _resolve_track_event(db, eventId)
-    phone_n = normalize_phone(phone) if phone else ""
-    raw = normalize_serial(serial)
-    if raw:
-        if not re.fullmatch(r"\d{4}", raw):
-            raise HTTPException(400, {"error": "invalid serial"})
-        check_rate_limit(_rate_track, f"{ip}:serial:{raw}", 30, 60.0)
-        tickets = _track_tickets_by_serial(db, raw, ev.id)
-        return {
-            "orders": [],
-            "tickets": tickets,
-            "event": _event_track_summary(ev, featured_id, include_location=bool(tickets)),
-        }
-    check_rate_limit(_rate_track, f"{ip}:{phone_n}", 30, 60.0)
-    if not valid_phone(phone_n):
-        raise HTTPException(400, {"error": "invalid phone"})
-
+def _track_by_phone(db: Session, ev: Event, phone_n: str, featured_id: int | None) -> dict:
     orders = db.scalars(
         select(Order).where(Order.phone == phone_n, Order.event_id == ev.id).order_by(Order.id.desc())
     ).all()
@@ -427,6 +401,51 @@ def track_orders(
         "tickets": ticket_payload,
         "event": _event_track_summary(ev, featured_id, include_location=bool(ticket_payload)),
     }
+
+
+@router.get("/api/orders/track")
+def track_orders(
+    phone: str = Query(""),
+    serial: str = Query(""),
+    eventId: int | None = Query(None),
+    request: Request = None,
+    db: Session = Depends(get_db),
+):
+    ip = "unknown"
+    featured_id = get_featured_event_id(db)
+    ev = _resolve_track_event(db, eventId)
+    phone_n = normalize_phone(phone) if phone else ""
+    raw = normalize_serial(serial)
+    has_serial = bool(raw)
+    has_phone = bool(phone_n)
+
+    if has_serial:
+        if not re.fullmatch(r"\d{4}", raw):
+            raise HTTPException(400, {"error": "invalid serial"})
+        check_rate_limit(_rate_track, f"{ip}:serial:{raw}", 30, 60.0)
+        tickets = _track_tickets_by_serial(db, raw, ev.id)
+        if tickets:
+            return {
+                "orders": [],
+                "tickets": tickets,
+                "event": _event_track_summary(ev, featured_id, include_location=True),
+            }
+        # Wrong/unknown serial but valid phone → fall back to phone lookup
+        if has_phone:
+            if not valid_phone(phone_n):
+                raise HTTPException(400, {"error": "invalid phone"})
+            check_rate_limit(_rate_track, f"{ip}:{phone_n}", 30, 60.0)
+            return _track_by_phone(db, ev, phone_n, featured_id)
+        return {
+            "orders": [],
+            "tickets": [],
+            "event": _event_track_summary(ev, featured_id, include_location=False),
+        }
+
+    check_rate_limit(_rate_track, f"{ip}:{phone_n}", 30, 60.0)
+    if not valid_phone(phone_n):
+        raise HTTPException(400, {"error": "invalid phone"})
+    return _track_by_phone(db, ev, phone_n, featured_id)
 
 
 @router.get("/api/ticket")
