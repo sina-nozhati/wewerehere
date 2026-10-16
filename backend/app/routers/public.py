@@ -222,13 +222,25 @@ def _resolve_track_event(db: Session, event_id: int | None) -> Event:
     return ev
 
 
-def _event_track_summary(ev: Event, featured_id: int | None) -> dict:
-    return {
+def _event_track_summary(
+    ev: Event,
+    featured_id: int | None,
+    *,
+    include_location: bool = False,
+) -> dict:
+    out = {
         "id": ev.id,
         "title": ev.title,
         "episodeNumber": ev.episode_number,
         "isFeatured": featured_id is not None and ev.id == featured_id,
     }
+    if include_location:
+        from app.services.event_location import location_payload_for_track
+
+        loc = location_payload_for_track(ev)
+        if loc:
+            out["location"] = loc
+    return out
 
 
 def _track_tickets_by_serial(db: Session, serial: str, event_id: int) -> list[dict]:
@@ -360,17 +372,17 @@ def track_orders(
     ip = "unknown"
     featured_id = get_featured_event_id(db)
     ev = _resolve_track_event(db, eventId)
-    event_summary = _event_track_summary(ev, featured_id)
     phone_n = normalize_phone(phone) if phone else ""
     raw = normalize_serial(serial)
     if raw:
         if not re.fullmatch(r"\d{4}", raw):
             raise HTTPException(400, {"error": "invalid serial"})
         check_rate_limit(_rate_track, f"{ip}:serial:{raw}", 30, 60.0)
+        tickets = _track_tickets_by_serial(db, raw, ev.id)
         return {
             "orders": [],
-            "tickets": _track_tickets_by_serial(db, raw, ev.id),
-            "event": event_summary,
+            "tickets": tickets,
+            "event": _event_track_summary(ev, featured_id, include_location=bool(tickets)),
         }
     check_rate_limit(_rate_track, f"{ip}:{phone_n}", 30, 60.0)
     if not valid_phone(phone_n):
@@ -410,7 +422,11 @@ def track_orders(
     ).all()
     ranks = active_rank_map(db, ev.id)
     ticket_payload = [_ticket_track_payload(t, ev, ranks) for t in tickets]
-    return {"orders": order_payload, "tickets": ticket_payload, "event": event_summary}
+    return {
+        "orders": order_payload,
+        "tickets": ticket_payload,
+        "event": _event_track_summary(ev, featured_id, include_location=bool(ticket_payload)),
+    }
 
 
 @router.get("/api/ticket")

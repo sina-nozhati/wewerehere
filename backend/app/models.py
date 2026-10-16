@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -23,6 +23,10 @@ class Event(Base):
     venue: Mapped[str] = mapped_column(String(200), default="", nullable=False)
     host_name: Mapped[str] = mapped_column(String(200), default="", nullable=False)
     host_venue: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+    location_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    location_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+    location_label: Mapped[str] = mapped_column(String(280), default="", nullable=False)
+    location_published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     capacity: Mapped[int] = mapped_column(Integer, default=50, nullable=False)
     ticket_price: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     payment_card_number: Mapped[str] = mapped_column(String(64), default="", nullable=False)

@@ -97,6 +97,10 @@ class EventBody(BaseModel):
     venue: str = ""
     hostName: str = ""
     hostVenue: str = ""
+    locationLat: float | None = None
+    locationLng: float | None = None
+    locationLabel: str = ""
+    locationPublished: bool = False
     capacity: int = 50
     ticketPrice: int = 0
     paymentCardNumber: str = ""
@@ -159,6 +163,10 @@ def _admin_event_row(e: Event, featured: int | None) -> dict:
         "venue": e.venue or "",
         "hostName": e.host_name or "",
         "hostVenue": e.host_venue or "",
+        "locationLat": e.location_lat,
+        "locationLng": e.location_lng,
+        "locationLabel": e.location_label or "",
+        "locationPublished": bool(e.location_published),
         "status": e.status,
         "salesStatus": e.sales_status,
         "capacity": e.capacity,
@@ -178,6 +186,27 @@ def admin_list_events(db: Session = Depends(get_db), _: str = Depends(require_ad
     rows = db.scalars(select(Event).order_by(Event.event_at.desc())).all()
     featured = get_featured_event_id(db)
     return {"events": [_admin_event_row(e, featured) for e in rows]}
+
+
+def _apply_event_location(ev: Event, body: EventBody) -> None:
+    from app.services.event_location import apply_location_fields
+
+    try:
+        apply_location_fields(
+            ev,
+            lat=body.locationLat,
+            lng=body.locationLng,
+            label=body.locationLabel,
+            published=body.locationPublished,
+        )
+    except ValueError as e:
+        code = str(e)
+        messages = {
+            "location_incomplete": "برای مختصات، هم عرض و هم طول جغرافیایی لازم است",
+            "location_invalid": "مختصات نامعتبر است",
+            "location_out_of_range": "مختصات خارج از بازه مجاز است",
+        }
+        raise HTTPException(400, {"error": messages.get(code, "location error")}) from e
 
 
 @router.post("/events")
@@ -205,6 +234,7 @@ def admin_create_event(body: EventBody, db: Session = Depends(get_db), _: str = 
         setlist_json=body.setlistJson,
         artists_json=body.artistsJson,
     )
+    _apply_event_location(ev, body)
     db.add(ev)
     db.commit()
     db.refresh(ev)
@@ -227,6 +257,7 @@ def admin_update_event(event_id: int, body: EventBody, db: Session = Depends(get
     ev.venue = body.venue
     ev.host_name = body.hostName
     ev.host_venue = body.hostVenue
+    _apply_event_location(ev, body)
     ev.capacity = body.capacity
     ev.ticket_price = body.ticketPrice
     ev.payment_card_number = body.paymentCardNumber

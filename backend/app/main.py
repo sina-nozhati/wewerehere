@@ -51,6 +51,10 @@ def _migrate_sqlite_columns():
         "events": [
             ("host_name", "VARCHAR(200) NOT NULL DEFAULT ''"),
             ("host_venue", "VARCHAR(200) NOT NULL DEFAULT ''"),
+            ("location_lat", "FLOAT"),
+            ("location_lng", "FLOAT"),
+            ("location_label", "VARCHAR(280) NOT NULL DEFAULT ''"),
+            ("location_published", "BOOLEAN NOT NULL DEFAULT 0"),
         ],
     }
     with engine.connect() as conn:

@@ -9,6 +9,7 @@
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg?v=1">
   <link rel="stylesheet" href="/assets/wwh-theme.css">
   <link rel="stylesheet" href="/assets/wwh-shell.css">
+  <script src="/assets/wwh-map.js" defer></script>
   <meta name="description" content="پیگیری وضعیت پرداخت و دریافت بلیت‌های رویداد ما اینجا بودیم — با شماره تماس.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -325,6 +326,120 @@
     .tickets-block__sub { font-size: 0.82rem; color: var(--color-muted); text-align: center; margin-bottom: 24px; }
     .tickets-block__sub--pair { color: var(--color-text); max-width: 36em; margin-left: auto; margin-right: auto; }
 
+    .track-location {
+      margin: 0 0 28px;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(212, 63, 90, 0.08);
+    }
+    .track-location__head {
+      padding: 16px 18px 12px;
+      text-align: center;
+    }
+    .track-location__title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--color-text);
+      line-height: 1.45;
+      margin-bottom: 6px;
+    }
+    .track-location__label {
+      font-size: 0.88rem;
+      color: var(--color-muted);
+      line-height: 1.5;
+    }
+    .track-location__map {
+      width: 100%;
+      height: 240px;
+      border-top: 1px solid rgba(70, 110, 160, 0.28);
+      border-bottom: 1px solid rgba(70, 110, 160, 0.28);
+      overscroll-behavior: contain;
+      touch-action: pan-x pan-y;
+      background: #0a1628;
+    }
+    .track-location__map .maplibregl-canvas { outline: none; }
+    .track-location__map .maplibregl-ctrl-attrib {
+      background: rgba(10, 22, 40, 0.82);
+      color: rgba(180, 200, 220, 0.85);
+      font-size: 10px;
+    }
+    .track-location__map .maplibregl-ctrl-attrib a { color: rgba(160, 190, 220, 0.95); }
+    .track-location__map .maplibregl-ctrl-group {
+      background: rgba(12, 24, 42, 0.92);
+      border: 1px solid rgba(70, 110, 160, 0.35);
+      box-shadow: none;
+    }
+    .track-location__map .maplibregl-ctrl-group button {
+      background: transparent;
+      border-color: rgba(70, 110, 160, 0.25);
+    }
+    .track-location__map .maplibregl-ctrl-group button + button {
+      border-top-color: rgba(70, 110, 160, 0.25);
+    }
+    .track-location__map .maplibregl-ctrl-icon { filter: invert(1) brightness(0.9); }
+    @media (min-width: 720px) {
+      .track-location__map { height: 280px; }
+    }
+    .track-location__actions {
+      padding: 14px 16px 16px;
+      display: flex;
+      justify-content: center;
+    }
+    .track-location__cta {
+      min-height: 48px;
+      min-width: min(100%, 280px);
+      padding: 0 22px;
+      border: 1px solid var(--color-accent);
+      border-radius: var(--radius-sm);
+      background: var(--color-accent);
+      color: #fff;
+      font-family: var(--font);
+      font-weight: 800;
+      font-size: 0.95rem;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 100ms ease-out, background var(--transition-base), color var(--transition-base);
+    }
+    .track-location__cta:active { transform: scale(0.97); }
+    @media (hover: hover) and (pointer: fine) {
+      .track-location__cta:hover { background: transparent; color: var(--color-accent); }
+    }
+    .wwh-map-place {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+      transform: translateY(-4px);
+    }
+    .wwh-map-marker {
+      width: 22px; height: 22px; border-radius: 50% 50% 50% 0;
+      background: var(--color-accent); border: 2px solid #fff;
+      transform: rotate(-45deg);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      flex-shrink: 0;
+    }
+    .wwh-map-place__label {
+      margin-top: 8px;
+      max-width: 200px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      background: rgba(10, 22, 40, 0.92);
+      border: 1px solid rgba(212, 63, 90, 0.55);
+      color: #f3e6ea;
+      font-family: var(--font);
+      font-size: 0.78rem;
+      font-weight: 700;
+      line-height: 1.35;
+      text-align: center;
+      white-space: normal;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+
     .tickets-list { display: grid; gap: 30px; max-width: 720px; margin: 0 auto; }
 
     .ticket { position: relative; }
@@ -620,6 +735,69 @@
       return d.toLocaleString('fa-IR');
     }
 
+    var trackMap = null;
+    var trackMapMarker = { current: null };
+
+    function locationCardHtml(loc) {
+      var label = loc.label || [loc.venue, loc.city].filter(Boolean).join(' · ') || '';
+      return (
+        '<section class="track-location" id="track-location">' +
+          '<div class="track-location__head">' +
+            '<h2 class="track-location__title">محل اجرا</h2>' +
+            (label
+              ? '<p class="track-location__label">' + escapeHtml(label) + '</p>'
+              : '') +
+          '</div>' +
+          '<div class="track-location__map" id="track-location-map" role="img" aria-label="نقشه محل اجرا"></div>' +
+          '<div class="track-location__actions">' +
+            '<button type="button" class="track-location__cta" id="track-dir-btn" ' +
+              'data-lat="' + escapeHtml(String(loc.lat)) + '" data-lng="' + escapeHtml(String(loc.lng)) + '"' +
+              (label ? ' data-label="' + escapeHtml(label) + '"' : '') +
+              '>' +
+              'مسیریابی' +
+            '</button>' +
+          '</div>' +
+        '</section>'
+      );
+    }
+
+    function mountTrackLocationMap(loc) {
+      var el = document.getElementById('track-location-map');
+      if (!el || !window.WwhMap) return;
+      if (trackMap) {
+        try { trackMap.remove(); } catch (err) { /* ignore */ }
+        trackMap = null;
+        trackMapMarker.current = null;
+      }
+      var placeLabel = loc.label || [loc.venue, loc.city].filter(Boolean).join(' · ') || '';
+      WwhMap.createMap(el, {
+        lat: Number(loc.lat),
+        lng: Number(loc.lng),
+        zoom: WwhMap.VENUE_ZOOM || 16,
+        cooperativeGestures: true,
+      }).then(function (map) {
+        trackMap = map;
+        return WwhMap.setMarker(
+          map,
+          Number(loc.lng),
+          Number(loc.lat),
+          trackMapMarker,
+          placeLabel,
+          { zoom: WwhMap.VENUE_ZOOM || 16 }
+        );
+      }).catch(function () { /* CDN optional */ });
+    }
+
+    document.getElementById('results').addEventListener('click', function (e) {
+      var btn = e.target.closest('#track-dir-btn');
+      if (!btn || !window.WwhMap) return;
+      WwhMap.openDirections(
+        btn.getAttribute('data-lat'),
+        btn.getAttribute('data-lng'),
+        btn.getAttribute('data-label') || ''
+      );
+    });
+
     // Builds the real designed ticket (A/B) with the buyer's number + serial,
     // mounted on a gothic display backdrop. Returns a Promise of a DOM node.
     function ticketHtml(t) {
@@ -861,6 +1039,10 @@
           if (res.orders.length && res.orders.every(function (o) { return o.status === 'pending'; })) {
             html += '<div class="track-pending-banner">رسید شما ثبت شده و در انتظار تأیید ادمین است.</div>';
           }
+          var loc = (res.tickets && res.tickets.length && ev.location) ? ev.location : null;
+          if (loc && loc.lat != null && loc.lng != null) {
+            html += locationCardHtml(loc);
+          }
           return Promise.all(res.tickets.map(ticketHtml)).then(function (cards) {
             if (cards.length) {
               html += '<div class="tickets-block">' +
@@ -875,6 +1057,7 @@
             clearTrackBusy();
             results.innerHTML = html;
             results.classList.add('visible');
+            if (loc) mountTrackLocationMap(loc);
             results.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }).catch(function (err) {
             clearTrackBusy();
