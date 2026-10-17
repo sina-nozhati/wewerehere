@@ -587,3 +587,92 @@ def test_publish_archive_to_gallery_and_leaderboard(client: TestClient):
     row = next(i for i in listing.json()["items"] if i["id"] == mem_id)
     assert row["source"] == "admin_archive"
     assert row["holderName"] == "آرشیو ادمین"
+
+
+def test_holder_slug_and_ticket_folder():
+    from app.services.memory_media import holder_slug, ticket_folder_name
+
+    assert "عرفان" in holder_slug("عرفان راد") or "راد" in holder_slug("عرفان راد")
+    assert ".." not in holder_slug("a/../b")
+    assert "/" not in holder_slug("a/b")
+    folder = ticket_folder_name(65, "عرفان راد")
+    assert folder.startswith("t65_")
+    assert " " not in folder
+
+
+def test_gate_limits_include_video_max_sec(client: TestClient):
+    body = _gate(client).json()
+    assert "limits" in body
+    assert body["limits"]["videoMaxSec"] == settings.memory_video_max_sec
+    assert body["limits"]["videoMaxMb"] == settings.memory_video_max_mb
+
+
+def test_store_memory_file_uses_ticket_folder(client: TestClient):
+    from app.services import memory_media as mm
+    from app.models import MemoryItem
+
+    token = _gate(client).json()["sessionToken"]
+    headers = {"Authorization": f"Bearer {token}"}
+    up = client.post(
+        "/api/events/night-test/memories/upload",
+        data={"consentPublish": "true"},
+        files=[("files", ("shot.jpg", BytesIO(_JPEG), "image/jpeg"))],
+        headers=headers,
+    )
+    assert up.status_code == 200
+    item_id = up.json()["results"][0]["id"]
+    db = client._TestingSession()  # type: ignore[attr-defined]
+    try:
+        item = db.get(MemoryItem, item_id)
+        assert item is not None
+        assert "/t" in item.stored_name
+        parts = item.stored_name.split("/")
+        assert len(parts) == 3
+        assert parts[1].startswith("t")
+        path = mm.absolute_memory_path(item.stored_name)
+        assert path is not None and path.is_file()
+    finally:
+        db.close()
+
+
+def test_video_too_long_rejected(client: TestClient, monkeypatch):
+    from app.services import memory_media as mm
+
+    # Minimal ftyp/isom so sniff accepts as mp4
+    fake_mp4 = b"\x00\x00\x00\x18ftypisom\x00\x00\x00\x00isomiso2mp41" + (b"\x00" * 64)
+
+    monkeypatch.setattr(mm, "probe_video_duration_sec", lambda path: 90.0)
+    monkeypatch.setattr(mm, "transcode_video_720p", lambda path: None)
+
+    token = _gate(client).json()["sessionToken"]
+    headers = {"Authorization": f"Bearer {token}"}
+    up = client.post(
+        "/api/events/night-test/memories/upload",
+        data={"consentPublish": "true"},
+        files=[("files", ("long.mp4", BytesIO(fake_mp4), "video/mp4"))],
+        headers=headers,
+    )
+    assert up.status_code == 200
+    body = up.json()
+    assert body["accepted"] == 0
+    assert body["results"][0]["error"] == "video_too_long"
+
+
+def test_video_ok_duration_skips_transcode_gracefully(client: TestClient, monkeypatch):
+    from app.services import memory_media as mm
+
+    fake_mp4 = b"\x00\x00\x00\x18ftypisom\x00\x00\x00\x00isomiso2mp41" + (b"\x00" * 64)
+    monkeypatch.setattr(mm, "probe_video_duration_sec", lambda path: 12.0)
+    monkeypatch.setattr(mm, "transcode_video_720p", lambda path: None)
+
+    token = _gate(client).json()["sessionToken"]
+    headers = {"Authorization": f"Bearer {token}"}
+    up = client.post(
+        "/api/events/night-test/memories/upload",
+        data={"consentPublish": "true"},
+        files=[("files", ("ok.mp4", BytesIO(fake_mp4), "video/mp4"))],
+        headers=headers,
+    )
+    assert up.status_code == 200
+    assert up.json()["accepted"] == 1
+    assert up.json()["results"][0]["durationMs"] == 12000

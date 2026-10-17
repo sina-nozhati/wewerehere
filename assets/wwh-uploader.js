@@ -158,7 +158,8 @@
     return this.els.cap ? String(this.els.cap.value || '').trim() : '';
   };
 
-  WwhUploader.prototype.addFiles = function (fileList) {
+  WwhUploader.prototype.addFiles = function (fileList, opts) {
+    opts = opts || {};
     if (this.state === 'uploading') {
       this._setStatus('اول آپلود جاری را مکث یا لغو کن.', 'err');
       return;
@@ -170,7 +171,7 @@
     }
     if (!files.length) return;
 
-    this.queue = files.map(function (f) {
+    var newItems = files.map(function (f) {
       return {
         file: f,
         name: f.name || 'file',
@@ -180,12 +181,26 @@
         error: ''
       };
     });
-    this.index = 0;
+    // Append by default so successive camera shots accumulate in the queue.
+    var replace = !!opts.replace;
+    if (replace || !this.queue.length) {
+      this.queue = newItems;
+      this.index = 0;
+    } else {
+      // Drop finished/cancelled items when starting a fresh batch after a completed run
+      if (this.state === 'done' || this.state === 'cancelled') {
+        this.queue = this.queue.filter(function (it) {
+          return it.status === 'waiting' || it.status === 'error' || it.status === 'paused';
+        });
+        this.index = 0;
+      }
+      this.queue = this.queue.concat(newItems);
+    }
     this.state = 'queued';
     this._offlinePaused = false;
     this._renderList();
     this._updateChrome();
-    this._setStatus(this.toFa(this.queue.length) + ' فایل آماده آپلود.', '');
+    this._setStatus(this.toFa(this.queue.length) + ' فایل در صف آپلود.', '');
     if (this.opts.autoStart) this.start();
   };
 

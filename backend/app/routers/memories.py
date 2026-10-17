@@ -28,9 +28,14 @@ from app.services.memory_gate import (
 from app.services.memory_media import (
     MemoryMediaError,
     absolute_memory_path,
+    assert_video_duration_ok,
+    delete_memory_file,
     max_bytes_for_kind,
+    relative_stored_name,
     sniff_media,
     store_memory_file,
+    transcode_video_720p,
+    video_max_sec,
 )
 from app.services.tickets import active_rank_map, public_number
 
@@ -121,6 +126,16 @@ def _comment_counts(db: Session, item_ids: list[int]) -> dict[int, int]:
     return {int(i): int(c) for i, c in rows}
 
 
+def _memory_limits() -> dict:
+    return {
+        "photoMaxMb": settings.memory_photo_max_mb,
+        "videoMaxMb": settings.memory_video_max_mb,
+        "videoMaxSec": video_max_sec(),
+        "maxFilesPerRequest": settings.memory_max_files_per_request,
+        "maxFilesPerTicket": settings.memory_max_files_per_ticket,
+    }
+
+
 @router.post("/api/events/{slug}/memories/gate")
 def memories_gate(
     slug: str,
@@ -140,12 +155,7 @@ def memories_gate(
         "archiveSession": archive["archiveSession"],
         "archiveMedia": archive["archiveMedia"],
         "uploadsRemaining": remaining,
-        "limits": {
-            "photoMaxMb": settings.memory_photo_max_mb,
-            "videoMaxMb": settings.memory_video_max_mb,
-            "maxFilesPerRequest": settings.memory_max_files_per_request,
-            "maxFilesPerTicket": settings.memory_max_files_per_ticket,
-        },
+        "limits": _memory_limits(),
     }
 
 
@@ -171,6 +181,7 @@ def memories_session(
         "archiveMedia": archive["archiveMedia"],
         "uploadsRemaining": remaining,
         "expiresAt": _iso(sess.expires_at),
+        "limits": _memory_limits(),
     }
 
 
@@ -217,6 +228,9 @@ async def memories_upload(
     if len(upload_list) > room:
         raise HTTPException(400, {"error": "ticket_quota_exceeded", "remaining": room})
 
+    ticket = db.get(Ticket, sess.ticket_id)
+    holder = (ticket.holder_name if ticket else "") or ""
+
     results: list[dict] = []
     for uf in upload_list:
         name = getattr(uf, "filename", "") or ""
@@ -238,7 +252,48 @@ async def memories_upload(
                     }
                 )
                 continue
-            stored = store_memory_file(ev.id, data, ext)
+            stored = store_memory_file(
+                ev.id,
+                data,
+                ext,
+                ticket_id=sess.ticket_id,
+                holder_name=holder,
+            )
+            size_bytes = len(data)
+            duration_ms = None
+            if kind == "video":
+                path = absolute_memory_path(stored)
+                if path:
+                    try:
+                        dur = assert_video_duration_ok(path)
+                        if dur is not None:
+                            duration_ms = int(round(dur * 1000))
+                    except MemoryMediaError:
+                        delete_memory_file(stored)
+                        raise
+                    tc = transcode_video_720p(path)
+                    if tc:
+                        new_path, mime, size_bytes = tc
+                        rel = relative_stored_name(new_path)
+                        if rel:
+                            stored = rel
+                        write_audit(
+                            db,
+                            event_id=ev.id,
+                            ticket_id=sess.ticket_id,
+                            actor="system",
+                            action="transcode",
+                            meta={"stored": stored, "sizeBytes": size_bytes},
+                        )
+                    else:
+                        write_audit(
+                            db,
+                            event_id=ev.id,
+                            ticket_id=sess.ticket_id,
+                            actor="system",
+                            action="transcode_skipped",
+                            meta={"stored": stored},
+                        )
             item = MemoryItem(
                 event_id=ev.id,
                 ticket_id=sess.ticket_id,
@@ -247,7 +302,8 @@ async def memories_upload(
                 media_kind=kind,
                 stored_name=stored,
                 mime=mime,
-                size_bytes=len(data),
+                size_bytes=size_bytes,
+                duration_ms=duration_ms,
                 consent_publish=True,
             )
             db.add(item)
@@ -259,7 +315,7 @@ async def memories_upload(
                 ticket_id=sess.ticket_id,
                 actor="ticket",
                 action="upload",
-                meta={"mediaKind": kind, "sizeBytes": len(data)},
+                meta={"mediaKind": kind, "sizeBytes": size_bytes, "durationMs": duration_ms},
             )
             db.commit()
             db.refresh(item)
@@ -269,11 +325,14 @@ async def memories_upload(
                     "id": item.id,
                     "status": item.status,
                     "mediaKind": kind,
-                    "sizeBytes": len(data),
+                    "sizeBytes": size_bytes,
+                    "durationMs": duration_ms,
                 }
             )
         except MemoryMediaError as e:
-            results.append({"ok": False, "error": str(e), "name": name})
+            results.append(
+                {"ok": False, "error": str(e), "name": name, "maxSec": video_max_sec()}
+            )
         except Exception:
             results.append({"ok": False, "error": "store_failed", "name": name})
 

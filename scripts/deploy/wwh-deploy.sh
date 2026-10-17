@@ -113,10 +113,10 @@ check_python() {
 
 install_apt_runtime_deps() {
   if ! command -v apt-get >/dev/null 2>&1; then
-    log "apt-get not found; skip Cairo/Pango install"
+    log "apt-get not found; skip Cairo/Pango/ffmpeg install"
     return 0
   fi
-  local pkgs=(libcairo2 libpango-1.0-0 libgdk-pixbuf-2.0-0 fontconfig)
+  local pkgs=(libcairo2 libpango-1.0-0 libgdk-pixbuf-2.0-0 fontconfig ffmpeg)
   local p need=0
   for p in "${pkgs[@]}"; do
     if ! dpkg -l "$p" 2>/dev/null | grep -q '^ii'; then
@@ -125,10 +125,10 @@ install_apt_runtime_deps() {
     fi
   done
   if [[ "$need" -eq 0 ]]; then
-    log "Cairo/Pango/fontconfig already installed"
+    log "Cairo/Pango/fontconfig/ffmpeg already installed"
     return 0
   fi
-  log "apt install Cairo/Pango/fontconfig (ticket PNG)"
+  log "apt install Cairo/Pango/fontconfig/ffmpeg (ticket PNG + memory video)"
   if ! run apt-get update -qq; then
     log "WARN: apt-get update failed (often a broken third-party source, e.g. Docker 403). Trying install anyway."
   fi

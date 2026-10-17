@@ -28,12 +28,15 @@ class Settings(BaseSettings):
 
     # Disposable camera / memories («شبی که اینجا بودیم»)
     memory_photo_max_mb: int = 8
-    memory_video_max_mb: int = 40
+    memory_video_max_mb: int = 25
+    memory_video_max_sec: int = 60
     memory_max_files_per_request: int = 5
     memory_max_files_per_ticket: int = 30
     memory_session_ttl_hours: int = 12
     memory_gate_max_attempts: int = 12
     memory_gate_window_sec: float = 600.0
+    memory_ffmpeg_bin: str = "ffmpeg"
+    memory_ffprobe_bin: str = "ffprobe"
 
     @property
     def receipts_dir(self) -> Path:

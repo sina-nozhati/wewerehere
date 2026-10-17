@@ -669,6 +669,48 @@
       }
       .toast.is-on { transform: translateX(-50%); }
     }
+
+    .rec-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      background: rgba(0, 0, 0, 0.88);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+    .rec-overlay[hidden] { display: none !important; }
+    .rec-panel {
+      width: min(420px, 100%);
+      background: #121214;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+    }
+    .rec-panel video {
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      object-fit: cover;
+      border-radius: 12px;
+      background: #000;
+      display: block;
+    }
+    .rec-timer {
+      text-align: center;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin: 12px 0 10px;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+    .rec-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .rec-actions .mem-btn { flex: 1; margin-top: 0; }
   </style>
 </head>
 <body>
@@ -745,9 +787,12 @@
         </label>
         <div class="pick-grid">
           <button type="button" class="mem-btn mem-btn--soft" id="btn-camera">دوربین عکس</button>
-          <button type="button" class="mem-btn mem-btn--soft" id="btn-video">ویدیو</button>
-          <button type="button" class="mem-btn mem-btn--ghost mem-btn--wide" id="btn-gallery-pick">از گالری گوشی</button>
+          <button type="button" class="mem-btn mem-btn--soft" id="btn-video">ویدیو (حداکثر ۱ دقیقه)</button>
+          <button type="button" class="mem-btn mem-btn--ghost mem-btn--wide" id="btn-gallery-pick">چندتایی از گالری گوشی</button>
         </div>
+        <p class="muted" style="text-align:center;font-size:0.78rem;margin:8px 0 0;line-height:1.45;">
+          می‌تونی چند بار پشت‌سرهم عکس بگیری؛ هر بار به صف اضافه می‌شه. ویدیو حداکثر ۶۰ ثانیه است.
+        </p>
         <input type="file" id="file-camera" class="hidden-file" accept="image/*" capture="environment" multiple>
         <input type="file" id="file-video" class="hidden-file" accept="video/*" capture="environment" multiple>
         <input type="file" id="file-library" class="hidden-file" accept="image/*,video/*" multiple>
@@ -777,6 +822,18 @@
   </aside>
 
   <div class="toast" id="mem-toast" role="status" aria-live="polite"></div>
+
+  <div class="rec-overlay" id="rec-overlay" hidden>
+    <div class="rec-panel" role="dialog" aria-modal="true" aria-label="ضبط ویدیو">
+      <video id="rec-preview" playsinline muted autoplay></video>
+      <p class="rec-timer" id="rec-timer" aria-live="polite">۰:۰۰ / ۱:۰۰</p>
+      <div class="rec-actions">
+        <button type="button" class="mem-btn mem-btn--ghost" id="rec-cancel">انصراف</button>
+        <button type="button" class="mem-btn" id="rec-toggle">شروع ضبط</button>
+      </div>
+      <p class="muted" style="text-align:center;font-size:0.75rem;margin-top:8px;">ضبط خودکار بعد از ۶۰ ثانیه قطع می‌شود.</p>
+    </div>
+  </div>
   <div id="wwh-footer-mount"></div>
   <script src="/assets/wwh-chrome.js"></script>
   <script src="/assets/wwh-uploader.js"></script>
@@ -806,7 +863,7 @@
   var displayNameKey = 'wwh_mem_display_' + slug;
   var sessionToken = sessionStorage.getItem(storageKey) || '';
   var displayNameSaved = sessionStorage.getItem(displayNameKey) || '';
-  var limits = { photoMaxMb: 8, videoMaxMb: 40, maxFilesPerRequest: 5 };
+  var limits = { photoMaxMb: 8, videoMaxMb: 25, videoMaxSec: 60, maxFilesPerRequest: 5 };
   var uploadsRemaining = null;
   var archiveMedia = [];
   var ticketInfo = null;
@@ -1413,11 +1470,70 @@
     });
   });
 
+  function videoMaxSec() {
+    return Math.max(1, Number(limits.videoMaxSec) || 60);
+  }
+
+  function readVideoDuration(file) {
+    return new Promise(function (resolve) {
+      if (!file || !(file.type || '').startsWith('video/')) {
+        resolve(null);
+        return;
+      }
+      var url = URL.createObjectURL(file);
+      var v = document.createElement('video');
+      v.preload = 'metadata';
+      v.onloadedmetadata = function () {
+        var d = v.duration;
+        URL.revokeObjectURL(url);
+        resolve(isFinite(d) ? d : null);
+      };
+      v.onerror = function () {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+      v.src = url;
+    });
+  }
+
   function addFiles(fileList) {
     if (!memUploader) return;
     showErr(uploadMsg, '');
     showErr(uploadErr, '');
-    memUploader.addFiles(fileList);
+    var files = Array.prototype.slice.call(fileList || []);
+    if (!files.length) return;
+    var maxSec = videoMaxSec();
+    var photoMax = (Number(limits.photoMaxMb) || 8) * 1024 * 1024;
+    var videoMax = (Number(limits.videoMaxMb) || 25) * 1024 * 1024;
+    Promise.all(files.map(function (f) {
+      var isVid = (f.type || '').indexOf('video/') === 0;
+      var maxB = isVid ? videoMax : photoMax;
+      if (f.size > maxB) {
+        return Promise.resolve({ file: f, reject: 'file_too_large' });
+      }
+      if (!isVid) return Promise.resolve({ file: f, reject: null });
+      return readVideoDuration(f).then(function (d) {
+        if (d != null && d > maxSec + 0.5) {
+          return { file: f, reject: 'video_too_long' };
+        }
+        return { file: f, reject: null };
+      });
+    })).then(function (rows) {
+      var ok = [];
+      var longN = 0;
+      var bigN = 0;
+      rows.forEach(function (r) {
+        if (r.reject === 'video_too_long') longN += 1;
+        else if (r.reject === 'file_too_large') bigN += 1;
+        else ok.push(r.file);
+      });
+      if (longN) {
+        showErr(uploadErr, 'ویدیو باید حداکثر ' + toFa(maxSec) + ' ثانیه باشد (' + toFa(longN) + ' فایل رد شد).');
+      } else if (bigN) {
+        showErr(uploadErr, 'حجم بعضی فایل‌ها زیاد بود و رد شدند.');
+      }
+      if (ok.length) memUploader.addFiles(ok);
+    });
   }
 
   if (window.WwhUploader && document.getElementById('mem-uploader')) {
@@ -1456,6 +1572,9 @@
         if (json && json.accepted === 0) {
           var r0 = json.results && json.results[0];
           if (r0 && r0.error === 'file_too_large') return 'حجم فایل زیاد است.';
+          if (r0 && r0.error === 'video_too_long') {
+            return 'ویدیو باید حداکثر ' + toFa(r0.maxSec || videoMaxSec()) + ' ثانیه باشد.';
+          }
           return 'فایل پذیرفته نشد.';
         }
         return null;
@@ -1598,9 +1717,6 @@
   document.getElementById('btn-camera').addEventListener('click', function () {
     document.getElementById('file-camera').click();
   });
-  document.getElementById('btn-video').addEventListener('click', function () {
-    document.getElementById('file-video').click();
-  });
   document.getElementById('btn-gallery-pick').addEventListener('click', function () {
     document.getElementById('file-library').click();
   });
@@ -1609,6 +1725,125 @@
       addFiles(this.files);
       this.value = '';
     });
+  });
+
+  /* ---- in-page video recorder (max 60s) with native camera fallback ---- */
+  var rec = {
+    overlay: document.getElementById('rec-overlay'),
+    preview: document.getElementById('rec-preview'),
+    timerEl: document.getElementById('rec-timer'),
+    toggleBtn: document.getElementById('rec-toggle'),
+    cancelBtn: document.getElementById('rec-cancel'),
+    stream: null,
+    recorder: null,
+    chunks: [],
+    startedAt: 0,
+    tick: null,
+    maxMs: 60000
+  };
+
+  function formatRecClock(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return toFa(m) + ':' + toFa(String(s).padStart(2, '0'));
+  }
+
+  function updateRecTimer() {
+    var maxS = videoMaxSec();
+    rec.maxMs = maxS * 1000;
+    var elapsed = rec.startedAt ? (Date.now() - rec.startedAt) / 1000 : 0;
+    rec.timerEl.textContent = formatRecClock(elapsed) + ' / ' + formatRecClock(maxS);
+    if (rec.startedAt && elapsed >= maxS) stopRec(true);
+  }
+
+  function closeRec() {
+    if (rec.tick) { clearInterval(rec.tick); rec.tick = null; }
+    if (rec.recorder && rec.recorder.state !== 'inactive') {
+      try { rec.recorder.stop(); } catch (e) {}
+    }
+    rec.recorder = null;
+    rec.chunks = [];
+    rec.startedAt = 0;
+    if (rec.stream) {
+      rec.stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e2) {} });
+      rec.stream = null;
+    }
+    if (rec.preview) rec.preview.srcObject = null;
+    rec.overlay.hidden = true;
+    rec.toggleBtn.textContent = 'شروع ضبط';
+  }
+
+  function stopRec(auto) {
+    if (!rec.recorder || rec.recorder.state === 'inactive') return;
+    try { rec.recorder.stop(); } catch (e) {}
+    if (rec.tick) { clearInterval(rec.tick); rec.tick = null; }
+    rec.toggleBtn.textContent = 'شروع ضبط';
+    if (auto) showToast('ضبط در ' + toFa(videoMaxSec()) + ' ثانیه تمام شد.');
+  }
+
+  function startRec() {
+    if (!rec.stream || typeof MediaRecorder === 'undefined') return;
+    rec.chunks = [];
+    var mime = '';
+    ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].some(function (m) {
+      if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) { mime = m; return true; }
+      return false;
+    });
+    try {
+      rec.recorder = mime ? new MediaRecorder(rec.stream, { mimeType: mime }) : new MediaRecorder(rec.stream);
+    } catch (e) {
+      showErr(uploadErr, 'ضبط ویدیو روی این دستگاه پشتیبانی نمی‌شود.');
+      closeRec();
+      document.getElementById('file-video').click();
+      return;
+    }
+    rec.recorder.ondataavailable = function (ev) {
+      if (ev.data && ev.data.size) rec.chunks.push(ev.data);
+    };
+    rec.recorder.onstop = function () {
+      var mimeType = (rec.recorder && rec.recorder.mimeType) || 'video/webm';
+      var chunks = rec.chunks.slice();
+      var blob = new Blob(chunks, { type: mimeType });
+      var ext = mimeType.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
+      var file = new File([blob], 'memory-' + Date.now() + '.' + ext, { type: mimeType });
+      rec.recorder = null;
+      closeRec();
+      if (blob.size > 0) addFiles([file]);
+    };
+    rec.startedAt = Date.now();
+    rec.recorder.start(250);
+    rec.toggleBtn.textContent = 'پایان ضبط';
+    updateRecTimer();
+    rec.tick = setInterval(updateRecTimer, 200);
+  }
+
+  function openRec() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+      document.getElementById('file-video').click();
+      return;
+    }
+    showErr(uploadErr, '');
+    navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    }).then(function (stream) {
+      rec.stream = stream;
+      rec.preview.srcObject = stream;
+      rec.overlay.hidden = false;
+      rec.startedAt = 0;
+      updateRecTimer();
+      rec.toggleBtn.textContent = 'شروع ضبط';
+    }).catch(function () {
+      document.getElementById('file-video').click();
+    });
+  }
+
+  document.getElementById('btn-video').addEventListener('click', openRec);
+  rec.cancelBtn.addEventListener('click', closeRec);
+  rec.toggleBtn.addEventListener('click', function () {
+    if (rec.recorder && rec.recorder.state === 'recording') stopRec(false);
+    else startRec();
   });
 
   var changeCodeBtn = document.getElementById('change-code-btn');
