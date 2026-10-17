@@ -2151,13 +2151,27 @@
               message.textContent = 'شماره سریال ' + toPersian(serial) + ' ثبت نشده.';
               return;
             }
-            var strong = document.createElement('strong');
-            strong.textContent = res.ticket.name;
-            message.textContent = 'خوش اومدی، ';
-            message.appendChild(strong);
-            message.appendChild(document.createTextNode('. این عکس‌ها و ویدیوهای اون شبه:'));
-
-            renderGallery(res.media);
+            var slug = (res.eventSlug || (window.__wwhEvent && window.__wwhEvent.slug) || '').trim();
+            var go = function (finalSlug) {
+              finalSlug = (finalSlug || '').trim();
+              if (!finalSlug) {
+                message.textContent = 'رویداد این بلیت مشخص نیست. کمی بعد دوباره تلاش کن یا از لینک خاطرات رویداد وارد شو.';
+                return;
+              }
+              message.textContent = 'خوش اومدی' + (res.ticket && res.ticket.name ? '، ' + res.ticket.name : '') + '. در حال ورود به گالری شب…';
+              location.href = '/events/' + encodeURIComponent(finalSlug) + '/memories?serial=' + encodeURIComponent(serial);
+            };
+            if (slug) {
+              go(slug);
+              return;
+            }
+            // Race: landing payload not ready yet — ask /api/landing once
+            return fetch('/api/landing')
+              .then(function (r) { return r.json(); })
+              .then(function (landing) {
+                go((landing.event && landing.event.slug) || '');
+              })
+              .catch(function () { go(''); });
           })
           .catch(function () {
             message.textContent = 'خطا در ارتباط با سرور. دوباره تلاش کن.';

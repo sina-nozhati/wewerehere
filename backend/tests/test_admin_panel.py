@@ -211,3 +211,85 @@ def test_admin_ticket_and_orders_scope(client: TestClient):
     row = next(o for o in orders["orders"] if o["phone"] == "09122222222")
     assert row["ticketCount"] == 1
     assert row["issuedTicketCount"] == 0
+
+
+def test_admin_dashboard_stats(client: TestClient):
+    headers = _auth(client)
+    ev_id = client.get("/api/admin/events", headers=headers).json()["events"][0]["id"]
+    client.post(
+        "/api/admin/tickets",
+        headers=headers,
+        json={"name": "A1", "phone": "09120000001", "serial": "1111", "group": "A", "eventId": ev_id},
+    )
+    client.post(
+        "/api/admin/tickets",
+        headers=headers,
+        json={"name": "B1", "phone": "09120000002", "serial": "2222", "group": "B", "eventId": ev_id},
+    )
+    client.post(
+        "/api/orders",
+        json={"phone": "09120000003", "names": ["X"], "receiptText": "pay", "eventId": ev_id},
+    )
+
+    r = client.get(f"/api/admin/dashboard?eventId={ev_id}", headers=headers)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["event"]["id"] == ev_id
+    assert data["event"]["ticketPrice"] == 50000
+    assert data["event"]["capacity"] == 10
+    assert data["guests"]["active"] == 2
+    assert data["guests"]["groupA"] == 1
+    assert data["guests"]["groupB"] == 1
+    assert data["guests"]["fillPercent"] == 20.0
+    assert data["revenue"]["estimatedToman"] == 100000
+    assert data["revenue"]["basis"] == "active_tickets_x_price"
+    assert data["orders"]["pending"] >= 1
+    assert data["orders"]["total"] >= 1
+    assert "pending" in data["memories"]
+    assert isinstance(data["supportOpen"], int)
+    assert len(data["dailyIssued"]) == 14
+    assert sum(d["count"] for d in data["dailyIssued"]) >= 2
+
+    assert client.get("/api/admin/dashboard", headers=headers).status_code == 200
+    assert client.get("/api/admin/dashboard").status_code == 401
+
+
+def test_admin_media_multipart_upload(client: TestClient, tmp_path, monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "storage_root", tmp_path)
+    headers = _auth(client)
+    ev_id = client.get("/api/admin/events", headers=headers).json()["events"][0]["id"]
+    # Minimal valid JPEG (1x1)
+    jpeg = (
+        b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+        b"\xff\xdb\x00C\x00" + (b"\x08" * 64) + b"\xff\xd9"
+    )
+    ok = client.post(
+        "/api/admin/media/upload",
+        headers=headers,
+        files={"file": ("shot.jpg", jpeg, "image/jpeg")},
+        data={"caption": "پشت‌صحنه", "eventId": str(ev_id)},
+    )
+    assert ok.status_code == 200, ok.text
+    body = ok.json()
+    assert body["id"]
+    assert body["mime"] == "image/jpeg"
+    assert body["caption"] == "پشت‌صحنه"
+
+    bad_type = client.post(
+        "/api/admin/media/upload",
+        headers=headers,
+        files={"file": ("x.txt", b"hello", "text/plain")},
+        data={"eventId": str(ev_id)},
+    )
+    assert bad_type.status_code == 400
+
+    huge = b"\xff\xd8\xff\xd9" + (b"\x00" * (41 * 1024 * 1024))
+    too_big = client.post(
+        "/api/admin/media/upload",
+        headers=headers,
+        files={"file": ("big.jpg", huge, "image/jpeg")},
+        data={"eventId": str(ev_id)},
+    )
+    assert too_big.status_code == 413

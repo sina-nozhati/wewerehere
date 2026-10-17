@@ -171,7 +171,7 @@ pip_install() {
 }
 
 ensure_data_dirs() {
-  run mkdir -p "$APP_DIR/storage/receipts" "$APP_DIR/storage/public" "$APP_DIR/storage/archive" "$APP_DIR/uploads"
+  run mkdir -p "$APP_DIR/storage/receipts" "$APP_DIR/storage/public" "$APP_DIR/storage/archive" "$APP_DIR/storage/memories" "$APP_DIR/uploads"
 }
 
 fix_permissions() {

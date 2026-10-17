@@ -103,7 +103,7 @@ server {
     listen 80;
     server_name example.com www.example.com;   # دامنهی خودتان
 
-    client_max_body_size 150m;   # برای آپلود عکس رسید (پایه 40MB هر فایل)
+    client_max_body_size 150m;   # رسید + خاطرات شب (ویدیو تا ~40MB؛ زیر از 150m کم نگذارید)
 
     location / {
         proxy_pass http://127.0.0.1:5173;
@@ -139,6 +139,8 @@ sudo certbot --nginx -d example.com -d www.example.com
 ```
 
 بلیتها، سفارشها و رسیدها در دیتابیس و پوشه‌های `storage/` (و در صورت legacy، `uploads/`) هستند؛ بدون بکاپ، حذف سرور = حذف دادهها.
+
+**خاطرات شب (Disposable Camera):** فایل‌ها در `storage/memories/` ذخیره می‌شوند (خارج از StaticFiles عمومی). `wwh-deploy` این پوشه را می‌سازد و بکاپ `storage/` آن را پوشش می‌دهد. جداول `memory_sessions` / `memory_items` با `create_all` ساخته می‌شوند — Alembic لازم نیست. مسیر عمومی QR: `/events/{slug}/memories`.
 
 قبل از هر `wwh-deploy update` هم یک بکاپ timestamp‌شده در `BACKUP_DIR` (پیش‌فرض `/var/backups/wewerehere`) ساخته می‌شود.
 

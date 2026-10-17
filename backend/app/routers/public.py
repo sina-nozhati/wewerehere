@@ -450,18 +450,41 @@ def track_orders(
 
 @router.get("/api/ticket")
 def ticket_legacy(serial: str = Query(""), db: Session = Depends(get_db)):
-    """Legacy serial lookup — scoped to featured event; prefer archive/access."""
-    ev = get_featured_event(db)
-    if not ev:
-        return {"found": False}
+    """Serial lookup for landing → memories redirect.
+
+    Prefer featured event; if serial is not there, fall back to any active ticket
+    so guests are still routed to the correct event slug.
+    """
     raw = normalize_serial(serial)
     if not re.fullmatch(r"\d{4}", raw):
         raise HTTPException(400, {"error": "invalid serial"})
-    ticket = db.scalar(
-        select(Ticket).where(Ticket.event_id == ev.id, Ticket.public_code == raw, Ticket.status == "active")
-    )
+
+    featured = get_featured_event(db)
+    ticket = None
+    ev = None
+    if featured:
+        ticket = db.scalar(
+            select(Ticket).where(
+                Ticket.event_id == featured.id,
+                Ticket.public_code == raw,
+                Ticket.status == "active",
+            )
+        )
+        if ticket:
+            ev = featured
+
     if not ticket:
+        ticket = db.scalar(
+            select(Ticket)
+            .where(Ticket.public_code == raw, Ticket.status == "active")
+            .order_by(Ticket.id.desc())
+        )
+        if ticket:
+            ev = db.get(Event, ticket.event_id)
+
+    if not ticket or not ev or ev.status in ("draft", "cancelled"):
         return {"found": False}
+
     import secrets
 
     session = secrets.token_urlsafe(24)
@@ -473,8 +496,11 @@ def ticket_legacy(serial: str = Query(""), db: Session = Depends(get_db)):
     media = _archive_media_list(db, ev.id, session=session)
     ranks = active_rank_map(db, ev.id)
     number = public_number(ticket, ranks) or ticket.display_number
+    slug = (ev.slug or "").strip()
     return {
         "found": True,
+        "eventId": ev.id,
+        "eventSlug": slug,
         "ticket": {
             "number": number,
             "serial": ticket.public_code,

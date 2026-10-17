@@ -26,6 +26,15 @@ class Settings(BaseSettings):
     sms_ir_timeout: float = 10.0
     sms_ir_admin_presets: str = ""
 
+    # Disposable camera / memories («شبی که اینجا بودیم»)
+    memory_photo_max_mb: int = 8
+    memory_video_max_mb: int = 40
+    memory_max_files_per_request: int = 5
+    memory_max_files_per_ticket: int = 30
+    memory_session_ttl_hours: int = 12
+    memory_gate_max_attempts: int = 12
+    memory_gate_window_sec: float = 600.0
+
     @property
     def receipts_dir(self) -> Path:
         return self.storage_root / "receipts"
@@ -37,6 +46,10 @@ class Settings(BaseSettings):
     @property
     def public_media_dir(self) -> Path:
         return self.storage_root / "public"
+
+    @property
+    def memories_dir(self) -> Path:
+        return self.storage_root / "memories"
 
 
 import os

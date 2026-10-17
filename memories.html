@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#0A0A0B">
+  <meta name="color-scheme" content="dark">
+  <title>شبی که اینجا بودیم — ما اینجا بودیم</title>
+  <link rel="icon" href="/assets/wwh-favicon.jpg?v=1" type="image/jpeg">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg?v=1">
+  <link rel="stylesheet" href="/assets/wwh-theme.css">
+  <link rel="stylesheet" href="/assets/wwh-shell.css">
+  <link rel="stylesheet" href="/assets/wwh-uploader.css">
+  <link rel="stylesheet" href="/assets/wwh-lightbox.css">
+  <meta name="description" content="گالری شب رویداد — خاطرات مهمان‌ها، آرشیو اجرا و آپلود با سریال بلیت.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=JetBrains+Mono:wght@400;600;700&family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --color-primary: #FFFFFF;
+      --color-secondary: #B8B8C0;
+      --color-bg: #0A0A0B;
+      --color-text: #FAFAFA;
+      --color-surface: #141416;
+      --color-surface-light: #1E1E22;
+      --color-muted: #7A7A85;
+      --color-border: #2A2A2E;
+      --color-border-light: #3A3A3F;
+      --color-accent: #D43F5A;
+      --color-accent-soft: #E86B82;
+      --color-success: #5EC98B;
+      --color-danger: #FF5A5A;
+      --glow-accent: 0 0 24px rgba(212, 63, 90, 0.35);
+      --font: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Vazirmatn', monospace;
+      --font-gothic: 'Cinzel', 'Vazirmatn', serif;
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --text: var(--color-text);
+      --muted: var(--color-muted);
+      --surface: var(--color-surface);
+      --surface-2: var(--color-surface-light);
+      --border: var(--color-border);
+      --border-light: var(--color-border-light);
+      --accent: var(--color-accent);
+      --accent-soft: var(--color-accent-soft);
+      --ok: var(--color-success);
+      --danger: var(--color-danger);
+      --radius-md: 8px;
+      --radius-lg: 16px;
+      --safe-t: env(safe-area-inset-top, 0px);
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      --safe-l: env(safe-area-inset-left, 0px);
+      --safe-r: env(safe-area-inset-right, 0px);
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-text-size-adjust: 100%;
+      overscroll-behavior: none;
+    }
+    body {
+      font-family: var(--font);
+      color: var(--color-text);
+      line-height: 1.7;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      background:
+        radial-gradient(ellipse 130% 70% at 50% -12%, #1b1424 0%, transparent 58%),
+        radial-gradient(ellipse 90% 55% at 50% 115%, #1c0f15 0%, transparent 60%),
+        #070609;
+      padding-bottom: calc(28px + var(--safe-b));
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.045;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    .wrap { max-width: 520px; margin: 0 auto; padding: 0 16px; }
+    .hero { padding: calc(20px + var(--safe-t)) 0 12px; text-align: center; }
+    .hero__brand {
+      font-family: var(--font-gothic);
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      font-size: clamp(1.05rem, 4.2vw, 1.35rem);
+      color: var(--color-primary);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+    .hero__title {
+      font-size: clamp(1.15rem, 4vw, 1.4rem);
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 6px;
+      color: var(--color-secondary);
+    }
+    .hero__sub { color: var(--color-muted); font-size: 0.88rem; }
+    .ticket-chip {
+      display: none;
+      margin: 12px auto 0;
+      max-width: 100%;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--color-border);
+      background: rgba(20, 20, 22, 0.7);
+      font-size: 0.8rem;
+      color: var(--color-secondary);
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+    }
+    .ticket-chip.is-on { display: inline-flex; }
+    .ticket-chip code {
+      font-family: var(--font-mono);
+      letter-spacing: 0.2em;
+      color: #fff;
+    }
+
+    .panel {
+      background: rgba(20, 20, 22, 0.88);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 22px 18px;
+      margin-bottom: 20px;
+    }
+    .panel[hidden] { display: none !important; }
+
+    label { display: block; font-size: 0.82rem; color: var(--color-secondary); margin-bottom: 8px; }
+    input[type="text"], input[type="tel"] {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: #0c0c0e;
+      color: var(--color-text);
+      font-family: var(--font);
+      font-size: 16px;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+    }
+    #serial-input {
+      font-family: var(--font-mono);
+      font-size: 1.35rem;
+      letter-spacing: 0.35em;
+      text-align: center;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 3px rgba(212, 63, 90, 0.22);
+    }
+    textarea {
+      width: 100%;
+      min-height: 88px;
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: #0c0c0e;
+      color: var(--color-text);
+      font-family: var(--font);
+      font-size: 16px;
+      resize: vertical;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 3px rgba(212, 63, 90, 0.22);
+    }
+
+    .mem-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px 18px;
+      margin-top: 14px;
+      border: 2px solid var(--color-accent);
+      border-radius: var(--radius-md);
+      background: var(--color-accent);
+      color: var(--color-primary);
+      font-family: var(--font);
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      min-height: 48px;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      box-shadow: var(--glow-accent);
+      transition: transform 120ms var(--ease-out), background 160ms ease, border-color 160ms ease, opacity 160ms ease, box-shadow 160ms ease;
+    }
+    .mem-btn:focus-visible {
+      outline: 2px solid var(--color-accent-soft);
+      outline-offset: 2px;
+    }
+    .mem-btn:active:not(:disabled) { transform: scale(0.97); }
+    .mem-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+    .mem-btn--ghost {
+      background: transparent;
+      border-color: var(--color-border-light);
+      color: var(--color-text);
+      box-shadow: none;
+    }
+    .mem-btn--soft {
+      background: var(--color-surface-light);
+      border-color: var(--color-border);
+      color: var(--color-text);
+      box-shadow: none;
+    }
+    .mem-btn--sm {
+      width: auto;
+      min-height: 40px;
+      padding: 8px 12px;
+      margin-top: 0;
+      font-size: 0.82rem;
+      box-shadow: none;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .mem-btn:hover:not(:disabled) { background: var(--color-accent-soft); border-color: var(--color-accent-soft); }
+      .mem-btn--ghost:hover:not(:disabled) { border-color: var(--color-accent); background: rgba(212, 63, 90, 0.06); }
+      .mem-btn--soft:hover:not(:disabled) { border-color: var(--color-border-light); background: #26262c; }
+    }
+
+    .err { color: var(--color-danger); font-size: 0.85rem; margin-top: 12px; text-align: center; }
+    .ok { color: var(--color-success); font-size: 0.88rem; margin-top: 12px; text-align: center; }
+    .muted { color: var(--color-muted); font-size: 0.82rem; }
+
+    .consent {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin: 16px 0 4px;
+      font-size: 0.86rem;
+      color: var(--color-secondary);
+      line-height: 1.55;
+      min-height: 44px;
+    }
+    .consent input {
+      margin-top: 3px;
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      accent-color: var(--color-accent);
+    }
+
+    .pick-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .pick-grid .mem-btn { margin-top: 0; font-size: 0.88rem; padding: 12px 10px; }
+    .pick-grid .mem-btn--wide { grid-column: 1 / -1; }
+    .hidden-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+    .nav-scroll {
+      display: none;
+      gap: 8px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+      touch-action: pan-x;
+      scrollbar-width: none;
+      margin: 4px 0 18px;
+      padding-bottom: 2px;
+    }
+    .nav-scroll::-webkit-scrollbar { display: none; }
+    .nav-scroll.is-on { display: flex; }
+    .nav-scroll button {
+      flex: 0 0 auto;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: transparent;
+      color: var(--color-secondary);
+      font-family: var(--font);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 44px;
+      white-space: nowrap;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: transform 120ms var(--ease-out), border-color 160ms ease, background 160ms ease, color 160ms ease;
+    }
+    .nav-scroll button:active { transform: scale(0.97); }
+    .nav-scroll button.is-on {
+      border-color: var(--color-accent);
+      color: #fff;
+      background: rgba(212, 63, 90, 0.14);
+    }
+    .nav-scroll button:focus-visible {
+      outline: 2px solid var(--color-accent-soft);
+      outline-offset: 2px;
+    }
+
+    .view[hidden] { display: none !important; }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 0.8rem;
+      color: var(--color-muted);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .mem-card {
+      margin: 0;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: #111;
+      border: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+      animation: memIn 280ms var(--ease-out) forwards;
+    }
+    .mem-card:nth-child(1) { animation-delay: 0ms; }
+    .mem-card:nth-child(2) { animation-delay: 40ms; }
+    .mem-card:nth-child(3) { animation-delay: 80ms; }
+    .mem-card:nth-child(4) { animation-delay: 120ms; }
+    .mem-card:nth-child(5) { animation-delay: 160ms; }
+    .mem-card:nth-child(6) { animation-delay: 200ms; }
+    @keyframes memIn {
+      to { opacity: 1; transform: none; }
+    }
+    .mem-card__media.wwh-thumb {
+      --wwh-lb-thumb-ratio: 1 / 1;
+      border-radius: 0;
+    }
+    .mem-card__body {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+    }
+    .mem-card__title {
+      font-size: 0.82rem;
+      color: var(--color-secondary);
+      line-height: 1.35;
+      min-height: 1.1em;
+    }
+    .mem-card__actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border: 1px solid var(--color-border);
+      color: var(--color-muted);
+    }
+    .chip--pending { color: #e0b45a; border-color: rgba(224, 180, 90, 0.35); }
+    .chip--approved { color: var(--color-success); border-color: rgba(94, 201, 139, 0.35); }
+    .chip--rejected { color: var(--color-danger); border-color: rgba(255, 90, 90, 0.35); }
+
+    .like-btn.is-on {
+      border-color: var(--color-accent);
+      color: #fff;
+      background: rgba(212, 63, 90, 0.2);
+    }
+
+    .sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      background: rgba(0, 0, 0, 0.55);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms var(--ease-out);
+    }
+    .sheet-backdrop.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .sheet {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 90;
+      max-height: min(78dvh, 640px);
+      background: #121214;
+      border: 1px solid var(--color-border);
+      border-bottom: 0;
+      border-radius: 18px 18px 0 0;
+      padding: 14px 16px calc(16px + var(--safe-b));
+      transform: translateY(110%);
+      transition: transform 240ms var(--ease-out);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .sheet.is-open { transform: none; }
+    .sheet__handle {
+      width: 40px;
+      height: 4px;
+      border-radius: 99px;
+      background: #3a3a40;
+      margin: 0 auto 4px;
+    }
+    .sheet__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .sheet__title { font-weight: 700; font-size: 1rem; }
+    .sheet__close {
+      min-width: 44px;
+      min-height: 44px;
+      border: 0;
+      background: transparent;
+      color: var(--color-secondary);
+      font-size: 1.4rem;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .sheet__close:active { transform: scale(0.94); }
+    .comments-list {
+      overflow-y: auto;
+      flex: 1;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-right: 2px;
+    }
+    .comment {
+      border-bottom: 1px solid var(--color-border);
+      padding-bottom: 10px;
+    }
+    .comment__name { font-weight: 700; font-size: 0.88rem; color: #fff; }
+    .comment__body { font-size: 0.9rem; color: var(--color-secondary); margin-top: 4px; white-space: pre-wrap; }
+    .comment-form { display: flex; flex-direction: column; gap: 8px; }
+    .comment-form[hidden] { display: none !important; }
+    .empty-state {
+      text-align: center;
+      padding: 28px 12px;
+      color: var(--color-muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    .empty-state strong { color: var(--color-secondary); font-weight: 700; }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(20px + var(--safe-b));
+      transform: translateX(-50%) translateY(120%);
+      z-index: 100;
+      max-width: min(92vw, 420px);
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: #1a1a1e;
+      border: 1px solid var(--color-border-light);
+      color: var(--color-text);
+      font-size: 0.88rem;
+      text-align: center;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+      transition: transform 220ms var(--ease-out), opacity 220ms var(--ease-out);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .toast.is-on {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    .gate-banner {
+      display: none;
+      margin: 0 0 14px;
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      border: 1px dashed var(--color-border-light);
+      background: rgba(212, 63, 90, 0.08);
+      color: var(--color-secondary);
+      font-size: 0.86rem;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .gate-banner.is-on { display: block; }
+    .like-btn.is-on { color: #fff; }
+    .ticket-chip .mem-btn { flex: 0 0 auto; width: auto; }
+
+    .session-bar {
+      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      margin: 0 0 14px;
+      padding: 12px 12px calc(12px + 2px);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+      background: rgba(12, 12, 14, 0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      gap: 10px 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+    }
+    .session-bar.is-on { display: flex; }
+    .session-bar__who {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1 1 140px;
+      text-align: center;
+      align-items: center;
+    }
+    .session-bar__name {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+    .session-bar__serial {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.18em;
+      color: var(--color-secondary);
+    }
+    .session-bar__actions {
+      display: inline-flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+    .session-bar__quota {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 72px;
+      min-height: 44px;
+      padding: 6px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(212, 63, 90, 0.55);
+      background: linear-gradient(160deg, rgba(212, 63, 90, 0.28), rgba(212, 63, 90, 0.08));
+      box-shadow: 0 0 0 1px rgba(212, 63, 90, 0.12), var(--glow-accent);
+    }
+    .session-bar__quota-label {
+      font-size: 0.68rem;
+      color: var(--color-accent-soft);
+      font-weight: 700;
+    }
+    .session-bar__quota-num {
+      font-family: var(--font-mono);
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+    .session-bar__exit {
+      width: auto;
+      min-height: 44px;
+      margin-top: 0;
+      padding: 10px 14px;
+      flex: 0 0 auto;
+      box-shadow: none;
+    }
+    @media (min-width: 560px) {
+      .session-bar {
+        justify-content: space-between;
+      }
+      .session-bar__who {
+        text-align: start;
+        align-items: flex-start;
+      }
+    }
+
+    .leaderboard {
+      margin: 0 0 18px;
+      padding: 14px 12px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+      background: rgba(20, 20, 22, 0.75);
+    }
+    .leaderboard__title {
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+      color: #fff;
+    }
+    .leaderboard__row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .leaderboard__card {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: #0c0c0e;
+      border: 1px solid var(--color-border);
+      text-align: center;
+    }
+    .leaderboard__media.wwh-thumb {
+      --wwh-lb-thumb-ratio: 1 / 1;
+    }
+    .leaderboard__meta {
+      padding: 8px 6px;
+      font-size: 0.75rem;
+      color: var(--color-secondary);
+    }
+    .leaderboard__rank {
+      display: block;
+      font-weight: 800;
+      color: var(--color-accent-soft);
+      margin-bottom: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .mem-card, .sheet, .sheet-backdrop, .toast {
+        animation: none !important;
+        transition: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
+      .toast.is-on { transform: translateX(-50%); }
+    }
+  </style>
+</head>
+<body>
+  <div id="wwh-topbar-mount"></div>
+
+  <main class="wrap">
+    <header class="hero">
+      <p class="hero__brand">WE WERE HERE</p>
+      <h1 class="hero__title">شبی که اینجا بودیم</h1>
+      <p class="hero__sub" id="event-sub">دوربین یک‌بارمصرف شب رویداد</p>
+    </header>
+
+    <div class="session-bar" id="session-bar" hidden aria-live="polite">
+      <div class="session-bar__who">
+        <span class="session-bar__name" id="ticket-name"></span>
+        <code class="session-bar__serial" id="ticket-serial"></code>
+      </div>
+      <div class="session-bar__actions">
+        <div class="session-bar__quota" id="session-quota" title="سقف آپلود باقی‌مانده این بلیت">
+          <span class="session-bar__quota-label">باقیمانده</span>
+          <span class="session-bar__quota-num" id="uploads-left-num">—</span>
+        </div>
+        <button type="button" class="mem-btn mem-btn--ghost session-bar__exit" id="change-code-btn">خروج / تغییر کد</button>
+      </div>
+    </div>
+
+    <nav class="nav-scroll" id="night-nav" role="tablist" aria-label="بخش‌های صفحه شب" hidden>
+      <button type="button" data-tab="upload" role="tab" aria-selected="false">آپلود</button>
+      <button type="button" data-tab="gallery" role="tab" aria-selected="false">گالری شب</button>
+      <button type="button" data-tab="archive" role="tab" aria-selected="false">آرشیو اجرا</button>
+      <button type="button" data-tab="mine" role="tab" aria-selected="false">مال من</button>
+    </nav>
+
+    <section id="view-gate">
+      <div class="panel" id="gate-panel">
+        <label for="serial-input">سریال ۴رقمی بلیت</label>
+        <input type="tel" id="serial-input" inputmode="numeric" maxlength="4" autocomplete="one-time-code" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••" aria-describedby="gate-hint">
+        <p class="muted" id="gate-hint" style="margin-top:10px;text-align:center;">فقط برای همین رویداد — کد رویداد دیگر کار نمی‌کند.</p>
+        <button type="button" class="mem-btn" id="gate-btn">ورود</button>
+        <p class="err" id="gate-err" role="alert" hidden></p>
+      </div>
+    </section>
+
+    <section class="view" id="view-gallery" hidden>
+      <p class="gate-banner" id="gallery-gate-banner">برای لایک و نظر، سریال بلیت را وارد کن.</p>
+      <div class="leaderboard" id="leaderboard" hidden>
+        <p class="leaderboard__title">رتبه لایک این شب</p>
+        <p class="muted" style="text-align:center;font-size:0.78rem;margin-bottom:10px;">سه نفر اول می‌تونن برای اجرای بعد آهنگ انتخاب کنن.</p>
+        <div class="leaderboard__row" id="leaderboard-row"></div>
+      </div>
+      <p class="muted" style="text-align:center;margin-bottom:14px;" id="gallery-hint">خاطرات تأییدشده مهمان‌ها</p>
+      <div class="grid-2" id="gallery-grid"></div>
+      <p class="empty-state" id="gallery-empty" hidden><strong>هنوز خاطره‌ای منتشر نشده.</strong><br>بعد از تأیید ادمین اینجا می‌آید.</p>
+    </section>
+
+    <section class="view" id="view-archive" hidden>
+      <p class="muted" style="text-align:center;margin-bottom:14px;">عکس و ویدیوهای آرشیو اجرا (آپلود ادمین)</p>
+      <div class="grid-2" id="archive-grid"></div>
+      <p class="empty-state" id="archive-empty" hidden><strong>آرشیو این رویداد خالی است.</strong><br>وقتی ادمین در پنل «آرشیو» برای همین رویداد فایل بگذارد، اینجا دیده می‌شود.</p>
+    </section>
+
+    <section class="view" id="view-mine" hidden>
+      <p class="muted" style="text-align:center;margin-bottom:14px;">آپلودهای همین بلیت</p>
+      <div class="grid-2" id="mine-grid"></div>
+      <p class="empty-state" id="mine-empty" hidden><strong>هنوز چیزی از این بلیت آپلود نشده.</strong><br>از تب آپلود شروع کن.</p>
+    </section>
+
+    <section class="view" id="view-upload" hidden>
+      <div class="panel" id="upload-panel">
+        <p class="muted" id="upload-event-title" style="margin-bottom:8px;text-align:center;"></p>
+        <label class="consent">
+          <input type="checkbox" id="consent-publish">
+          <span>موافقم عکس/ویدیوهایم پس از تأیید ادمین در گالری عمومی این رویداد نمایش داده شود.</span>
+        </label>
+        <div class="pick-grid">
+          <button type="button" class="mem-btn mem-btn--soft" id="btn-camera">دوربین عکس</button>
+          <button type="button" class="mem-btn mem-btn--soft" id="btn-video">ویدیو</button>
+          <button type="button" class="mem-btn mem-btn--ghost mem-btn--wide" id="btn-gallery-pick">از گالری گوشی</button>
+        </div>
+        <input type="file" id="file-camera" class="hidden-file" accept="image/*" capture="environment" multiple>
+        <input type="file" id="file-video" class="hidden-file" accept="video/*" capture="environment" multiple>
+        <input type="file" id="file-library" class="hidden-file" accept="image/*,video/*" multiple>
+        <div id="mem-uploader"></div>
+        <p class="ok" id="upload-msg" role="status" hidden></p>
+        <p class="err" id="upload-err" role="alert" hidden></p>
+      </div>
+    </section>
+  </main>
+
+  <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
+  <aside class="sheet" id="comment-sheet" hidden aria-hidden="true">
+    <div class="sheet__handle" aria-hidden="true"></div>
+    <div class="sheet__head">
+      <h2 class="sheet__title" id="sheet-title">نظرها</h2>
+      <button type="button" class="sheet__close" id="sheet-close" aria-label="بستن">×</button>
+    </div>
+    <div class="comments-list" id="comments-list"></div>
+    <p class="empty-state" id="comment-login-hint" hidden>برای نوشتن نظر، اول با سریال بلیت وارد شو.</p>
+    <form class="comment-form" id="comment-form">
+      <input type="text" id="display-name" maxlength="40" placeholder="نام نمایشی (مثلاً سینا)" autocomplete="nickname">
+      <textarea id="comment-body" maxlength="400" placeholder="نظرت را بنویس…" rows="3"></textarea>
+      <button type="submit" class="mem-btn" id="comment-submit">ارسال نظر</button>
+      <p class="err" id="comment-err" role="alert" hidden></p>
+      <p class="ok" id="comment-ok" role="status" hidden></p>
+    </form>
+  </aside>
+
+  <div class="toast" id="mem-toast" role="status" aria-live="polite"></div>
+  <div id="wwh-footer-mount"></div>
+  <script src="/assets/wwh-chrome.js"></script>
+  <script src="/assets/wwh-uploader.js"></script>
+  <script src="/assets/wwh-lightbox.js"></script>
+  <script>
+(function () {
+  'use strict';
+
+  var FA = '۰۱۲۳۴۵۶۷۸۹';
+  function toFa(s) { return String(s).replace(/\d/g, function (d) { return FA[d]; }); }
+
+  function slugFromPath() {
+    var m = (location.pathname || '').match(/\/events\/([^/]+)\/memories\/?$/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  function qsSerial() {
+    try {
+      return new URLSearchParams(location.search || '').get('serial') || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  var slug = slugFromPath();
+  var storageKey = 'wwh_mem_sess_' + slug;
+  var displayNameKey = 'wwh_mem_display_' + slug;
+  var sessionToken = sessionStorage.getItem(storageKey) || '';
+  var displayNameSaved = sessionStorage.getItem(displayNameKey) || '';
+  var limits = { photoMaxMb: 8, videoMaxMb: 40, maxFilesPerRequest: 5 };
+  var uploadsRemaining = null;
+  var archiveMedia = [];
+  var ticketInfo = null;
+  var memUploader = null;
+  var activeTab = 'upload';
+  var commentItemId = null;
+  var gated = false;
+
+  var gatePanel = document.getElementById('gate-panel');
+  var viewGate = document.getElementById('view-gate');
+  var serialInput = document.getElementById('serial-input');
+  var gateErr = document.getElementById('gate-err');
+  var uploadErr = document.getElementById('upload-err');
+  var uploadMsg = document.getElementById('upload-msg');
+  var consent = document.getElementById('consent-publish');
+  var nightNav = document.getElementById('night-nav');
+  var sessionBar = document.getElementById('session-bar');
+
+  if (!slug) {
+    document.getElementById('event-sub').textContent = 'لینک ناقص است.';
+    gatePanel.hidden = true;
+    return;
+  }
+
+  function showErr(el, msg) {
+    if (!el) return;
+    if (!msg) { el.hidden = true; el.textContent = ''; return; }
+    el.hidden = false;
+    el.textContent = msg;
+  }
+
+  var toastTimer = null;
+  function showToast(msg) {
+    var el = document.getElementById('mem-toast');
+    if (!el || !msg) return;
+    el.textContent = msg;
+    el.classList.add('is-on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('is-on'); }, 2800);
+  }
+
+  function focusGate(msg) {
+    if (gated) showProfileShell(false);
+    viewGate.hidden = false;
+    if (msg) showErr(gateErr, msg);
+    showToast(msg || 'اول با سریال بلیت وارد شو.');
+    try { serialInput.focus(); } catch (e) {}
+    try { serialInput.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e2) {}
+  }
+
+  function apiJson(path, opts) {
+    opts = opts || {};
+    return fetch(path, opts).then(function (r) {
+      return r.text().then(function (text) {
+        var body = null;
+        if (text) {
+          try { body = JSON.parse(text); }
+          catch (parseErr) {
+            var pe = new Error(r.ok ? 'bad_json' : 'request_failed');
+            pe.status = r.status;
+            throw pe;
+          }
+        } else {
+          body = {};
+        }
+        if (!r.ok) {
+          var err = (body && body.detail) || body || {};
+          var code = typeof err === 'object' ? (err.error || err.msg || '') : err;
+          if (!code || typeof code !== 'string') code = 'request_failed';
+          var e = new Error(code);
+          e.status = r.status;
+          e.body = body;
+          throw e;
+        }
+        return body;
+      });
+    });
+  }
+
+  function authHeaders(extra) {
+    var h = extra ? Object.assign({}, extra) : {};
+    if (sessionToken) h.Authorization = 'Bearer ' + sessionToken;
+    return h;
+  }
+
+  function socialErrorMessage(err) {
+    var c = err && err.message;
+    var status = err && err.status;
+    if (status === 401) return 'نشست منقضی شده؛ دوباره با سریال وارد شو.';
+    if (status >= 500) return 'خطای سرور؛ کمی بعد دوباره تلاش کن.';
+    if (c === 'session_required') return 'برای لایک و نظر باید وارد شوی.';
+    if (c === 'display_name_required') return 'نام نمایشی حداقل ۲ حرف باشد.';
+    if (c === 'body_required') return 'متن نظر خالی است.';
+    if (c === 'not_found') return 'این خاطره در دسترس نیست.';
+    if (c === 'ticket_inactive') return 'بلیت غیرفعال است.';
+    if (c === 'request_failed' || c === 'bad_json') return 'پاسخ سرور نامعتبر بود؛ صفحه را تازه کن.';
+    if (typeof console !== 'undefined' && console.warn) console.warn('[memories social]', status, c, err && err.body);
+    return 'انجام نشد؛ دوباره تلاش کن.';
+  }
+
+  function setUploadsRemaining(n) {
+    uploadsRemaining = typeof n === 'number' ? n : null;
+    var numEl = document.getElementById('uploads-left-num');
+    if (numEl) numEl.textContent = uploadsRemaining == null ? '—' : toFa(uploadsRemaining);
+  }
+
+  function statusLabel(st) {
+    if (st === 'approved') return 'تأیید';
+    if (st === 'rejected') return 'رد';
+    return 'در انتظار';
+  }
+
+  function setTicketChip(ticket) {
+    ticketInfo = ticket || null;
+    var nameEl = document.getElementById('ticket-name');
+    var serialEl = document.getElementById('ticket-serial');
+    if (!ticket) {
+      if (nameEl) nameEl.textContent = '';
+      if (serialEl) serialEl.textContent = '';
+      return;
+    }
+    if (nameEl) nameEl.textContent = ticket.name || ('بلیت ' + toFa(ticket.number || ''));
+    if (serialEl) serialEl.textContent = ticket.serial || '';
+  }
+
+  function changeCode() {
+    clearSession();
+    serialInput.value = '';
+    showErr(gateErr, '');
+    viewGate.hidden = false;
+    showToast('سریال جدید را وارد کن.');
+    try { serialInput.focus(); } catch (e) {}
+    try { serialInput.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e2) {}
+  }
+
+  function showProfileShell(on) {
+    gated = !!on;
+    viewGate.hidden = !!on;
+    nightNav.hidden = !on;
+    if (sessionBar) {
+      sessionBar.hidden = !on;
+      sessionBar.classList.toggle('is-on', !!on);
+    }
+    if (on) nightNav.classList.add('is-on');
+    else nightNav.classList.remove('is-on');
+    if (!on) {
+      ['gallery', 'archive', 'mine', 'upload'].forEach(function (t) {
+        document.getElementById('view-' + t).hidden = true;
+      });
+      setTicketChip(null);
+      setUploadsRemaining(null);
+    }
+  }
+
+  function switchTab(tab) {
+    activeTab = tab;
+    nightNav.querySelectorAll('[data-tab]').forEach(function (btn) {
+      var on = btn.getAttribute('data-tab') === tab;
+      btn.classList.toggle('is-on', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    ['gallery', 'archive', 'mine', 'upload'].forEach(function (t) {
+      document.getElementById('view-' + t).hidden = t !== tab;
+    });
+    if (tab === 'gallery') loadGallery();
+    if (tab === 'archive') renderArchive();
+    if (tab === 'mine') loadMine();
+  }
+
+  var galleryItemsCache = [];
+  var mineItemsCache = [];
+  var leaderboardItemsCache = [];
+  var authBlobCache = {};
+
+  function isVideoItem(item) {
+    return item && (item.mediaKind === 'video' || item.kind === 'video' ||
+      (item.mime && String(item.mime).indexOf('video/') === 0));
+  }
+
+  function toLightboxItem(item) {
+    return {
+      url: item.url,
+      kind: isVideoItem(item) ? 'video' : 'image',
+      mime: item.mime,
+      caption: item.title || item.caption || item.original_name || '',
+      _auth: !!item._auth
+    };
+  }
+
+  function resolveAuthUrl(item) {
+    if (!item || !item._auth) return Promise.resolve(item.url);
+    if (authBlobCache[item.url]) return Promise.resolve(authBlobCache[item.url]);
+    return fetch(item.url, { headers: authHeaders() })
+      .then(function (r) { if (!r.ok) throw new Error('fail'); return r.blob(); })
+      .then(function (blob) {
+        var u = URL.createObjectURL(blob);
+        authBlobCache[item.url] = u;
+        return u;
+      });
+  }
+
+  function openMediaLightbox(items, index) {
+    if (!window.WwhLightbox || !items || !items.length) return;
+    var needsAuth = items.some(function (it) { return it._auth; });
+    WwhLightbox.open({
+      items: items,
+      index: index || 0,
+      toFa: toFa,
+      resolveUrl: needsAuth ? function (it) { return resolveAuthUrl(it); } : null
+    });
+  }
+
+  function mediaEl(item, withAuth, onOpen) {
+    var wrap = document.createElement('div');
+    wrap.className = 'mem-card__media wwh-thumb';
+    wrap.setAttribute('role', 'button');
+    wrap.tabIndex = 0;
+    wrap.setAttribute('aria-label', 'پیش‌نمایش');
+    var video = isVideoItem(item);
+    if (video) {
+      var v = document.createElement('video');
+      v.preload = 'metadata';
+      v.muted = true;
+      v.playsInline = true;
+      v.setAttribute('playsinline', '');
+      v.setAttribute('aria-hidden', 'true');
+      if (withAuth && sessionToken) {
+        fetch(item.url, { headers: authHeaders() })
+          .then(function (r) { if (!r.ok) throw new Error('fail'); return r.blob(); })
+          .then(function (blob) {
+            var u = URL.createObjectURL(blob);
+            authBlobCache[item.url] = u;
+            v.src = u;
+          })
+          .catch(function () { wrap.textContent = 'پیش‌نمایش نیست'; });
+      } else {
+        v.src = item.url;
+      }
+      wrap.appendChild(v);
+      var play = document.createElement('span');
+      play.className = 'wwh-thumb__play';
+      play.setAttribute('aria-hidden', 'true');
+      wrap.appendChild(play);
+    } else {
+      var img = document.createElement('img');
+      img.alt = item.title || item.caption || '';
+      img.loading = 'lazy';
+      if (withAuth && sessionToken) {
+        fetch(item.url, { headers: authHeaders() })
+          .then(function (r) { if (!r.ok) throw new Error('fail'); return r.blob(); })
+          .then(function (blob) {
+            var u = URL.createObjectURL(blob);
+            authBlobCache[item.url] = u;
+            img.src = u;
+          })
+          .catch(function () { wrap.textContent = 'پیش‌نمایش نیست'; });
+      } else {
+        img.src = item.url;
+      }
+      wrap.appendChild(img);
+    }
+    function activate(e) {
+      if (e) e.preventDefault();
+      if (typeof onOpen === 'function') onOpen();
+    }
+    wrap.addEventListener('click', activate);
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        activate();
+      }
+    });
+    return wrap;
+  }
+
+  function loadLeaderboard() {
+    var box = document.getElementById('leaderboard');
+    var row = document.getElementById('leaderboard-row');
+    if (!box || !row) return;
+    apiJson('/api/events/' + encodeURIComponent(slug) + '/memories/leaderboard')
+      .then(function (data) {
+        var items = data.items || [];
+        if (!items.length) {
+          box.hidden = true;
+          row.innerHTML = '';
+          return;
+        }
+        box.hidden = false;
+        row.innerHTML = '';
+        leaderboardItemsCache = items.map(function (item) {
+          return toLightboxItem(item);
+        });
+        items.forEach(function (item, idx) {
+          var card = document.createElement('div');
+          card.className = 'leaderboard__card';
+          var media = mediaEl(item, false, function () {
+            openMediaLightbox(leaderboardItemsCache, idx);
+          });
+          media.className = 'leaderboard__media wwh-thumb';
+          var meta = document.createElement('div');
+          meta.className = 'leaderboard__meta';
+          meta.innerHTML = '<span class="leaderboard__rank"></span><span class="leaderboard__likes"></span>';
+          meta.querySelector('.leaderboard__rank').textContent = 'رتبه ' + toFa(item.rank);
+          meta.querySelector('.leaderboard__likes').textContent = '♥ ' + toFa(item.likeCount || 0);
+          card.appendChild(media);
+          card.appendChild(meta);
+          row.appendChild(card);
+        });
+      })
+      .catch(function () {
+        box.hidden = true;
+      });
+  }
+
+  function loadGallery() {
+    var grid = document.getElementById('gallery-grid');
+    var empty = document.getElementById('gallery-empty');
+    var banner = document.getElementById('gallery-gate-banner');
+    grid.innerHTML = '';
+    empty.hidden = true;
+    if (banner) banner.classList.toggle('is-on', !sessionToken);
+    loadLeaderboard();
+    apiJson('/api/events/' + encodeURIComponent(slug) + '/memories/gallery', {
+      headers: authHeaders()
+    }).then(function (data) {
+      if (data.event && data.event.title) {
+        document.getElementById('event-sub').textContent = data.event.title;
+      }
+      if (!data.items || !data.items.length) {
+        galleryItemsCache = [];
+        empty.hidden = false;
+        empty.innerHTML = '<strong>هنوز خاطره‌ای منتشر نشده.</strong><br>بعد از تأیید ادمین اینجا می‌آید.';
+        return;
+      }
+      empty.hidden = true;
+      galleryItemsCache = data.items.map(function (item) {
+        return toLightboxItem(item);
+      });
+      data.items.forEach(function (item, idx) {
+        var card = document.createElement('article');
+        card.className = 'mem-card';
+        card.appendChild(mediaEl(item, false, function () {
+          openMediaLightbox(galleryItemsCache, idx);
+        }));
+        var body = document.createElement('div');
+        body.className = 'mem-card__body';
+        var title = document.createElement('div');
+        title.className = 'mem-card__title';
+        title.textContent = item.title || 'بدون عنوان';
+        body.appendChild(title);
+        var actions = document.createElement('div');
+        actions.className = 'mem-card__actions';
+        var likeBtn = document.createElement('button');
+        likeBtn.type = 'button';
+        likeBtn.className = 'mem-btn mem-btn--ghost mem-btn--sm like-btn' + (item.likedByMe ? ' is-on' : '');
+        likeBtn.setAttribute('aria-pressed', item.likedByMe ? 'true' : 'false');
+        likeBtn.textContent = '♥ ' + toFa(item.likeCount || 0);
+        likeBtn.addEventListener('click', function () {
+          if (!sessionToken) {
+            focusGate('برای لایک، اول با سریال بلیت وارد شو.');
+            return;
+          }
+          likeBtn.disabled = true;
+          apiJson('/api/events/' + encodeURIComponent(slug) + '/memories/' + item.id + '/like', {
+            method: 'POST',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: '{}'
+          }).then(function (res) {
+            likeBtn.classList.toggle('is-on', !!res.liked);
+            likeBtn.setAttribute('aria-pressed', res.liked ? 'true' : 'false');
+            likeBtn.textContent = '♥ ' + toFa(res.likeCount || 0);
+            loadLeaderboard();
+          }).catch(function (err) {
+            if (err && err.status === 401) {
+              clearSession();
+              focusGate(socialErrorMessage(err));
+            } else {
+              showToast(socialErrorMessage(err));
+            }
+          }).finally(function () {
+            likeBtn.disabled = false;
+          });
+        });
+        var commentBtn = document.createElement('button');
+        commentBtn.type = 'button';
+        commentBtn.className = 'mem-btn mem-btn--ghost mem-btn--sm';
+        commentBtn.textContent = 'نظر ' + toFa(item.commentCount || 0);
+        commentBtn.addEventListener('click', function () {
+          openComments(item);
+        });
+        actions.appendChild(likeBtn);
+        actions.appendChild(commentBtn);
+        body.appendChild(actions);
+        card.appendChild(body);
+        grid.appendChild(card);
+      });
+    }).catch(function () {
+      empty.hidden = false;
+      empty.innerHTML = '<strong>گالری الان در دسترس نیست.</strong><br>کمی بعد دوباره تلاش کن.';
+    });
+  }
+
+  function renderArchive() {
+    var grid = document.getElementById('archive-grid');
+    var empty = document.getElementById('archive-empty');
+    grid.innerHTML = '';
+    if (!archiveMedia || !archiveMedia.length) {
+      empty.hidden = false;
+      empty.innerHTML = '<strong>آرشیو این رویداد خالی است.</strong><br>ادمین باید در پنل، برای <em>همین رویداد</em> فایل آپلود کند تا اینجا دیده شود.';
+      return;
+    }
+    empty.hidden = true;
+    var archiveLb = archiveMedia.map(function (m) {
+      var kind = (m.mime && String(m.mime).indexOf('video/') === 0) ? 'video' : 'photo';
+      return toLightboxItem({ url: m.url, mediaKind: kind, mime: m.mime, caption: m.caption || m.original_name || '' });
+    });
+    archiveMedia.forEach(function (m, idx) {
+      var card = document.createElement('article');
+      card.className = 'mem-card';
+      var kind = (m.mime && String(m.mime).indexOf('video/') === 0) ? 'video' : 'photo';
+      card.appendChild(mediaEl(
+        { url: m.url, mediaKind: kind, mime: m.mime, caption: m.caption },
+        false,
+        function () { openMediaLightbox(archiveLb, idx); }
+      ));
+      var body = document.createElement('div');
+      body.className = 'mem-card__body';
+      var title = document.createElement('div');
+      title.className = 'mem-card__title';
+      title.textContent = m.caption || m.original_name || '';
+      body.appendChild(title);
+      card.appendChild(body);
+      grid.appendChild(card);
+    });
+  }
+
+  function loadMine() {
+    var grid = document.getElementById('mine-grid');
+    var empty = document.getElementById('mine-empty');
+    grid.innerHTML = '';
+    apiJson('/api/events/' + encodeURIComponent(slug) + '/memories/mine', {
+      headers: authHeaders()
+    }).then(function (data) {
+      if (!data.items || !data.items.length) {
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+      mineItemsCache = data.items.map(function (item) {
+        var lb = toLightboxItem(item);
+        if (item.status !== 'approved') lb._auth = true;
+        return lb;
+      });
+      data.items.forEach(function (item, idx) {
+        var card = document.createElement('article');
+        card.className = 'mem-card';
+        var needAuth = item.status !== 'approved';
+        card.appendChild(mediaEl(item, needAuth, function () {
+          openMediaLightbox(mineItemsCache, idx);
+        }));
+        var body = document.createElement('div');
+        body.className = 'mem-card__body';
+        var chip = document.createElement('span');
+        chip.className = 'chip chip--' + (item.status || 'pending');
+        chip.textContent = statusLabel(item.status);
+        body.appendChild(chip);
+        if (item.title) {
+          var title = document.createElement('div');
+          title.className = 'mem-card__title';
+          title.textContent = item.title;
+          body.appendChild(title);
+        }
+        card.appendChild(body);
+        grid.appendChild(card);
+      });
+    }).catch(function () {
+      empty.hidden = false;
+      empty.textContent = 'لیست در دسترس نیست.';
+    });
+  }
+
+  function renderCommentsList(list, comments) {
+    list.innerHTML = '';
+    if (!comments || !comments.length) {
+      list.innerHTML = '<p class="empty-state"><strong>تو اولین نفر هستی.</strong><br>هنوز نظری ثبت نشده — اولی را تو بنویس.</p>';
+      return;
+    }
+    comments.forEach(function (c) {
+      var row = document.createElement('div');
+      row.className = 'comment';
+      row.innerHTML = '<div class="comment__name"></div><div class="comment__body"></div>';
+      row.querySelector('.comment__name').textContent = c.displayName || '';
+      row.querySelector('.comment__body').textContent = c.body || '';
+      list.appendChild(row);
+    });
+  }
+
+  function syncCommentFormVisibility() {
+    var form = document.getElementById('comment-form');
+    var hint = document.getElementById('comment-login-hint');
+    var loggedIn = !!sessionToken;
+    if (form) form.hidden = !loggedIn;
+    if (hint) hint.hidden = loggedIn;
+  }
+
+  function openComments(item) {
+    commentItemId = item.id;
+    document.getElementById('sheet-title').textContent = item.title ? ('نظرها — ' + item.title) : 'نظرها';
+    document.getElementById('display-name').value = displayNameSaved || '';
+    document.getElementById('comment-body').value = '';
+    showErr(document.getElementById('comment-err'), '');
+    showErr(document.getElementById('comment-ok'), '');
+    syncCommentFormVisibility();
+    var list = document.getElementById('comments-list');
+    list.innerHTML = '<p class="muted" style="text-align:center;">در حال بارگذاری…</p>';
+    var backdrop = document.getElementById('sheet-backdrop');
+    var sheet = document.getElementById('comment-sheet');
+    backdrop.hidden = false;
+    sheet.hidden = false;
+    sheet.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(function () {
+      backdrop.classList.add('is-open');
+      sheet.classList.add('is-open');
+    });
+    apiJson('/api/events/' + encodeURIComponent(slug) + '/memories/' + item.id + '/comments')
+      .then(function (data) {
+        renderCommentsList(list, data.comments || []);
+      })
+      .catch(function () {
+        // Prefer inviting empty-state over a harsh error when list is unavailable
+        list.innerHTML = '<p class="empty-state"><strong>نظرها الان لود نشد.</strong><br>اگر آنلاین هستی، دوباره شیت را باز کن. اگر لیست خالی بود، تو می‌توانی اولین نظر را بنویسی.</p>';
+      });
+  }
+
+  function closeComments() {
+    var backdrop = document.getElementById('sheet-backdrop');
+    var sheet = document.getElementById('comment-sheet');
+    backdrop.classList.remove('is-open');
+    sheet.classList.remove('is-open');
+    sheet.setAttribute('aria-hidden', 'true');
+    setTimeout(function () {
+      if (!sheet.classList.contains('is-open')) {
+        backdrop.hidden = true;
+        sheet.hidden = true;
+      }
+    }, 260);
+    commentItemId = null;
+  }
+
+  document.getElementById('sheet-close').addEventListener('click', closeComments);
+  document.getElementById('sheet-backdrop').addEventListener('click', closeComments);
+
+  document.getElementById('comment-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!commentItemId) return;
+    if (!sessionToken) {
+      closeComments();
+      focusGate('برای ارسال نظر، اول با سریال بلیت وارد شو.');
+      return;
+    }
+    var name = (document.getElementById('display-name').value || '').trim();
+    var body = (document.getElementById('comment-body').value || '').trim();
+    showErr(document.getElementById('comment-err'), '');
+    showErr(document.getElementById('comment-ok'), '');
+    if (name.length < 2) {
+      showErr(document.getElementById('comment-err'), 'نام نمایشی حداقل ۲ حرف باشد.');
+      return;
+    }
+    if (!body) {
+      showErr(document.getElementById('comment-err'), 'متن نظر خالی است.');
+      return;
+    }
+    var btn = document.getElementById('comment-submit');
+    btn.disabled = true;
+    apiJson('/api/events/' + encodeURIComponent(slug) + '/memories/' + commentItemId + '/comments', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ displayName: name, body: body })
+    }).then(function (res) {
+      displayNameSaved = name;
+      sessionStorage.setItem(displayNameKey, name);
+      document.getElementById('comment-body').value = '';
+      var list = document.getElementById('comments-list');
+      if (list.querySelector('.empty-state') || list.querySelector('.muted')) list.innerHTML = '';
+      var row = document.createElement('div');
+      row.className = 'comment';
+      row.innerHTML = '<div class="comment__name"></div><div class="comment__body"></div>';
+      row.querySelector('.comment__name').textContent = res.comment.displayName;
+      row.querySelector('.comment__body').textContent = res.comment.body;
+      list.appendChild(row);
+      list.scrollTop = list.scrollHeight;
+      showErr(document.getElementById('comment-ok'), 'نظر ثبت شد.');
+      showToast('نظر ثبت شد.');
+    }).catch(function (err) {
+      if (err && (err.status === 401 || err.message === 'session_required')) {
+        clearSession();
+        closeComments();
+        focusGate(socialErrorMessage(err));
+        return;
+      }
+      showErr(document.getElementById('comment-err'), socialErrorMessage(err));
+    }).finally(function () {
+      btn.disabled = false;
+    });
+  });
+
+  function addFiles(fileList) {
+    if (!memUploader) return;
+    showErr(uploadMsg, '');
+    showErr(uploadErr, '');
+    memUploader.addFiles(fileList);
+  }
+
+  if (window.WwhUploader && document.getElementById('mem-uploader')) {
+    memUploader = new WwhUploader({
+      root: '#mem-uploader',
+      toFa: toFa,
+      showCaption: false,
+      accept: 'image/*,video/*',
+      getUrl: function () {
+        return '/api/events/' + encodeURIComponent(slug) + '/memories/upload';
+      },
+      getHeaders: function () {
+        return sessionToken ? { Authorization: 'Bearer ' + sessionToken } : {};
+      },
+      filterFiles: function (files) {
+        var maxN = limits.maxFilesPerRequest || 5;
+        var room = uploadsRemaining == null ? maxN : Math.min(maxN, uploadsRemaining);
+        if (room <= 0) {
+          showErr(uploadErr, 'سقف آپلود این بلیت پر شده.');
+          return [];
+        }
+        var out = files.slice(0, room);
+        if (files.length > room) {
+          showErr(uploadErr, 'فقط ' + toFa(room) + ' فایل در این نوبت مجاز است.');
+        }
+        return out;
+      },
+      buildFormData: function (file) {
+        if (!consent.checked) throw new Error('رضایت انتشار لازم است.');
+        var fd = new FormData();
+        fd.append('consentPublish', 'true');
+        fd.append('files', file, file.name || 'upload.bin');
+        return fd;
+      },
+      validateResponse: function (json) {
+        if (json && json.accepted === 0) {
+          var r0 = json.results && json.results[0];
+          if (r0 && r0.error === 'file_too_large') return 'حجم فایل زیاد است.';
+          return 'فایل پذیرفته نشد.';
+        }
+        return null;
+      },
+      onItemSuccess: function (item, json) {
+        if (json && typeof json.uploadsRemaining === 'number') {
+          setUploadsRemaining(json.uploadsRemaining);
+        }
+      },
+      onQueueDone: function () {
+        showErr(uploadMsg, 'ثبت شد برای بررسی؛ تا تأیید خصوصی می‌مونه.');
+        showErr(uploadErr, '');
+      },
+      onUnauthorized: function () {
+        clearSession();
+        showErr(gateErr, 'نشست منقضی شد. دوباره وارد شوید.');
+      }
+    });
+    var _memStart = memUploader.start.bind(memUploader);
+    memUploader.start = function () {
+      showErr(uploadErr, '');
+      showErr(uploadMsg, '');
+      if (!consent.checked) {
+        showErr(uploadErr, 'رضایت انتشار لازم است.');
+        return;
+      }
+      _memStart();
+    };
+  }
+
+  function gateErrorMessage(err) {
+    var c = err && err.message;
+    if (err && err.status === 429) return 'تلاش‌های زیاد. کمی صبر کنید.';
+    if (c === 'invalid_code') return 'سریال باید ۴ رقم باشد.';
+    if (c === 'code_rejected') return 'این کد برای این رویداد معتبر نیست.';
+    if (c === 'event_not_found') return 'رویداد پیدا نشد.';
+    return 'ورود ناموفق بود.';
+  }
+
+  function enterSession(token, data) {
+    sessionToken = token;
+    sessionStorage.setItem(storageKey, token);
+    if (data && data.limits) limits = data.limits;
+    if (data && data.event) {
+      document.getElementById('event-sub').textContent = data.event.title || '';
+      var uet = document.getElementById('upload-event-title');
+      if (uet) uet.textContent = data.event.title || '';
+    }
+    if (data && data.ticket) setTicketChip(data.ticket);
+    archiveMedia = (data && data.archiveMedia) || [];
+    setUploadsRemaining(
+      data && typeof data.uploadsRemaining === 'number' ? data.uploadsRemaining : null
+    );
+    showProfileShell(true);
+    // After gate / QR: land on upload so guest can send memories immediately
+    switchTab('upload');
+    showErr(gateErr, '');
+  }
+
+  function clearSession() {
+    sessionToken = '';
+    sessionStorage.removeItem(storageKey);
+    archiveMedia = [];
+    ticketInfo = null;
+    if (memUploader) memUploader.cancelAll();
+    closeComments();
+    showProfileShell(false);
+    activeTab = 'upload';
+  }
+
+  function stripSerialFromUrl() {
+    try {
+      var u = new URL(location.href);
+      if (!u.searchParams.has('serial')) return;
+      u.searchParams.delete('serial');
+      var next = u.pathname + (u.searchParams.toString() ? '?' + u.searchParams.toString() : '') + u.hash;
+      history.replaceState(null, '', next);
+    } catch (e) {}
+  }
+
+  function doGate(serial) {
+    serial = String(serial || '').replace(/\D/g, '').slice(0, 4);
+    serialInput.value = serial;
+    showErr(gateErr, '');
+    if (serial.length !== 4) {
+      showErr(gateErr, 'سریال باید ۴ رقم باشد.');
+      return Promise.reject(new Error('invalid_code'));
+    }
+    var btn = document.getElementById('gate-btn');
+    btn.disabled = true;
+    return apiJson('/api/events/' + encodeURIComponent(slug) + '/memories/gate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serial: serial })
+    }).then(function (data) {
+      enterSession(data.sessionToken, data);
+      stripSerialFromUrl();
+      return data;
+    }).catch(function (err) {
+      showErr(gateErr, gateErrorMessage(err));
+      throw err;
+    }).finally(function () {
+      btn.disabled = false;
+    });
+  }
+
+  function tryRestoreSession() {
+    if (!sessionToken) return Promise.resolve(false);
+    return apiJson('/api/events/' + encodeURIComponent(slug) + '/memories/session', {
+      headers: authHeaders()
+    }).then(function (data) {
+      enterSession(sessionToken, data);
+      return true;
+    }).catch(function () {
+      clearSession();
+      return false;
+    });
+  }
+
+  nightNav.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-tab]');
+    if (!btn || !gated) return;
+    switchTab(btn.getAttribute('data-tab'));
+  });
+
+  document.getElementById('gate-btn').addEventListener('click', function () {
+    doGate(serialInput.value).catch(function () {});
+  });
+
+  serialInput.addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 4);
+  });
+  serialInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('gate-btn').click();
+    }
+  });
+
+  document.getElementById('btn-camera').addEventListener('click', function () {
+    document.getElementById('file-camera').click();
+  });
+  document.getElementById('btn-video').addEventListener('click', function () {
+    document.getElementById('file-video').click();
+  });
+  document.getElementById('btn-gallery-pick').addEventListener('click', function () {
+    document.getElementById('file-library').click();
+  });
+  ['file-camera', 'file-video', 'file-library'].forEach(function (id) {
+    document.getElementById(id).addEventListener('change', function () {
+      addFiles(this.files);
+      this.value = '';
+    });
+  });
+
+  var changeCodeBtn = document.getElementById('change-code-btn');
+  if (changeCodeBtn) changeCodeBtn.addEventListener('click', changeCode);
+
+  // Boot: restore session, else auto-gate from ?serial=
+  var incoming = (qsSerial() || '').replace(/\D/g, '').slice(0, 4);
+  if (incoming.length === 4) serialInput.value = incoming;
+
+  tryRestoreSession().then(function (ok) {
+    if (ok) {
+      stripSerialFromUrl();
+      return;
+    }
+    if (incoming.length === 4) {
+      doGate(incoming).catch(function () {});
+    } else {
+      // Public gallery peek without session
+      document.getElementById('view-gallery').hidden = false;
+      loadGallery();
+    }
+  });
+})();
+  </script>
+</body>
+</html>

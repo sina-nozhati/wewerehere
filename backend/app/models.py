@@ -114,9 +114,85 @@ class Media(Base):
     size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     caption: Mapped[str] = mapped_column(String(500), default="", nullable=False)
     access_level: Mapped[str] = mapped_column(String(32), default="archive_private", nullable=False)
+    published_memory_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     event: Mapped["Event"] = relationship(back_populates="media_items")
+
+
+class MemorySession(Base):
+    """Short-lived upload access after 4-digit ticket gate (token hash only)."""
+
+    __tablename__ = "memory_sessions"
+
+    token_hash: Mapped[str] = mapped_column(String(128), primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), nullable=False, index=True)
+    ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class MemoryItem(Base):
+    """Participant photo/video for an event night — pending until admin approves."""
+
+    __tablename__ = "memory_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), nullable=False, index=True)
+    ticket_id: Mapped[int | None] = mapped_column(ForeignKey("tickets.id"), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(16), default="pending", nullable=False, index=True)
+    source: Mapped[str] = mapped_column(String(32), default="guest", nullable=False, index=True)
+    media_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    stored_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    mime: Mapped[str] = mapped_column(String(120), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    consent_publish: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    title: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reviewed_by: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+
+
+class MemoryLike(Base):
+    """One like per ticket per approved memory item."""
+
+    __tablename__ = "memory_likes"
+    __table_args__ = (UniqueConstraint("item_id", "ticket_id", name="uq_memory_like_item_ticket"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("memory_items.id"), nullable=False, index=True)
+    ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class MemoryComment(Base):
+    __tablename__ = "memory_comments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("memory_items.id"), nullable=False, index=True)
+    ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"), nullable=False, index=True)
+    display_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    body: Mapped[str] = mapped_column(String(500), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class MemoryAuditLog(Base):
+    """Append-only activity log for night memories (admin + guest actions)."""
+
+    __tablename__ = "memory_audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), nullable=False, index=True)
+    item_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    ticket_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    actor: Mapped[str] = mapped_column(String(32), nullable=False, default="system")
+    action: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    meta_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class SupportContact(Base):

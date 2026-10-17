@@ -1,19 +1,35 @@
 import base64
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth import check_rate_limit, create_session, require_admin, revoke_session, verify_admin_password
 from app.config import settings
 from app.storage_paths import receipt_path as _receipt_path
 from app.db import get_db
-from app.models import Event, Media, Order, PaymentReceipt, SiteSetting, SupportContact, SupportMessage, SupportTicket, Ticket
+from app.models import (
+    Event,
+    Media,
+    MemoryAuditLog,
+    MemoryComment,
+    MemoryItem,
+    MemoryLike,
+    Order,
+    PaymentReceipt,
+    SiteSetting,
+    SupportContact,
+    SupportMessage,
+    SupportTicket,
+    Ticket,
+)
+from app.services.memory_audit import write_audit
+from app.services.memory_media import absolute_memory_path, delete_memory_file, sniff_media, store_memory_file
 from app.services.events import FEATURED_KEY, event_at_iso, get_featured_event_id, parse_event_at, set_featured_event_id
 from app.services.orders import approve_order, reject_order
 from app.services import notify as notify_svc
@@ -186,6 +202,115 @@ def admin_list_events(db: Session = Depends(get_db), _: str = Depends(require_ad
     rows = db.scalars(select(Event).order_by(Event.event_at.desc())).all()
     featured = get_featured_event_id(db)
     return {"events": [_admin_event_row(e, featured) for e in rows]}
+
+
+@router.get("/dashboard")
+def admin_dashboard(
+    eventId: int | None = Query(None),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    """Aggregated ops stats for the selected (or featured) event."""
+    eid = eventId or _default_event_id(db)
+    ev = db.get(Event, eid)
+    if not ev:
+        raise HTTPException(404, "event not found")
+
+    def _ticket_count(*, status: str | None = None, group: str | None = None) -> int:
+        q = select(func.count()).select_from(Ticket).where(Ticket.event_id == eid)
+        if status is not None:
+            q = q.where(Ticket.status == status)
+        if group is not None:
+            q = q.where(Ticket.group_name == group)
+        return int(db.scalar(q) or 0)
+
+    active = _ticket_count(status="active")
+    revoked = _ticket_count(status="revoked")
+    capacity = max(0, int(ev.capacity or 0))
+    fill = round((active / capacity) * 100, 1) if capacity else 0.0
+    price = max(0, int(ev.ticket_price or 0))
+
+    def _order_count(status: str | None = None) -> int:
+        q = select(func.count()).select_from(Order).where(Order.event_id == eid)
+        if status is not None:
+            q = q.where(Order.status == status)
+        return int(db.scalar(q) or 0)
+
+    pending_orders = _order_count("payment_submitted")
+    approved_orders = _order_count("approved")
+    rejected_orders = _order_count("rejected")
+    total_orders = _order_count()
+
+    def _mem_count(status: str) -> int:
+        return int(
+            db.scalar(
+                select(func.count())
+                .select_from(MemoryItem)
+                .where(MemoryItem.event_id == eid, MemoryItem.status == status)
+            )
+            or 0
+        )
+
+    support_open = int(
+        db.scalar(
+            select(func.count())
+            .select_from(SupportTicket)
+            .where(SupportTicket.status.in_(tuple(_ACTIVE_SUPPORT)))
+        )
+        or 0
+    )
+
+    # Daily issued tickets for last 14 calendar days (UTC date of issued_at)
+    now = datetime.now(timezone.utc)
+    day_keys = [(now - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(13, -1, -1)]
+    day_counts = {k: 0 for k in day_keys}
+    issued_rows = db.scalars(select(Ticket).where(Ticket.event_id == eid)).all()
+    for t in issued_rows:
+        issued = t.issued_at
+        if issued is None:
+            continue
+        if issued.tzinfo is None:
+            issued = issued.replace(tzinfo=timezone.utc)
+        key = issued.astimezone(timezone.utc).strftime("%Y-%m-%d")
+        if key in day_counts:
+            day_counts[key] += 1
+
+    return {
+        "event": {
+            "id": ev.id,
+            "title": ev.title,
+            "slug": ev.slug,
+            "capacity": capacity,
+            "ticketPrice": price,
+            "salesStatus": ev.sales_status,
+            "status": ev.status,
+        },
+        "guests": {
+            "active": active,
+            "revoked": revoked,
+            "capacity": capacity,
+            "fillPercent": fill,
+            "groupA": _ticket_count(status="active", group="A"),
+            "groupB": _ticket_count(status="active", group="B"),
+        },
+        "revenue": {
+            "estimatedToman": active * price,
+            "basis": "active_tickets_x_price",
+        },
+        "orders": {
+            "pending": pending_orders,
+            "approved": approved_orders,
+            "rejected": rejected_orders,
+            "total": total_orders,
+        },
+        "memories": {
+            "pending": _mem_count("pending"),
+            "approved": _mem_count("approved"),
+            "rejected": _mem_count("rejected"),
+        },
+        "supportOpen": support_open,
+        "dailyIssued": [{"date": d, "count": day_counts[d]} for d in day_keys],
+    }
 
 
 def _apply_event_location(ev: Event, body: EventBody) -> None:
@@ -865,6 +990,7 @@ def admin_media_list(eventId: int | None = Query(None), db: Session = Depends(ge
                 "created_at": m.created_at.isoformat() if m.created_at else "",
                 "url": f"/api/admin/media-file/{m.id}",
                 "eventId": m.event_id,
+                "publishedMemoryId": m.published_memory_id,
             }
             for m in rows
         ]
@@ -881,20 +1007,23 @@ def admin_media_file(media_id: int, db: Session = Depends(get_db), _: str = Depe
     return _file_response(m)
 
 
-@router.post("/media")
-def admin_media_upload(body: MediaUploadBody, db: Session = Depends(get_db), _: str = Depends(require_admin)):
-    if not re.match(r"^(image|video)/", body.mime):
+def _store_archive_media(
+    db: Session,
+    *,
+    raw: bytes,
+    mime: str,
+    original_name: str,
+    caption: str = "",
+    event_id: int | None = None,
+) -> dict:
+    if not re.match(r"^(image|video)/", mime or ""):
         raise HTTPException(400, {"error": "unsupported type"})
-    ext = MIME_EXT.get(body.mime)
+    ext = MIME_EXT.get(mime)
     if not ext:
         raise HTTPException(400, {"error": "unsupported mime type"})
-    try:
-        raw = base64.b64decode(body.data)
-    except Exception:
-        raise HTTPException(400, {"error": "bad base64"})
     if len(raw) > 40 * 1024 * 1024:
         raise HTTPException(413, {"error": "file too large"})
-    eid = body.eventId or _default_event_id(db)
+    eid = event_id or _default_event_id(db)
     settings.archive_dir.mkdir(parents=True, exist_ok=True)
     import secrets
 
@@ -903,10 +1032,10 @@ def admin_media_upload(body: MediaUploadBody, db: Session = Depends(get_db), _: 
     m = Media(
         event_id=eid,
         filename=fname,
-        original_name=body.filename[:200],
-        mime=body.mime,
+        original_name=(original_name or "upload")[:200],
+        mime=mime,
         size=len(raw),
-        caption=(body.caption or "")[:500],
+        caption=(caption or "")[:500],
         access_level="archive_private",
     )
     db.add(m)
@@ -919,6 +1048,51 @@ def admin_media_upload(body: MediaUploadBody, db: Session = Depends(get_db), _: 
         "caption": m.caption,
         "original_name": m.original_name,
     }
+
+
+@router.post("/media/upload")
+async def admin_media_upload_multipart(
+    file: UploadFile = File(...),
+    caption: str = Form(""),
+    eventId: int | None = Form(None),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    """Multipart upload for the admin archive uploader (progress-friendly)."""
+    raw = await file.read()
+    mime = (file.content_type or "").split(";")[0].strip().lower()
+    if not mime or mime == "application/octet-stream":
+        # Fallback from filename extension
+        name = (file.filename or "").lower()
+        for m, ext in MIME_EXT.items():
+            if name.endswith(ext):
+                mime = m
+                break
+    return _store_archive_media(
+        db,
+        raw=raw,
+        mime=mime,
+        original_name=file.filename or "upload.bin",
+        caption=caption,
+        event_id=eventId,
+    )
+
+
+@router.post("/media")
+def admin_media_upload(body: MediaUploadBody, db: Session = Depends(get_db), _: str = Depends(require_admin)):
+    """Legacy JSON+base64 upload — kept for compatibility."""
+    try:
+        raw = base64.b64decode(body.data)
+    except Exception:
+        raise HTTPException(400, {"error": "bad base64"})
+    return _store_archive_media(
+        db,
+        raw=raw,
+        mime=body.mime,
+        original_name=body.filename,
+        caption=body.caption,
+        event_id=body.eventId,
+    )
 
 
 @router.put("/media")
@@ -943,6 +1117,316 @@ def admin_media_delete(id: int = Query(...), db: Session = Depends(get_db), _: s
     db.delete(m)
     db.commit()
     return {"ok": True}
+
+
+class MemoryModerationBody(BaseModel):
+    ids: list[int] = []
+    status: str = "approved"  # approved | rejected
+
+
+class MemoryTitleBody(BaseModel):
+    title: str = ""
+
+
+def _memory_admin_row(
+    m: MemoryItem,
+    *,
+    ticket: Ticket | None = None,
+    like_count: int = 0,
+    comment_count: int = 0,
+) -> dict:
+    return {
+        "id": m.id,
+        "eventId": m.event_id,
+        "ticketId": m.ticket_id,
+        "status": m.status,
+        "source": (m.source or "guest"),
+        "title": (m.title or "").strip(),
+        "mediaKind": m.media_kind,
+        "mime": m.mime,
+        "sizeBytes": m.size_bytes,
+        "consentPublish": bool(m.consent_publish),
+        "createdAt": _iso_utc(m.created_at),
+        "uploadedAt": _iso_utc(m.created_at),
+        "reviewedAt": _iso_utc(m.reviewed_at),
+        "reviewedBy": m.reviewed_by or "",
+        "holderName": (ticket.holder_name if ticket else "") or ("آرشیو ادمین" if (m.source or "") == "admin_archive" else ""),
+        "serial": (ticket.public_code if ticket else "") or "",
+        "group": (ticket.group_name if ticket else "") or "",
+        "likeCount": like_count,
+        "commentCount": comment_count,
+        "url": f"/api/admin/memories/file/{m.id}",
+    }
+
+
+@router.get("/memories")
+def admin_memories_list(
+    eventId: int | None = Query(None),
+    status: str = Query("pending"),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    q = select(MemoryItem).order_by(MemoryItem.id.desc())
+    if eventId is not None:
+        q = q.where(MemoryItem.event_id == int(eventId))
+    st = (status or "all").strip().lower()
+    if st in ("pending", "approved", "rejected"):
+        q = q.where(MemoryItem.status == st)
+    rows = db.scalars(q.limit(300)).all()
+
+    ticket_ids = [m.ticket_id for m in rows if m.ticket_id]
+    tickets = {}
+    if ticket_ids:
+        for t in db.scalars(select(Ticket).where(Ticket.id.in_(ticket_ids))).all():
+            tickets[t.id] = t
+    item_ids = [m.id for m in rows]
+    like_map: dict[int, int] = {}
+    comment_map: dict[int, int] = {}
+    if item_ids:
+        for iid, c in db.execute(
+            select(MemoryLike.item_id, func.count()).where(MemoryLike.item_id.in_(item_ids)).group_by(MemoryLike.item_id)
+        ).all():
+            like_map[int(iid)] = int(c)
+        for iid, c in db.execute(
+            select(MemoryComment.item_id, func.count())
+            .where(MemoryComment.item_id.in_(item_ids))
+            .group_by(MemoryComment.item_id)
+        ).all():
+            comment_map[int(iid)] = int(c)
+
+    # Counts for current event filter (or global)
+    def _count(s: str) -> int:
+        cq = select(MemoryItem).where(MemoryItem.status == s)
+        if eventId is not None:
+            cq = cq.where(MemoryItem.event_id == int(eventId))
+        return len(db.scalars(cq).all())
+
+    return {
+        "counts": {
+            "pending": _count("pending"),
+            "approved": _count("approved"),
+            "rejected": _count("rejected"),
+        },
+        "items": [
+            _memory_admin_row(
+                m,
+                ticket=tickets.get(m.ticket_id) if m.ticket_id else None,
+                like_count=like_map.get(m.id, 0),
+                comment_count=comment_map.get(m.id, 0),
+            )
+            for m in rows
+        ],
+    }
+
+
+@router.get("/memories/audit")
+def admin_memories_audit(
+    eventId: int | None = Query(None),
+    limit: int = Query(80, ge=1, le=300),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    eid = eventId or _default_event_id(db)
+    q = select(MemoryAuditLog).order_by(MemoryAuditLog.id.desc()).limit(limit)
+    if eid:
+        q = q.where(MemoryAuditLog.event_id == int(eid))
+    rows = db.scalars(q).all()
+    out = []
+    for r in rows:
+        try:
+            meta = json.loads(r.meta_json or "{}")
+        except Exception:
+            meta = {}
+        out.append(
+            {
+                "id": r.id,
+                "eventId": r.event_id,
+                "itemId": r.item_id,
+                "ticketId": r.ticket_id,
+                "actor": r.actor,
+                "action": r.action,
+                "meta": meta,
+                "createdAt": _iso_utc(r.created_at),
+            }
+        )
+    return {"items": out}
+
+
+@router.get("/memories/file/{item_id}")
+def admin_memories_file(item_id: int, db: Session = Depends(get_db), _: str = Depends(require_admin)):
+    from fastapi.responses import FileResponse
+
+    m = db.get(MemoryItem, item_id)
+    if not m:
+        raise HTTPException(404, "not found")
+    path = absolute_memory_path(m.stored_name)
+    if not path:
+        raise HTTPException(404, "missing file")
+    return FileResponse(path, media_type=m.mime)
+
+
+@router.post("/memories/moderate")
+def admin_memories_moderate(
+    body: MemoryModerationBody,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    status = (body.status or "").strip().lower()
+    if status not in ("approved", "rejected"):
+        raise HTTPException(400, {"error": "invalid_status"})
+    ids = [int(x) for x in (body.ids or []) if str(x).isdigit() or isinstance(x, int)]
+    if not ids:
+        raise HTTPException(400, {"error": "ids_required"})
+    now = datetime.now(timezone.utc)
+    updated = 0
+    action = "approve" if status == "approved" else "reject"
+    for mid in ids:
+        m = db.get(MemoryItem, mid)
+        if not m:
+            continue
+        m.status = status
+        m.reviewed_at = now
+        m.reviewed_by = "admin"
+        write_audit(
+            db,
+            event_id=m.event_id,
+            item_id=m.id,
+            ticket_id=m.ticket_id,
+            actor="admin",
+            action=action,
+            meta={"status": status},
+        )
+        updated += 1
+    db.commit()
+    return {"ok": True, "updated": updated, "status": status}
+
+
+@router.put("/memories/title")
+def admin_memories_title(
+    id: int = Query(...),
+    body: MemoryTitleBody = ...,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    m = db.get(MemoryItem, id)
+    if not m:
+        raise HTTPException(404, "not found")
+    old = m.title or ""
+    m.title = (body.title or "").strip()[:200]
+    write_audit(
+        db,
+        event_id=m.event_id,
+        item_id=m.id,
+        ticket_id=m.ticket_id,
+        actor="admin",
+        action="title",
+        meta={"from": old, "to": m.title},
+    )
+    db.commit()
+    return {"id": m.id, "title": m.title}
+
+
+@router.delete("/memories")
+def admin_memories_delete(
+    id: int = Query(...),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    m = db.get(MemoryItem, id)
+    if not m:
+        raise HTTPException(404, "not found")
+    # Clear FK children first (SQLite FK ON)
+    for like in db.scalars(select(MemoryLike).where(MemoryLike.item_id == m.id)).all():
+        db.delete(like)
+    for c in db.scalars(select(MemoryComment).where(MemoryComment.item_id == m.id)).all():
+        db.delete(c)
+    # Unlink archive publish pointer if any
+    for media in db.scalars(select(Media).where(Media.published_memory_id == m.id)).all():
+        media.published_memory_id = None
+    write_audit(
+        db,
+        event_id=m.event_id,
+        item_id=m.id,
+        ticket_id=m.ticket_id,
+        actor="admin",
+        action="delete",
+        meta={"source": m.source or "guest", "stored": m.stored_name},
+    )
+    stored = m.stored_name
+    db.delete(m)
+    db.commit()
+    delete_memory_file(stored)
+    return {"ok": True}
+
+
+@router.post("/media/publish-to-gallery")
+def admin_media_publish_to_gallery(
+    id: int = Query(...),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    m = db.get(Media, id)
+    if not m:
+        raise HTTPException(404, "not found")
+    if m.published_memory_id:
+        existing = db.get(MemoryItem, m.published_memory_id)
+        if existing:
+            return {
+                "ok": True,
+                "already": True,
+                "memoryId": existing.id,
+                "url": f"/api/admin/memories/file/{existing.id}",
+            }
+        m.published_memory_id = None
+
+    src = settings.archive_dir / m.filename
+    if not src.is_file():
+        raise HTTPException(404, {"error": "missing_file"})
+    raw = src.read_bytes()
+    try:
+        kind, mime, ext = sniff_media(raw, m.original_name or m.filename)
+    except Exception:
+        # Fall back to stored mime
+        mime = m.mime or "application/octet-stream"
+        kind = "video" if mime.startswith("video/") else "image"
+        ext = Path(m.filename).suffix or ".bin"
+
+    stored = store_memory_file(m.event_id, raw, ext)
+    now = datetime.now(timezone.utc)
+    item = MemoryItem(
+        event_id=m.event_id,
+        ticket_id=None,
+        status="approved",
+        source="admin_archive",
+        media_kind=kind,
+        stored_name=stored,
+        mime=mime,
+        size_bytes=len(raw),
+        consent_publish=True,
+        title=(m.caption or "").strip()[:200],
+        reviewed_at=now,
+        reviewed_by="admin",
+    )
+    db.add(item)
+    db.flush()
+    m.published_memory_id = item.id
+    write_audit(
+        db,
+        event_id=m.event_id,
+        item_id=item.id,
+        ticket_id=None,
+        actor="admin",
+        action="publish_archive",
+        meta={"mediaId": m.id, "caption": m.caption or ""},
+    )
+    db.commit()
+    db.refresh(item)
+    return {
+        "ok": True,
+        "already": False,
+        "memoryId": item.id,
+        "url": f"/api/admin/memories/file/{item.id}",
+    }
 
 
 @router.get("/support/tickets/{ticket_id}")
