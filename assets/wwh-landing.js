@@ -154,9 +154,25 @@
     });
   }
 
-  window.applyCapacity = function (remaining) {
-    var rem = Math.max(0, Number(remaining) || 0);
+  window.applyCapacity = function (capacityData) {
+    // Accept either legacy number (remaining) or full capacity object
+    var cap = capacityData;
+    var rem = 0;
+    var sold = 0;
+    var total = 0;
+    if (typeof capacityData === 'number' || typeof capacityData === 'string') {
+      // Legacy: only remaining passed
+      rem = Math.max(0, Number(capacityData) || 0);
+    } else if (capacityData && typeof capacityData === 'object') {
+      // New: full capacity payload {capacity, sold, pending, remaining}
+      rem = Math.max(0, Number(capacityData.remaining) || 0);
+      sold = Math.max(0, Number(capacityData.sold) || 0);
+      total = Math.max(0, Number(capacityData.capacity) || 0);
+    }
     window.remainingTickets = rem;
+    window.soldTickets = sold;
+    window.totalCapacity = total;
+
     var badge = document.getElementById('capacity-badge');
     if (badge) {
       badge.classList.remove('sold-out', 'is-low');
@@ -169,6 +185,15 @@
         if (rem <= 10) badge.classList.add('is-low');
       }
     }
+
+    // Update the detailed capacity display (sold / total)
+    var capacityDetails = document.getElementById('capacity-details');
+    if (capacityDetails && total > 0) {
+      var soldFa = typeof toPersian === 'function' ? toPersian(sold) : sold;
+      var totalFa = typeof toPersian === 'function' ? toPersian(total) : total;
+      capacityDetails.textContent = soldFa + ' رزرو شده از ' + totalFa + ' نفر';
+    }
+
     var stepButtons = [document.getElementById('reg-next'), document.getElementById('pay-submit')];
     stepButtons.forEach(function (b) {
       if (!b) return;
@@ -277,7 +302,7 @@
         return r.json();
       })
       .then(function (c) {
-        window.applyCapacity(c.remaining);
+        window.applyCapacity(c);
       })
       .catch(function () {});
   }
@@ -299,10 +324,9 @@
         return;
       }
       var ev = data.event;
-      var cap =
-        ev.capacity && typeof ev.capacity === 'object' && ev.capacity.remaining !== undefined
-          ? ev.capacity
-          : null;
+      var cap = ev.capacity && typeof ev.capacity === 'object'
+        ? ev.capacity
+        : null;
       applyEventToDom(ev, cap);
     })
     .catch(function () {});
