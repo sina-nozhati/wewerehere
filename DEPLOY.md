@@ -105,6 +105,10 @@ server {
 
     client_max_body_size 150m;   # رسید + خاطرات شب (ویدیو تا ~40MB؛ زیر از 150m کم نگذارید)
 
+    # Longer timeouts for heavy endpoints (ZIP export renders many tickets)
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+
     location / {
         proxy_pass http://127.0.0.1:5173;
         proxy_http_version 1.1;
@@ -112,6 +116,18 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Extra timeout for ZIP export (renders PNG per ticket)
+    location /api/admin/tickets/export {
+        proxy_pass http://127.0.0.1:5173;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
     }
 }
 ```

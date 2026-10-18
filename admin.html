@@ -1745,10 +1745,17 @@
         .catch(function (e2) { alert('خطا در رزرو نمونه: ' + e2.message); });
     });
     document.getElementById('export-tickets-zip').addEventListener('click', function () {
+      var btn = this;
       var q = currentEventId ? ('?eventId=' + currentEventId) : '';
+      btn.disabled = true;
+      btn.textContent = 'در حال تولید ZIP...';
       fetch('/api/admin/tickets/export' + q, { headers: { Authorization: 'Bearer ' + TOKEN } })
         .then(function (r) { return downloadFromFetchResponse(r, 'wewerehere-tickets'); })
-        .catch(function (e2) { alert('خطا در ZIP: ' + e2.message); });
+        .catch(function (e2) { alert('خطا در ZIP: ' + e2.message); })
+        .finally(function () {
+          btn.disabled = false;
+          btn.textContent = 'خروجی تصویر رزروها (ZIP)';
+        });
     });
 
     document.getElementById('export-csv').addEventListener('click', function () {
