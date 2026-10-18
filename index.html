@@ -1930,9 +1930,25 @@
       }
 
       var landingApplyCapacity = window.applyCapacity;
-      window.applyCapacity = function (n) {
-        if (typeof landingApplyCapacity === 'function') landingApplyCapacity(n);
-        available = Math.max(0, Number(n) || 0);
+      window.applyCapacity = function (capacityData) {
+        if (typeof landingApplyCapacity === 'function') landingApplyCapacity(capacityData);
+        // Accept either legacy number (remaining) or full capacity object
+        var rem = 0;
+        var sold = 0;
+        var total = 0;
+        if (typeof capacityData === 'number' || typeof capacityData === 'string') {
+          rem = Math.max(0, Number(capacityData) || 0);
+        } else if (capacityData && typeof capacityData === 'object') {
+          rem = Math.max(0, Number(capacityData.remaining) || 0);
+          sold = Math.max(0, Number(capacityData.sold) || 0);
+          total = Math.max(0, Number(capacityData.capacity) || 0);
+        }
+        // Allow registration if truly sold out (sold >= capacity) is false
+        // When pending orders hold seats but sold < capacity, registration should still work
+        var trulySoldOut = total > 0 && sold >= total;
+        // Actual available seats for new registrations = capacity - sold (ignoring pending holds)
+        var actualAvailable = total > 0 ? Math.max(0, total - sold) : 0;
+        available = trulySoldOut ? 0 : Math.max(actualAvailable, rem);
         setQuantity(quantity);
       };
 
