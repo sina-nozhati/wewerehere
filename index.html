@@ -1873,7 +1873,7 @@
 
       var pendingResult = document.getElementById('pending-result');
 
-      var MAX_TICKETS = 6;
+      var MAX_TICKETS = 10;
       var quantity = 1;
       var available = MAX_TICKETS;
       var collected = { phone: '', names: [] };
@@ -1936,12 +1936,14 @@
         var rem = 0;
         var sold = 0;
         var total = 0;
+        var pending = 0;
         if (typeof capacityData === 'number' || typeof capacityData === 'string') {
           rem = Math.max(0, Number(capacityData) || 0);
         } else if (capacityData && typeof capacityData === 'object') {
           rem = Math.max(0, Number(capacityData.remaining) || 0);
           sold = Math.max(0, Number(capacityData.sold) || 0);
           total = Math.max(0, Number(capacityData.capacity) || 0);
+          pending = Math.max(0, Number(capacityData.pending) || 0);
         }
         // Allow registration if truly sold out (sold >= capacity) is false
         // When pending orders hold seats but sold < capacity, registration should still work
@@ -1950,6 +1952,22 @@
         var actualAvailable = total > 0 ? Math.max(0, total - sold) : 0;
         available = trulySoldOut ? 0 : Math.max(actualAvailable, rem);
         setQuantity(quantity);
+
+        // Update capacity details with pending breakdown
+        var capacityDetails = document.getElementById('capacity-details');
+        if (capacityDetails && total > 0) {
+          var soldFa = typeof toPersian === 'function' ? toPersian(sold) : sold;
+          var totalFa = typeof toPersian === 'function' ? toPersian(total) : total;
+          var pendingFa = typeof toPersian === 'function' ? toPersian(pending) : pending;
+          var availableFa = typeof toPersian === 'function' ? toPersian(total - sold - pending) : (total - sold - pending);
+          var detailText = soldFa + ' رزرو شده';
+          if (pending > 0) detailText += '، ' + pendingFa + ' در انتظار تأیید';
+          detailText += '، ' + availableFa + ' باقی‌مانده';
+          capacityDetails.textContent = detailText;
+          capacityDetails.hidden = false;
+        } else if (capacityDetails) {
+          capacityDetails.hidden = true;
+        }
       };
 
       qtyMinus.addEventListener('click', function () { setQuantity(quantity - 1); });

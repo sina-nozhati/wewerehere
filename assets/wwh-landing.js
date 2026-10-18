@@ -200,12 +200,17 @@
       }
     }
 
-    // Update the detailed capacity display (sold / total)
+    // Update the detailed capacity display (sold / total / pending)
     var capacityDetails = document.getElementById('capacity-details');
     if (capacityDetails && total > 0) {
       var soldFa = typeof toPersian === 'function' ? toPersian(sold) : sold;
       var totalFa = typeof toPersian === 'function' ? toPersian(total) : total;
-      capacityDetails.textContent = soldFa + ' رزرو شده از ' + totalFa + ' نفر';
+      var pendingFa = typeof toPersian === 'function' ? toPersian(pending) : pending;
+      var availableFa = typeof toPersian === 'function' ? toPersian(total - sold - pending) : (total - sold - pending);
+      var detailText = soldFa + ' رزرو شده';
+      if (pending > 0) detailText += '، ' + pendingFa + ' در انتظار تأیید';
+      detailText += '، ' + availableFa + ' باقی‌مانده';
+      capacityDetails.textContent = detailText;
       capacityDetails.hidden = false;
     } else if (capacityDetails) {
       capacityDetails.hidden = true;
