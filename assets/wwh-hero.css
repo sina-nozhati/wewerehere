@@ -398,6 +398,20 @@ html.wwh-spotlight-scroll-lock body {
   display: none;
 }
 
+.hero-capacity.pending-holding {
+  border-color: var(--color-warning);
+  border-inline-start-color: var(--color-warning);
+  background: linear-gradient(135deg, rgba(245, 197, 66, 0.15), rgba(30, 20, 10, 0.9));
+  color: var(--color-warning);
+}
+
+.hero-capacity.pending-holding::before {
+  border-radius: 50%;
+  background: var(--color-warning);
+  box-shadow: 0 0 8px rgba(245, 197, 66, 0.6);
+  animation: heroCapPulse 1.5s ease-in-out infinite;
+}
+
 @keyframes heroCapPulse {
   0%,
   100% {

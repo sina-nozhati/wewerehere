@@ -160,6 +160,7 @@
     var rem = 0;
     var sold = 0;
     var total = 0;
+    var pending = 0;
     if (typeof capacityData === 'number' || typeof capacityData === 'string') {
       // Legacy: only remaining passed
       rem = Math.max(0, Number(capacityData) || 0);
@@ -168,17 +169,30 @@
       rem = Math.max(0, Number(capacityData.remaining) || 0);
       sold = Math.max(0, Number(capacityData.sold) || 0);
       total = Math.max(0, Number(capacityData.capacity) || 0);
+      pending = Math.max(0, Number(capacityData.pending) || 0);
     }
     window.remainingTickets = rem;
     window.soldTickets = sold;
     window.totalCapacity = total;
+    window.pendingTickets = pending;
+
+    // Determine actual state:
+    // - trulySoldOut: sold >= total (no seats at all)
+    // - pendingHolding: rem <= 0 but sold < total (pending orders holding seats)
+    // - available: rem > 0
+    var trulySoldOut = total > 0 && sold >= total;
+    var pendingHolding = total > 0 && rem <= 0 && sold < total;
 
     var badge = document.getElementById('capacity-badge');
     if (badge) {
-      badge.classList.remove('sold-out', 'is-low');
-      if (rem <= 0) {
+      badge.classList.remove('sold-out', 'is-low', 'pending-holding');
+      if (trulySoldOut) {
         badge.textContent = 'ظرفیت تکمیل شد';
         badge.classList.add('sold-out');
+      } else if (pendingHolding) {
+        var heldFa = typeof toPersian === 'function' ? toPersian(pending) : pending;
+        badge.textContent = heldFa + ' نفر در انتظار تأیید (صندلی رزرو شده)';
+        badge.classList.add('pending-holding');
       } else {
         var remFa = typeof toPersian === 'function' ? toPersian(rem) : rem;
         badge.textContent = 'ظرفیت باقی‌مانده: ' + remFa + ' نفر';
@@ -197,16 +211,17 @@
       capacityDetails.hidden = true;
     }
 
+    // Buttons disabled only when truly sold out (not when pending holding)
     var stepButtons = [document.getElementById('reg-next'), document.getElementById('pay-submit')];
     stepButtons.forEach(function (b) {
       if (!b) return;
-      b.disabled = rem <= 0 || !window.__wwhSalesOpen;
+      b.disabled = trulySoldOut || !window.__wwhSalesOpen;
     });
 
-    // Hero CTA sold-out handling
+    // Hero CTA sold-out handling - only disable when truly sold out
     var heroCta = document.getElementById('hero-register-cta');
     if (heroCta) {
-      if (rem <= 0) {
+      if (trulySoldOut) {
         heroCta.setAttribute('aria-disabled', 'true');
         if (heroCta.tagName === 'BUTTON') {
           heroCta.disabled = true;
