@@ -1937,7 +1937,11 @@
         qtyValue.textContent = toPersian(quantity);
         qtyMinus.disabled = quantity <= 1;
         qtyPlus.disabled = quantity >= maxAllowed;
-        renderNameFields();
+        // Only re-render name fields if quantity actually changed (avoids flicker on capacity poll)
+        if (!window._prevRenderedQuantity || window._prevRenderedQuantity !== quantity) {
+          window._prevRenderedQuantity = quantity;
+          renderNameFields();
+        }
       }
 
       var landingApplyCapacity = window.applyCapacity;
@@ -1961,8 +1965,12 @@
         var trulySoldOut = total > 0 && sold >= total;
         // Actual available seats for new registrations = capacity - sold (ignoring pending holds)
         var actualAvailable = total > 0 ? Math.max(0, total - sold) : 0;
-        available = trulySoldOut ? 0 : Math.max(actualAvailable, rem);
-        setQuantity(quantity);
+        var newAvailable = trulySoldOut ? 0 : Math.max(actualAvailable, rem);
+        // Only call setQuantity if available actually changed (prevents flicker on poll)
+        if (newAvailable !== available) {
+          available = newAvailable;
+          setQuantity(quantity);
+        }
 
         // Update capacity details with pending breakdown
         var capacityDetails = document.getElementById('capacity-details');

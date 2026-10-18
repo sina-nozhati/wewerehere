@@ -42,7 +42,7 @@ def create_order(
     if not valid_phone(phone):
         raise ValueError("invalid phone")
     names = [n.strip() for n in names if n and n.strip()]
-    if not 1 <= len(names) <= 6:
+    if not 1 <= len(names) <= 10:
         raise ValueError("invalid names")
 
     try:
