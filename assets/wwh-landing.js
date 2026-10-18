@@ -285,13 +285,9 @@
 
     renderSetlist(ev.setlist || []);
     applySalesState(ev.salesStatus === 'open');
-    var rem =
-      cap && typeof cap.remaining === 'number'
-        ? cap.remaining
-        : ev.capacity && typeof ev.capacity === 'object' && typeof ev.capacity.remaining === 'number'
-          ? ev.capacity.remaining
-          : null;
-    if (rem !== null) window.applyCapacity(rem);
+    if (cap && typeof cap === 'object') {
+      window.applyCapacity(cap);
+    }
   }
 
   function pollCapacity() {
