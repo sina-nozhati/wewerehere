@@ -192,6 +192,9 @@
       var soldFa = typeof toPersian === 'function' ? toPersian(sold) : sold;
       var totalFa = typeof toPersian === 'function' ? toPersian(total) : total;
       capacityDetails.textContent = soldFa + ' رزرو شده از ' + totalFa + ' نفر';
+      capacityDetails.hidden = false;
+    } else if (capacityDetails) {
+      capacityDetails.hidden = true;
     }
 
     var stepButtons = [document.getElementById('reg-next'), document.getElementById('pay-submit')];
