@@ -1892,6 +1892,12 @@
       }
 
       function renderNameFields() {
+        // Preserve existing values
+        var existingValues = [];
+        namesContainer.querySelectorAll('input').forEach(function (inp) {
+          existingValues.push(inp.value.trim());
+        });
+
         namesContainer.innerHTML = '';
         for (var i = 1; i <= quantity; i++) {
           var wrap = document.createElement('div');
@@ -1907,6 +1913,11 @@
           input.id = 'guest-name-' + i;
           input.placeholder = 'مثال: علی رضایی';
           input.autocomplete = 'name';
+
+          // Restore value if exists
+          if (existingValues[i - 1]) {
+            input.value = existingValues[i - 1];
+          }
 
           labelEl.setAttribute('for', input.id);
           labelEl.textContent = label;
