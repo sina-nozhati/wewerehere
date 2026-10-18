@@ -174,6 +174,58 @@
       if (!b) return;
       b.disabled = rem <= 0 || !window.__wwhSalesOpen;
     });
+
+    // Hero CTA sold-out handling
+    var heroCta = document.getElementById('hero-register-cta');
+    if (heroCta) {
+      if (rem <= 0) {
+        heroCta.setAttribute('aria-disabled', 'true');
+        if (heroCta.tagName === 'BUTTON') {
+          heroCta.disabled = true;
+        } else {
+          heroCta.classList.add('btn--disabled-link', 'is-sold-out');
+          heroCta.tabIndex = -1;
+        }
+        // Update hero CTA text to sold-out state
+        if (!heroCta.dataset.originalText) {
+          heroCta.dataset.originalText = heroCta.textContent.trim();
+        }
+        heroCta.textContent = 'ظرفیت تکمیل شد';
+      } else {
+        heroCta.removeAttribute('aria-disabled');
+        if (heroCta.tagName === 'BUTTON') {
+          heroCta.disabled = false;
+        } else {
+          heroCta.classList.remove('btn--disabled-link', 'is-sold-out');
+          heroCta.tabIndex = 0;
+        }
+        // Restore original text if we saved it
+        if (heroCta.dataset.originalText) {
+          heroCta.textContent = heroCta.dataset.originalText;
+          delete heroCta.dataset.originalText;
+        }
+      }
+    }
+
+    // Show/hide sold-out banner near register section
+    var soldOutBanner = document.getElementById('sold-out-banner');
+    var registerSection = document.getElementById('register');
+    if (rem <= 0) {
+      if (!soldOutBanner && registerSection) {
+        var banner = document.createElement('div');
+        banner.id = 'sold-out-banner';
+        banner.className = 'sales-banner sold-out';
+        banner.setAttribute('role', 'status');
+        banner.setAttribute('aria-live', 'polite');
+        banner.textContent = 'متأسفانه ظرفیت این رویداد تکمیل شده است.';
+        registerSection.insertBefore(banner, registerSection.firstChild);
+      } else if (soldOutBanner) {
+        soldOutBanner.hidden = false;
+      }
+    } else if (soldOutBanner) {
+      soldOutBanner.hidden = true;
+    }
+
     if (window.__wwhEvent) {
       var sch = scheduleLines(window.__wwhEvent.eventAt);
       setMarqueeTexts([

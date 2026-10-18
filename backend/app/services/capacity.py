@@ -16,15 +16,21 @@ def sold_count(db: Session, event_id: int) -> int:
     ) or 0
 
 
-def pending_names_count(db: Session, event_id: int) -> int:
-    rows = db.scalars(
-        select(Order.names_json).where(
-            Order.event_id == event_id,
-            Order.status.in_(PENDING_STATUSES),
-        )
-    ).all()
+def pending_names_count(
+    db: Session,
+    event_id: int,
+    *,
+    exclude_order_id: int | None = None,
+) -> int:
+    q = select(Order.id, Order.names_json).where(
+        Order.event_id == event_id,
+        Order.status.in_(PENDING_STATUSES),
+    )
+    if exclude_order_id is not None:
+        q = q.where(Order.id != int(exclude_order_id))
+    rows = db.execute(q).all()
     total = 0
-    for raw in rows:
+    for _oid, raw in rows:
         try:
             total += len(json.loads(raw or "[]"))
         except json.JSONDecodeError:
@@ -32,8 +38,24 @@ def pending_names_count(db: Session, event_id: int) -> int:
     return total
 
 
-def remaining_tickets(db: Session, event_id: int, capacity: int) -> int:
-    return max(0, capacity - sold_count(db, event_id) - pending_names_count(db, event_id))
+def remaining_tickets(
+    db: Session,
+    event_id: int,
+    capacity: int,
+    *,
+    exclude_order_id: int | None = None,
+) -> int:
+    return max(
+        0,
+        capacity
+        - sold_count(db, event_id)
+        - pending_names_count(db, event_id, exclude_order_id=exclude_order_id),
+    )
+
+
+def seats_available_for_approve(db: Session, event_id: int, capacity: int, order_id: int) -> int:
+    """Seats free for approving this order (its own pending hold does not block it)."""
+    return remaining_tickets(db, event_id, capacity, exclude_order_id=order_id)
 
 
 def capacity_payload(db: Session, event_id: int, capacity: int) -> dict:

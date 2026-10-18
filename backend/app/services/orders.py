@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.models import Order, PaymentReceipt
-from app.services.capacity import remaining_tickets
+from app.services.capacity import remaining_tickets, seats_available_for_approve
 from app.services.media_guard import MediaGuardError, guard_media
 from app.services.phone import normalize_phone, valid_phone
 from app.services.tickets import issue_ticket
@@ -135,8 +135,9 @@ def approve_order(db: Session, order_id: int) -> tuple[Order, list[dict], bool]:
 
     event = order.event
     try:
-        remaining = remaining_tickets(db, event.id, event.capacity)
-        if len(names) > remaining:
+        # Exclude this order's pending hold — otherwise near sold-out approve always 409s.
+        available = seats_available_for_approve(db, event.id, event.capacity, order.id)
+        if len(names) > available:
             raise ValueError("ظرفیت کافی برای تأیید این درخواست رزرو نیست")
 
         issued = []
