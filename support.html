@@ -223,7 +223,7 @@
   <main class="container">
     <section class="verify-panel" id="verify-panel">
       <h1 class="hero__title">پشتیبانی</h1>
-      <p class="hero__subtitle">برای شروع گفتگو شماره موبایلت را وارد کن — اگر بلیت خریده‌ای همان شمارهٔ ثبت‌نام؛ اگر نه، هر شماره‌ای که باهاش در دسترس باشی.</p>
+      <p class="hero__subtitle">برای شروع گفتگو شماره موبایلت را وارد کن — اگر رزرو کرده‌ای همان شمارهٔ درخواست رزرو؛ اگر نه، هر شماره‌ای که باهاش در دسترس باشی.</p>
       <input class="lookup__input" type="tel" id="phone-input" data-wwh-phone dir="ltr" placeholder="09123456789" autocomplete="tel">
       <button type="button" class="lookup__btn" id="verify-btn">ادامه</button>
       <p class="lookup__error" id="verify-error"></p>
@@ -339,9 +339,9 @@
 
     function welcomeHtml(sess) {
       if (sess.hasEventTicket && sess.holderName) {
-        return '<strong>' + escapeHtml(sess.holderName) + '</strong> عزیز، خوش آمدی! بلیتت با این شماره ثبت شده. سوالت رو بپرس — تیم ما جواب می‌ده.';
+        return '<strong>' + escapeHtml(sess.holderName) + '</strong> عزیز، خوش آمدی! رزرو ورودت با این شماره ثبت شده. سوالت رو بپرس — تیم ما جواب می‌ده.';
       }
-      return 'هنوز بلیتی با شماره شما ثبت نشده. اگر سوالی داری خوشحال می‌شیم راهنماییت کنیم — موضوع و پیامت رو بنویس.';
+      return 'هنوز رزرو ورودی با شماره شما ثبت نشده. اگر سوالی داری خوشحال می‌شیم راهنماییت کنیم — موضوع و پیامت رو بنویس.';
     }
 
     function enterChat(sess) {

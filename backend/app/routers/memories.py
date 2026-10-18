@@ -32,7 +32,7 @@ from app.services.memory_media import (
     delete_memory_file,
     max_bytes_for_kind,
     relative_stored_name,
-    sniff_media,
+    guard_and_prepare,
     store_memory_file,
     transcode_video_720p,
     video_max_sec,
@@ -240,7 +240,18 @@ async def memories_upload(
             results.append({"ok": False, "error": "read_failed", "name": name})
             continue
         try:
-            kind, mime, ext = sniff_media(data, name)
+            # Soft pre-check size before full guard (images may shrink after sanitize)
+            if len(data) > max(max_bytes_for_kind("image"), max_bytes_for_kind("video")):
+                results.append(
+                    {
+                        "ok": False,
+                        "error": "file_too_large",
+                        "name": name,
+                        "maxBytes": max_bytes_for_kind("video"),
+                    }
+                )
+                continue
+            kind, mime, ext, data = guard_and_prepare(data, name)
             limit = max_bytes_for_kind(kind)
             if len(data) > limit:
                 results.append(

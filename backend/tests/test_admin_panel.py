@@ -173,14 +173,23 @@ def test_admin_receipt_image_with_auth(client: TestClient, tmp_path, monkeypatch
     monkeypatch.setattr(settings, "storage_root", tmp_path)
     headers = _auth(client)
     ev_id = client.get("/api/admin/events", headers=headers).json()["events"][0]["id"]
-    png_head = bytes([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x00])
+    from io import BytesIO
+    from PIL import Image
+
+    buf = BytesIO()
+    Image.new("RGB", (16, 16), (90, 40, 40)).save(buf, format="PNG")
+    png_bytes = buf.getvalue()
     created = client.post(
         f"/api/events/{ev_id}/orders",
         json={
             "phone": "09129998877",
             "names": ["رسید"],
             "receiptText": "",
-            "receiptImage": {"mime": "image/png", "data": base64.b64encode(png_head).decode("ascii")},
+            "receiptImage": {
+                "mime": "image/png",
+                "name": "receipt.png",
+                "data": base64.b64encode(png_bytes).decode("ascii"),
+            },
         },
     )
     assert created.status_code in (200, 201)
@@ -188,7 +197,7 @@ def test_admin_receipt_image_with_auth(client: TestClient, tmp_path, monkeypatch
     assert client.get(f"/api/admin/receipts/{oid}").status_code == 401
     img = client.get(f"/api/admin/receipts/{oid}", headers=headers)
     assert img.status_code == 200
-    assert img.content[:8] == png_head[:8]
+    assert img.content[:8] == b"\x89PNG\r\n\x1a\n"
 
 
 def test_admin_ticket_and_orders_scope(client: TestClient):
@@ -260,11 +269,12 @@ def test_admin_media_multipart_upload(client: TestClient, tmp_path, monkeypatch)
     monkeypatch.setattr(settings, "storage_root", tmp_path)
     headers = _auth(client)
     ev_id = client.get("/api/admin/events", headers=headers).json()["events"][0]["id"]
-    # Minimal valid JPEG (1x1)
-    jpeg = (
-        b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
-        b"\xff\xdb\x00C\x00" + (b"\x08" * 64) + b"\xff\xd9"
-    )
+    from io import BytesIO
+    from PIL import Image
+
+    buf = BytesIO()
+    Image.new("RGB", (12, 12), (40, 80, 120)).save(buf, format="JPEG", quality=85)
+    jpeg = buf.getvalue()
     ok = client.post(
         "/api/admin/media/upload",
         headers=headers,
@@ -274,7 +284,7 @@ def test_admin_media_multipart_upload(client: TestClient, tmp_path, monkeypatch)
     assert ok.status_code == 200, ok.text
     body = ok.json()
     assert body["id"]
-    assert body["mime"] == "image/jpeg"
+    assert body["mime"] in ("image/jpeg", "image/png", "image/webp")
     assert body["caption"] == "پشت‌صحنه"
 
     bad_type = client.post(

@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="/assets/wwh-shell.css">
   <link rel="stylesheet" href="/assets/wwh-uploader.css">
   <link rel="stylesheet" href="/assets/wwh-lightbox.css">
-  <meta name="description" content="گالری شب رویداد — خاطرات مهمان‌ها، آرشیو اجرا و آپلود با سریال بلیت.">
+  <meta name="description" content="گالری شب رویداد — خاطرات مهمان‌ها، آرشیو اجرا و آپلود با سریال رزرو ورود.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -275,6 +275,20 @@
     }
     .pick-grid .mem-btn { margin-top: 0; font-size: 0.88rem; padding: 12px 10px; }
     .pick-grid .mem-btn--wide { grid-column: 1 / -1; }
+    .pick-grid.is-locked {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+    .pick-grid.is-locked .mem-btn {
+      cursor: not-allowed;
+    }
+    .pick-hint {
+      text-align: center;
+      font-size: 0.78rem;
+      margin: 8px 0 0;
+      line-height: 1.45;
+      color: var(--color-muted, #7a7a85);
+    }
     .hidden-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
     .nav-scroll {
@@ -729,7 +743,7 @@
         <code class="session-bar__serial" id="ticket-serial"></code>
       </div>
       <div class="session-bar__actions">
-        <div class="session-bar__quota" id="session-quota" title="سقف آپلود باقی‌مانده این بلیت">
+        <div class="session-bar__quota" id="session-quota" title="سقف آپلود باقی‌مانده این رزرو ورود">
           <span class="session-bar__quota-label">باقیمانده</span>
           <span class="session-bar__quota-num" id="uploads-left-num">—</span>
         </div>
@@ -746,7 +760,7 @@
 
     <section id="view-gate">
       <div class="panel" id="gate-panel">
-        <label for="serial-input">سریال ۴رقمی بلیت</label>
+        <label for="serial-input">سریال ۴رقمی رزرو ورود</label>
         <input type="tel" id="serial-input" inputmode="numeric" maxlength="4" autocomplete="one-time-code" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••" aria-describedby="gate-hint">
         <p class="muted" id="gate-hint" style="margin-top:10px;text-align:center;">فقط برای همین رویداد — کد رویداد دیگر کار نمی‌کند.</p>
         <button type="button" class="mem-btn" id="gate-btn">ورود</button>
@@ -755,7 +769,7 @@
     </section>
 
     <section class="view" id="view-gallery" hidden>
-      <p class="gate-banner" id="gallery-gate-banner">برای لایک و نظر، سریال بلیت را وارد کن.</p>
+      <p class="gate-banner" id="gallery-gate-banner">برای لایک و نظر، سریال رزرو ورود را وارد کن.</p>
       <div class="leaderboard" id="leaderboard" hidden>
         <p class="leaderboard__title">رتبه لایک این شب</p>
         <p class="muted" style="text-align:center;font-size:0.78rem;margin-bottom:10px;">سه نفر اول می‌تونن برای اجرای بعد آهنگ انتخاب کنن.</p>
@@ -773,9 +787,9 @@
     </section>
 
     <section class="view" id="view-mine" hidden>
-      <p class="muted" style="text-align:center;margin-bottom:14px;">آپلودهای همین بلیت</p>
+      <p class="muted" style="text-align:center;margin-bottom:14px;">آپلودهای همین رزرو ورود</p>
       <div class="grid-2" id="mine-grid"></div>
-      <p class="empty-state" id="mine-empty" hidden><strong>هنوز چیزی از این بلیت آپلود نشده.</strong><br>از تب آپلود شروع کن.</p>
+      <p class="empty-state" id="mine-empty" hidden><strong>هنوز چیزی از این رزرو ورود آپلود نشده.</strong><br>از تب آپلود شروع کن.</p>
     </section>
 
     <section class="view" id="view-upload" hidden>
@@ -785,13 +799,13 @@
           <input type="checkbox" id="consent-publish">
           <span>موافقم عکس/ویدیوهایم پس از تأیید ادمین در گالری عمومی این رویداد نمایش داده شود.</span>
         </label>
-        <div class="pick-grid">
+        <div class="pick-grid" id="pick-grid">
           <button type="button" class="mem-btn mem-btn--soft" id="btn-camera">دوربین عکس</button>
           <button type="button" class="mem-btn mem-btn--soft" id="btn-video">ویدیو (حداکثر ۱ دقیقه)</button>
           <button type="button" class="mem-btn mem-btn--ghost mem-btn--wide" id="btn-gallery-pick">چندتایی از گالری گوشی</button>
         </div>
-        <p class="muted" style="text-align:center;font-size:0.78rem;margin:8px 0 0;line-height:1.45;">
-          می‌تونی چند بار پشت‌سرهم عکس بگیری؛ هر بار به صف اضافه می‌شه. ویدیو حداکثر ۶۰ ثانیه است.
+        <p class="pick-hint" id="pick-hint">
+          بعد از انتخاب فایل، «شروع آپلود» را بزن. می‌تونی چند بار پشت‌سرهم عکس بگیری؛ هر شات به صف اضافه می‌شه. ویدیو حداکثر ۶۰ ثانیه است.
         </p>
         <input type="file" id="file-camera" class="hidden-file" accept="image/*" capture="environment" multiple>
         <input type="file" id="file-video" class="hidden-file" accept="video/*" capture="environment" multiple>
@@ -811,7 +825,7 @@
       <button type="button" class="sheet__close" id="sheet-close" aria-label="بستن">×</button>
     </div>
     <div class="comments-list" id="comments-list"></div>
-    <p class="empty-state" id="comment-login-hint" hidden>برای نوشتن نظر، اول با سریال بلیت وارد شو.</p>
+    <p class="empty-state" id="comment-login-hint" hidden>برای نوشتن نظر، اول با سریال رزرو ورود وارد شو.</p>
     <form class="comment-form" id="comment-form">
       <input type="text" id="display-name" maxlength="40" placeholder="نام نمایشی (مثلاً سینا)" autocomplete="nickname">
       <textarea id="comment-body" maxlength="400" placeholder="نظرت را بنویس…" rows="3"></textarea>
@@ -909,7 +923,7 @@
     if (gated) showProfileShell(false);
     viewGate.hidden = false;
     if (msg) showErr(gateErr, msg);
-    showToast(msg || 'اول با سریال بلیت وارد شو.');
+    showToast(msg || 'اول با سریال رزرو ورود وارد شو.');
     try { serialInput.focus(); } catch (e) {}
     try { serialInput.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e2) {}
   }
@@ -958,7 +972,7 @@
     if (c === 'display_name_required') return 'نام نمایشی حداقل ۲ حرف باشد.';
     if (c === 'body_required') return 'متن نظر خالی است.';
     if (c === 'not_found') return 'این خاطره در دسترس نیست.';
-    if (c === 'ticket_inactive') return 'بلیت غیرفعال است.';
+    if (c === 'ticket_inactive') return 'رزرو ورود غیرفعال است.';
     if (c === 'request_failed' || c === 'bad_json') return 'پاسخ سرور نامعتبر بود؛ صفحه را تازه کن.';
     if (typeof console !== 'undefined' && console.warn) console.warn('[memories social]', status, c, err && err.body);
     return 'انجام نشد؛ دوباره تلاش کن.';
@@ -985,7 +999,7 @@
       if (serialEl) serialEl.textContent = '';
       return;
     }
-    if (nameEl) nameEl.textContent = ticket.name || ('بلیت ' + toFa(ticket.number || ''));
+    if (nameEl) nameEl.textContent = ticket.name || ('رزرو ورود ' + toFa(ticket.number || ''));
     if (serialEl) serialEl.textContent = ticket.serial || '';
   }
 
@@ -1223,7 +1237,7 @@
         likeBtn.textContent = '♥ ' + toFa(item.likeCount || 0);
         likeBtn.addEventListener('click', function () {
           if (!sessionToken) {
-            focusGate('برای لایک، اول با سریال بلیت وارد شو.');
+            focusGate('برای لایک، اول با سریال رزرو ورود وارد شو.');
             return;
           }
           likeBtn.disabled = true;
@@ -1421,7 +1435,7 @@
     if (!commentItemId) return;
     if (!sessionToken) {
       closeComments();
-      focusGate('برای ارسال نظر، اول با سریال بلیت وارد شو.');
+      focusGate('برای ارسال نظر، اول با سریال رزرو ورود وارد شو.');
       return;
     }
     var name = (document.getElementById('display-name').value || '').trim();
@@ -1541,7 +1555,7 @@
       root: '#mem-uploader',
       toFa: toFa,
       showCaption: false,
-      accept: 'image/*,video/*',
+      accept: 'image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,video/mp4,video/webm,video/quicktime,.jpg,.jpeg,.png,.webp,.heic,.heif,.avif,.mp4,.webm,.mov,.m4v',
       getUrl: function () {
         return '/api/events/' + encodeURIComponent(slug) + '/memories/upload';
       },
@@ -1552,7 +1566,7 @@
         var maxN = limits.maxFilesPerRequest || 5;
         var room = uploadsRemaining == null ? maxN : Math.min(maxN, uploadsRemaining);
         if (room <= 0) {
-          showErr(uploadErr, 'سقف آپلود این بلیت پر شده.');
+          showErr(uploadErr, 'سقف آپلود این رزرو ورود پر شده.');
           return [];
         }
         var out = files.slice(0, room);
@@ -1591,6 +1605,14 @@
       onUnauthorized: function () {
         clearSession();
         showErr(gateErr, 'نشست منقضی شد. دوباره وارد شوید.');
+      },
+      onStateChange: function (state, info) {
+        setPickLocked(!!(info && info.busy));
+      },
+      onAddMore: function () {
+        setPickLocked(false);
+        var hint = document.getElementById('pick-hint');
+        if (hint) hint.textContent = 'فایل بعدی را انتخاب کن، بعد «شروع آپلود» را بزن.';
       }
     });
     var _memStart = memUploader.start.bind(memUploader);
@@ -1603,6 +1625,19 @@
       }
       _memStart();
     };
+  }
+
+  function setPickLocked(locked) {
+    var grid = document.getElementById('pick-grid');
+    if (!grid) return;
+    grid.classList.toggle('is-locked', !!locked);
+    ['btn-camera', 'btn-video', 'btn-gallery-pick'].forEach(function (id) {
+      var btn = document.getElementById(id);
+      if (!btn) return;
+      btn.disabled = !!locked;
+      if (locked) btn.setAttribute('aria-disabled', 'true');
+      else btn.removeAttribute('aria-disabled');
+    });
   }
 
   function gateErrorMessage(err) {
@@ -1715,9 +1750,11 @@
   });
 
   document.getElementById('btn-camera').addEventListener('click', function () {
+    if (memUploader && memUploader.isBusy()) return;
     document.getElementById('file-camera').click();
   });
   document.getElementById('btn-gallery-pick').addEventListener('click', function () {
+    if (memUploader && memUploader.isBusy()) return;
     document.getElementById('file-library').click();
   });
   ['file-camera', 'file-video', 'file-library'].forEach(function (id) {
@@ -1839,7 +1876,10 @@
     });
   }
 
-  document.getElementById('btn-video').addEventListener('click', openRec);
+  document.getElementById('btn-video').addEventListener('click', function () {
+    if (memUploader && memUploader.isBusy()) return;
+    openRec();
+  });
   rec.cancelBtn.addEventListener('click', closeRec);
   rec.toggleBtn.addEventListener('click', function () {
     if (rec.recorder && rec.recorder.state === 'recording') stopRec(false);

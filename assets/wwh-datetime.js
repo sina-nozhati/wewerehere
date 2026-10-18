@@ -154,7 +154,7 @@
     if (meta && sched.tagline) {
       meta.setAttribute(
         'content',
-        'ما اینجا بودیم — ' + sched.tagline + '. ثبت‌نام و دریافت بلیت.'
+        'ما اینجا بودیم — ' + sched.tagline + '. رزرو حضور برای این شب.'
       );
     }
     global.__wwhEventAt = sched.eventDate;
@@ -181,7 +181,7 @@
       parts.push(
         rem <= 0
           ? 'ظرفیت تکمیل'
-          : 'ظرفیت ' + (typeof global.toPersian === 'function' ? global.toPersian(rem) : rem) + ' بلیت'
+          : 'ظرفیت باقی‌مانده: ' + (typeof global.toPersian === 'function' ? global.toPersian(rem) : rem) + ' نفر'
       );
     }
     return parts.join(' — ') || 'WE WERE HERE';

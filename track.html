@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0A0A0B">
-  <title>پیگیری بلیت — ما اینجا بودیم</title>
+  <title>پیگیری رزرو — ما اینجا بودیم</title>
   <link rel="icon" href="/assets/wwh-favicon.jpg?v=1" type="image/jpeg">
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg?v=1">
   <link rel="stylesheet" href="/assets/wwh-theme.css">
   <link rel="stylesheet" href="/assets/wwh-shell.css">
   <script src="/assets/wwh-map.js" defer></script>
-  <meta name="description" content="پیگیری وضعیت پرداخت و دریافت بلیت‌های رویداد ما اینجا بودیم — با شماره تماس.">
+  <meta name="description" content="پیگیری وضعیت درخواست رزرو و دریافت رزرو ورود رویداد ما اینجا بودیم — با شماره تماس یا سریال.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -607,10 +607,10 @@
     <section class="hero">
       <p class="hero__eyebrow">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-        پیگیری بلیت
+        پیگیری رزرو
       </p>
-      <h1 class="hero__title">بلیتت کجاست؟</h1>
-      <p class="hero__subtitle">شماره تماسی که باهاش ثبت‌نام کردی رو وارد کن تا وضعیت پرداخت و بلیت‌هات رو ببینی. اگه مرورگرت رو بستی هم نگران نباش — همه‌چیز اینجاست.</p>
+      <h1 class="hero__title">رزروت کجاست؟</h1>
+      <p class="hero__subtitle">شماره‌ای که باهاش درخواست رزرو دادی را وارد کن تا وضعیت بررسی و رزرو ورودت را ببینی. اگه مرورگر را بستی هم نگران نباش — همه‌چیز اینجاست.</p>
 
       <form class="lookup" id="lookup-form" novalidate>
         <label class="lookup__episode-label" for="track-event">اپیزود / اجرا</label>
@@ -620,7 +620,7 @@
         </div>
         <div class="lookup__or" aria-hidden="true">یا</div>
         <div class="lookup__group">
-          <input class="lookup__input" type="text" id="lookup-serial" placeholder="کد پیگیری / سریال (۴ رقم)" maxlength="4" inputmode="numeric" dir="ltr" aria-label="کد سریال بلیت">
+          <input class="lookup__input" type="text" id="lookup-serial" placeholder="کد پیگیری / سریال (۴ رقم)" maxlength="4" inputmode="numeric" dir="ltr" aria-label="سریال ۴رقمی رزرو ورود">
           <button type="submit" class="lookup__btn" id="lookup-btn">
             <span id="lookup-btn-text">پیگیری</span>
             <span class="spinner" id="lookup-spinner" style="display: none;"></span>
@@ -660,12 +660,14 @@
     }
 
     var STATUS_LABEL = {
-      pending: 'در انتظار تایید',
-      approved: 'تایید شده',
+      pending: 'در انتظار بررسی',
+      payment_submitted: 'در انتظار بررسی',
+      approved: 'رزرو تأیید شد',
       rejected: 'رد شده'
     };
     var STATUS_CLASS = {
       pending: 'badge--pending',
+      payment_submitted: 'badge--pending',
       approved: 'badge--approved',
       rejected: 'badge--rejected'
     };
@@ -846,7 +848,7 @@
       viewBtn.setAttribute('data-print', String(t.serial));
       viewBtn.setAttribute('data-download-url', t.printUrl || '');
       viewBtn.setAttribute('data-ticket-action', 'view');
-      viewBtn.textContent = 'مشاهده بلیت';
+      viewBtn.textContent = 'مشاهده رزرو ورود';
       actions.appendChild(viewBtn);
       var btn = document.createElement('button');
       btn.type = 'button';
@@ -854,7 +856,7 @@
       btn.setAttribute('data-print', String(t.serial));
       btn.setAttribute('data-download-url', t.printUrl || '');
       btn.setAttribute('data-ticket-action', 'download');
-      btn.textContent = 'دانلود بلیت';
+      btn.textContent = 'دانلود رزرو ورود';
       actions.appendChild(btn);
 
       stage.appendChild(summary);
@@ -865,7 +867,7 @@
       stage.dataset.ticketSerial = String(t.serial);
       stage.dataset.ticketPrintUrl = t.printUrl || '';
       if (!t.printUrl) {
-        art.innerHTML = '<p class="muted" style="padding:12px;font-size:13px;">بلیت از سرور قدیمی (Node) قابل دانلود نیست. روی VPS باید uvicorn (FastAPI) فعال باشد.</p>';
+        art.innerHTML = '<p class="muted" style="padding:12px;font-size:13px;">رزرو ورود از سرور قدیمی (Node) قابل دانلود نیست. روی VPS باید uvicorn (FastAPI) فعال باشد.</p>';
         return Promise.resolve(stage);
       }
       return fetchTicketInlineBlob(t.printUrl, t.serial)
@@ -875,7 +877,7 @@
         })
         .catch(function (err) {
           art.innerHTML = '<p class="muted" style="padding:12px;font-size:13px;">' +
-            escapeHtml(String(err && err.message ? err.message : 'پیش‌نمایش بلیت ناموفق')) +
+            escapeHtml(String(err && err.message ? err.message : 'پیش‌نمایش رزرو ورود ناموفق')) +
             '</p>';
           return stage;
         });
@@ -923,13 +925,13 @@
         obj.type = 'image/svg+xml';
         obj.data = url;
         obj.className = 'ticket-art__embed';
-        obj.setAttribute('aria-label', 'پیش‌نمایش بلیت');
+        obj.setAttribute('aria-label', 'پیش‌نمایش رزرو ورود');
         art.appendChild(obj);
         return;
       }
       var img = document.createElement('img');
       img.src = url;
-      img.alt = 'بلیت';
+      img.alt = 'رزرو ورود';
       art.appendChild(img);
     }
 
@@ -973,7 +975,7 @@
             '<div class="order__names">' + o.names.map(escapeHtml).join('، ') + '</div>' +
             '<div class="order__meta">ثبت‌شده در ' + fmtDate(o.createdAt) + '</div>' +
           '</div>' +
-          '<span class="badge ' + STATUS_CLASS[o.status] + '">' + STATUS_LABEL[o.status] + '</span>' +
+          '<span class="badge ' + (STATUS_CLASS[o.status] || 'badge--pending') + '" role="status">' + (STATUS_LABEL[o.status] || o.status) + '</span>' +
         '</div>' +
         receipt +
         note +
@@ -985,7 +987,7 @@
       results.innerHTML =
         '<div class="track-loading" role="status">' +
           '<span class="spinner" aria-hidden="true"></span>' +
-          '<p class="track-loading__text">در حال پیدا کردن بلیت…</p>' +
+          '<p class="track-loading__text">در حال پیدا کردن رزرو…</p>' +
           '<p class="track-loading__hint">لطفاً چند لحظه صبر کن</p>' +
         '</div>';
       results.classList.add('visible');
@@ -1048,14 +1050,15 @@
             '</div>';
           if (!res.orders.length && !res.tickets.length) {
             clearTrackBusy();
-            results.innerHTML = scopeHtml + '<div class="empty">برای این اپیزود و این شماره/سریال چیزی پیدا نشد.<br>اگه هنوز ثبت‌نام نکردی، <a href="/#register" style="color:var(--color-primary);">از اینجا شروع کن</a>.</div>';
+            results.innerHTML = scopeHtml + '<div class="empty">برای این اپیزود و این شماره/سریال چیزی پیدا نشد.<br>اگه هنوز درخواست رزرو ندادی، <a href="/#register" style="color:var(--color-primary);">از اینجا شروع کن</a>.</div>';
             results.classList.add('visible');
             results.scrollIntoView({ behavior: 'smooth', block: 'start' });
             return;
           }
           var html = scopeHtml;
-          if (res.orders.length && res.orders.every(function (o) { return o.status === 'pending'; })) {
-            html += '<div class="track-pending-banner">رسید شما ثبت شده و در انتظار تأیید ادمین است.</div>';
+          var pendingStatuses = { pending: 1, payment_submitted: 1 };
+          if (res.orders.length && res.orders.every(function (o) { return pendingStatuses[o.status]; })) {
+            html += '<div class="track-pending-banner" role="status">درخواست رزرو شما در انتظار بررسی است. بعد از تأیید، رزرو ورود صادر می‌شود.</div>';
           }
           var loc = (res.tickets && res.tickets.length && ev.location) ? ev.location : null;
           if (loc && loc.lat != null && loc.lng != null) {
@@ -1064,10 +1067,10 @@
           return Promise.all(res.tickets.map(ticketHtml)).then(function (cards) {
             if (cards.length) {
               html += '<div class="tickets-block">' +
-                '<h2 class="tickets-block__title">بلیت‌های تو آماده‌ست ♥</h2>' +
-                '<p class="tickets-block__sub">تیکت‌هات رو ذخیره کن — شماره سریال، کلید خاطره‌های اون شبه.</p>' +
-                '<p class="tickets-block__sub">همراه داشتن بلیت الزامی نیست؛ کافیه اسمت رو در ورودی بگی.</p>' +
-                '<p class="tickets-block__sub tickets-block__sub--pair">بلیت‌های A و B جفت‌اند: بلیت B را بالای A بگذار تا کوه‌ها و حرف W کامل شوند — بهانه‌ای برای پیدا کردن همدیگر آن شب.</p>' +
+                '<h2 class="tickets-block__title" role="status">رزروت تأیید شد — رزرو ورود آماده‌ست</h2>' +
+                '<p class="tickets-block__sub">رزرو ورود را ذخیره کن — شماره سریال، کلید خاطره‌های آن شب است.</p>' +
+                '<p class="tickets-block__sub">همراه داشتن رزرو ورود الزامی نیست؛ کافی است اسمت را در ورودی بگویی.</p>' +
+                '<p class="tickets-block__sub tickets-block__sub--pair">رزروهای ورود A و B جفت‌اند: رزرو B را بالای A بگذار تا کوه‌ها و حرف W کامل شوند — بهانه‌ای برای پیدا کردن همدیگر آن شب.</p>' +
                 '<div class="tickets-list">' + cards.map(function (c) { return c.outerHTML; }).join('') + '</div>' +
               '</div>';
             }
@@ -1079,7 +1082,7 @@
             results.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }).catch(function (err) {
             clearTrackBusy();
-            results.innerHTML = html + '<div class="empty">خطا در نمایش بلیت: ' + escapeHtml(err && err.message ? err.message : 'نامشخص') + '</div>';
+            results.innerHTML = html + '<div class="empty">خطا در نمایش رزرو ورود: ' + escapeHtml(err && err.message ? err.message : 'نامشخص') + '</div>';
             results.classList.add('visible');
           });
         })
@@ -1197,7 +1200,7 @@
         }
         downloadTicketFromApi(dl, serial, action).catch(function (err) {
           console.error(err);
-          alert('دانلود بلیت ناموفق بود.');
+          alert('دانلود رزرو ورود ناموفق بود.');
         });
         return;
       }

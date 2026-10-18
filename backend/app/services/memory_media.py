@@ -15,32 +15,7 @@ from app.config import settings
 
 log = logging.getLogger("wwh.memory_media")
 
-# Magic-byte sniff — do not trust client Content-Type alone.
-_JPEG = (b"\xff\xd8\xff", "image/jpeg", ".jpg", "image")
-_PNG = (b"\x89PNG\r\n\x1a\n", "image/png", ".png", "image")
-_WEBP_RIFF = b"RIFF"
-_WEBP_WEBP = b"WEBP"
-_FTYP = b"ftyp"
-_MP4_BRANDS = (b"isom", b"iso2", b"mp41", b"mp42", b"MSNV", b"M4V ", b"avc1", b"qt  ")
-_WEBM = (b"\x1a\x45\xdf\xa3", "video/webm", ".webm", "video")
-
-_DENIED_EXT = frozenset(
-    {
-        ".svg",
-        ".svgz",
-        ".html",
-        ".htm",
-        ".js",
-        ".mjs",
-        ".exe",
-        ".bat",
-        ".cmd",
-        ".sh",
-        ".php",
-        ".py",
-        ".wasm",
-    }
-)
+from app.services.media_guard import MediaGuardError, guard_media, sniff_media as _guard_sniff
 
 
 class MemoryMediaError(ValueError):
@@ -49,28 +24,24 @@ class MemoryMediaError(ValueError):
 
 def sniff_media(data: bytes, filename_hint: str = "") -> tuple[str, str, str]:
     """Return (media_kind, mime, ext). Raises MemoryMediaError."""
-    if not data or len(data) < 12:
-        raise MemoryMediaError("file_too_small")
-    hint = (filename_hint or "").lower()
-    for bad in _DENIED_EXT:
-        if hint.endswith(bad):
-            raise MemoryMediaError("file_type_denied")
+    try:
+        return _guard_sniff(data, filename_hint)
+    except MediaGuardError as e:
+        raise MemoryMediaError(e.code) from e
 
-    if data.startswith(_JPEG[0]):
-        return _JPEG[3], _JPEG[1], _JPEG[2]
-    if data.startswith(_PNG[0]):
-        return _PNG[3], _PNG[1], _PNG[2]
-    if data.startswith(_WEBP_RIFF) and data[8:12] == _WEBP_WEBP:
-        return "image", "image/webp", ".webp"
-    if data.startswith(_WEBM[0]):
-        return _WEBM[3], _WEBM[1], _WEBM[2]
-    # ISO BMFF (MP4 / QuickTime)
-    if len(data) >= 12 and data[4:8] == _FTYP:
-        brand = data[8:12]
-        if brand in _MP4_BRANDS or brand.strip():
-            return "video", "video/mp4", ".mp4"
 
-    raise MemoryMediaError("unsupported_type")
+def guard_and_prepare(
+    data: bytes,
+    filename_hint: str = "",
+    *,
+    max_bytes: int | None = None,
+) -> tuple[str, str, str, bytes]:
+    """Sniff + sanitize images. Returns (kind, mime, ext, safe_bytes)."""
+    try:
+        g = guard_media(data, filename_hint, max_bytes=max_bytes)
+    except MediaGuardError as e:
+        raise MemoryMediaError(e.code) from e
+    return g.kind, g.mime, g.ext, g.data
 
 
 def max_bytes_for_kind(kind: str) -> int:

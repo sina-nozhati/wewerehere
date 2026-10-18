@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0A0A0B">
   <meta name="color-scheme" content="dark">
-  <title>ما اینجا بودیم</title>
+  <title>رزرو حضور | WE WERE HERE</title>
   <link rel="icon" href="/assets/wwh-favicon.jpg?v=1" type="image/jpeg">
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg?v=1">
   <link rel="stylesheet" href="/assets/wwh-theme.css">
@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="/assets/wwh-loader.css">
   <link rel="stylesheet" href="/assets/wwh-perf.css">
   <script src="/assets/wwh-perf.js"></script>
-  <meta name="description" content="ما اینجا بودیم — رویداد موسیقی. ثبت‌نام کنید و تیکت اختصاصی خود را دریافت کنید.">
+  <meta name="description" content="WE WERE HERE — برای این شب جا رزرو کن. پیگیری رزرو و خاطرات بعد از اجرا.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1528,9 +1528,9 @@
       <p class="hero-capacity" id="capacity-badge" role="status" aria-atomic="true">ظرفیت محدود</p>
 
       <div class="hero__cta">
-        <a href="#register" class="btn btn--filled btn--shine btn--glow" id="hero-register-cta">ثبت‌نام و دریافت تیکت</a>
+        <a href="#register" class="btn btn--filled btn--shine btn--glow" id="hero-register-cta">رزرو حضور</a>
         <div class="hero__cta-secondary">
-          <a href="/track" class="btn btn--outline btn--small btn--secondary-hero">پیگیری بلیت</a>
+          <a href="/track" class="btn btn--outline btn--small btn--secondary-hero">پیگیری رزرو</a>
           <a href="/support" class="btn btn--outline btn--small btn--secondary-hero">پشتیبانی</a>
         </div>
       </div>
@@ -1552,9 +1552,9 @@
        ============================================ -->
   <section class="registration" id="register">
     <div class="container">
-      <p class="section-label reveal">ثبت‌نام</p>
-      <h2 class="section-title reveal">جای تو اینجا خالیه</h2>
-      <p class="sales-banner" id="sales-closed-banner" hidden role="status">فروش بلیت برای این رویداد فعلاً بسته است — برای سوال به پشتیبانی پیام بده.</p>
+      <p class="section-label reveal">رزرو حضور</p>
+      <h2 class="section-title reveal">برای این شب جا رزرو کن</h2>
+      <p class="sales-banner" id="sales-closed-banner" hidden role="status">رزرو برای این رویداد فعلاً باز نیست — برای سوال به پشتیبانی پیام بده.</p>
       <div class="ornament reveal" aria-hidden="true">
         <span class="ornament__line"></span>
         <svg class="ornament__glyph" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2v20M4 6l8 4 8-4M4 18l8-4 8 4"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
@@ -1562,10 +1562,10 @@
       </div>
 
       <!-- Steps -->
-      <ol class="steps reveal" id="steps" aria-label="مراحل ثبت‌نام">
-        <li class="step is-active" data-step="1"><span class="step__num">۱</span><span>اطلاعات</span></li>
-        <li class="step" data-step="2"><span class="step__num">۲</span><span>پرداخت و رسید</span></li>
-        <li class="step" data-step="3"><span class="step__num">۳</span><span>تایید و دریافت</span></li>
+      <ol class="steps reveal" id="steps" aria-label="مراحل رزرو حضور">
+        <li class="step is-active" data-step="1"><span class="step__num">۱</span><span>نفرات</span></li>
+        <li class="step" data-step="2"><span class="step__num">۲</span><span>واریز و رسید</span></li>
+        <li class="step" data-step="3"><span class="step__num">۳</span><span>ارسال درخواست</span></li>
       </ol>
 
       <!-- STEP 1: details -->
@@ -1577,13 +1577,13 @@
         </div>
 
         <div class="form__group">
-          <label class="form__label" id="qty-label">تعداد بلیت</label>
+          <label class="form__label" id="qty-label">تعداد نفرات</label>
           <div class="stepper">
-            <button type="button" class="stepper__btn" id="qty-minus" aria-label="کاهش تعداد بلیت">
+            <button type="button" class="stepper__btn" id="qty-minus" aria-label="کاهش تعداد نفرات">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
             <span class="stepper__value" id="qty-value" aria-live="polite">۱</span>
-            <button type="button" class="stepper__btn" id="qty-plus" aria-label="افزایش تعداد بلیت">
+            <button type="button" class="stepper__btn" id="qty-plus" aria-label="افزایش تعداد نفرات">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           </div>
@@ -1592,7 +1592,7 @@
         <div class="form__names" id="names-container"></div>
 
         <button type="submit" class="btn btn--filled btn--shine form__submit" id="reg-next">
-          <span id="reg-next-text">ادامه به پرداخت</span>
+          <span id="reg-next-text">ادامه به واریز</span>
           <span class="spinner" id="reg-next-spinner" style="display: none;"></span>
         </button>
         <p class="form__server-error" id="form-server-error"></p>
@@ -1622,7 +1622,7 @@
                   <span class="gothic-card__field-value" id="card-holder">—</span>
                 </div>
                 <div class="gothic-card__field" style="text-align:left;">
-                  <span class="gothic-card__field-label">مبلغ قابل پرداخت</span>
+                  <span class="gothic-card__field-label">مبلغ برای قطعی‌سازی رزرو</span>
                   <span class="gothic-card__field-value" id="card-price">—</span>
                   <span class="gothic-card__field-label" id="card-price-rial" style="margin-top:6px;"></span>
                 </div>
@@ -1631,9 +1631,9 @@
           </div>
           <div class="card-info__meta">
             <span>بانک: <b id="card-bank">—</b></span>
-            <span>مبلغ هر بلیت: <b id="card-unit-price">—</b></span>
+            <span>مبلغ هر نفر: <b id="card-unit-price">—</b></span>
           </div>
-          <p class="card-info__hint" id="card-hint">بعد از واریز، رسید پرداخت رو در پایین ثبت کن.</p>
+          <p class="card-info__hint" id="card-hint">بعد از واریز، رسید را پایین ثبت کن تا درخواست رزرو ارسال شود.</p>
         </div>
 
         <form id="payment-form" novalidate>
@@ -1644,20 +1644,20 @@
 
           <div class="form__group">
             <span class="form__label" id="receipt-image-label">یا تصویر رسید</span>
-            <label class="upload" for="receipt-image" id="upload-box">
+            <label class="upload" for="receipt-image" id="upload-box" aria-labelledby="receipt-image-label">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span id="upload-label">انتخاب تصویر رسید</span>
-              <span class="upload__hint">JPG یا PNG — حداکثر ۴۰ مگابایت</span>
+              <span class="upload__hint">JPG / PNG / HEIC — حداکثر ۴۰ مگابایت</span>
             </label>
-            <input type="file" id="receipt-image" accept="image/*" class="sr-only">
-            <p class="form__error" id="error-receipt">لطفاً رسید رو به صورت متن یا تصویر وارد کن</p>
+            <input type="file" id="receipt-image" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,.jpg,.jpeg,.png,.webp,.heic,.heif,.avif" class="sr-only">
+            <p class="form__error" id="error-receipt">لطفاً رسید را به صورت متن یا تصویر وارد کن</p>
           </div>
 
           <button type="submit" class="btn btn--accent btn--shine form__submit" id="pay-submit">
-            <span id="pay-submit-text">ثبت رسید و تکمیل ثبت‌نام</span>
+            <span id="pay-submit-text">ثبت رسید و ارسال درخواست رزرو</span>
             <span class="spinner" id="pay-submit-spinner" style="display: none;"></span>
           </button>
-          <button type="button" class="btn btn--outline form__submit form__back" id="pay-back">بازگشت به اطلاعات</button>
+          <button type="button" class="btn btn--outline form__submit form__back" id="pay-back">بازگشت به نفرات</button>
           <p class="form__server-error" id="pay-server-error"></p>
         </form>
       </div>
@@ -1667,10 +1667,10 @@
         <div class="result__icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
         </div>
-        <h3 class="section-title" style="margin-bottom: 6px;">در انتظار تایید</h3>
-        <p class="result__note">رسیدت ثبت شد. به محض تایید ادمین، تیکت‌هات فعال می‌شن. برای پیگیری بلیت، شماره‌ات رو در صفحه پیگیری بلیت وارد کن.</p>
+        <h3 class="section-title" style="margin-bottom: 6px;" role="status">درخواست رزرو شما در انتظار بررسی است</h3>
+        <p class="result__note">رسید ثبت شد. بعد از بررسی ادمین، رزرو تأیید می‌شود و رزرو ورود صادر می‌گردد. برای پیگیری، شماره یا سریال را در صفحه پیگیری رزرو وارد کن.</p>
         <div class="result__actions">
-          <a href="/track" class="btn btn--filled btn--shine" id="pending-track-link">پیگیری بلیت</a>
+          <a href="/track" class="btn btn--filled btn--shine" id="pending-track-link">پیگیری رزرو</a>
           <a href="/support" class="btn btn--outline btn--small" id="pending-support-link">پشتیبانی</a>
         </div>
       </div>
@@ -1733,7 +1733,7 @@
 
       <form class="access-form reveal" id="access-form" novalidate>
         <div class="access-form__input-group">
-          <input class="access-form__input" type="text" id="access-serial" placeholder="شماره سریال" required inputmode="numeric" maxlength="4" dir="ltr" aria-label="شماره سریال تیکت">
+          <input class="access-form__input" type="text" id="access-serial" placeholder="شماره سریال" required inputmode="numeric" maxlength="4" dir="ltr" aria-label="سریال ۴رقمی رزرو ورود">
           <button type="submit" class="access-form__btn">ورود</button>
         </div>
       </form>
@@ -1989,7 +1989,7 @@
               num.textContent = info.cardNumber;
               holder.textContent = info.cardHolder || '—';
               bank.textContent = info.bankName || '—';
-              hint.textContent = 'بعد از واریز، رسید پرداخت رو در پایین ثبت کن.';
+              hint.textContent = 'بعد از واریز، رسید را پایین ثبت کن تا درخواست رزرو ارسال شود.';
             } else {
               num.textContent = 'به‌زودی اعلام می‌شود';
               holder.textContent = '—';
@@ -2010,6 +2010,18 @@
           .catch(function () { /* keep placeholders */ });
       }
 
+      var RECEIPT_MAX = 40 * 1024 * 1024;
+      function isValidReceiptImage(file) {
+        if (!file) return false;
+        var name = (file.name || '').toLowerCase();
+        var type = (file.type || '').toLowerCase();
+        if (/\.(gif|svg|svgz|html?|js|exe|php)$/i.test(name)) return false;
+        if (type && type.indexOf('image/') === 0 && !/^image\/(jpeg|jpg|png|webp|heic|heif|avif)$/.test(type)) return false;
+        if (!type && !/\.(jpe?g|png|webp|heic|heif|avif)$/i.test(name)) return false;
+        if (file.size > RECEIPT_MAX) return false;
+        return true;
+      }
+
       // ---- receipt image preview ----
       receiptImage.addEventListener('change', function () {
         var file = receiptImage.files && receiptImage.files[0];
@@ -2018,6 +2030,17 @@
           uploadLabel.textContent = 'انتخاب تصویر رسید';
           return;
         }
+        if (!isValidReceiptImage(file)) {
+          receiptImage.value = '';
+          uploadBox.classList.remove('has-file');
+          uploadLabel.textContent = 'انتخاب تصویر رسید';
+          var prevBad = uploadBox.querySelector('.upload__preview');
+          if (prevBad) prevBad.remove();
+          payServerError.textContent = 'فقط JPG/PNG/WebP/HEIC تا ۴۰ مگابایت برای رسید مجاز است.';
+          payServerError.classList.add('visible');
+          return;
+        }
+        payServerError.classList.remove('visible');
         uploadBox.classList.add('has-file');
         uploadLabel.textContent = file.name;
         var prev = uploadBox.querySelector('.upload__preview');
@@ -2045,16 +2068,26 @@
         var payload = { phone: collected.phone, names: collected.names, receiptText: text, eventId: window.__wwhEventId };
         var chain = Promise.resolve();
         if (file) {
+          if (!isValidReceiptImage(file)) {
+            payServerError.textContent = 'فقط JPG/PNG/WebP/HEIC تا ۴۰ مگابایت برای رسید مجاز است.';
+            payServerError.classList.add('visible');
+            return;
+          }
           chain = readAsBase64(file).then(function (b64) {
-            payload.receiptImage = { mime: file.type || 'image/png', data: b64 };
+            payload.receiptImage = {
+              mime: file.type || 'image/jpeg',
+              name: file.name || 'receipt.jpg',
+              data: b64
+            };
           });
         }
 
         chain
           .then(function () {
-            payText.style.display = 'none';
+            payText.textContent = 'در حال ارسال درخواست…';
             paySpinner.style.display = 'block';
             paySubmit.disabled = true;
+            paySubmit.setAttribute('aria-busy', 'true');
             payServerError.classList.remove('visible');
             return fetch('/api/orders', {
               method: 'POST',
@@ -2082,13 +2115,14 @@
             showStep(3);
           })
           .catch(function (err) {
-            payServerError.textContent = 'خطا در ثبت سفارش: ' + err.message;
+            payServerError.textContent = 'خطا در ثبت درخواست رزرو: ' + err.message;
             payServerError.classList.add('visible');
             window.refreshCapacity && window.refreshCapacity();
           })
           .finally(function () {
-            payText.style.display = '';
+            payText.textContent = 'ثبت رسید و ارسال درخواست رزرو';
             paySpinner.style.display = 'none';
+            paySubmit.removeAttribute('aria-busy');
             var soldOut = (typeof window.remainingTickets === 'number') && window.remainingTickets <= 0;
             paySubmit.disabled = soldOut;
           });
@@ -2115,7 +2149,7 @@
       samples.forEach(function (s) {
         if (!s.el) return;
         renderTicketArt(s.el, s.ticket)
-          .catch(function () { s.el.innerHTML = '<p class="ticket-stage__note">نمونه بلیت در دسترس نیست.</p>'; });
+          .catch(function () { s.el.innerHTML = '<p class="ticket-stage__note">نمونه رزرو ورود در دسترس نیست.</p>'; });
       });
     })();
 
@@ -2135,7 +2169,7 @@
         if (!/^\d{1,4}$/.test(raw)) {
           result.classList.add('visible');
           gallery.innerHTML = '';
-          message.textContent = 'شماره سریال معتبر نیست. عدد ۴ رقمی روی تیکتت رو وارد کن.';
+          message.textContent = 'سریال معتبر نیست. عدد ۴ رقمی روی رزرو ورود را وارد کن.';
           return;
         }
 
@@ -2155,7 +2189,7 @@
             var go = function (finalSlug) {
               finalSlug = (finalSlug || '').trim();
               if (!finalSlug) {
-                message.textContent = 'رویداد این بلیت مشخص نیست. کمی بعد دوباره تلاش کن یا از لینک خاطرات رویداد وارد شو.';
+                message.textContent = 'رویداد این رزرو ورود مشخص نیست. کمی بعد دوباره تلاش کن یا از لینک خاطرات رویداد وارد شو.';
                 return;
               }
               message.textContent = 'خوش اومدی' + (res.ticket && res.ticket.name ? '، ' + res.ticket.name : '') + '. در حال ورود به گالری شب…';

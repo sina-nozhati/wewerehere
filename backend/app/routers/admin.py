@@ -29,7 +29,8 @@ from app.models import (
     Ticket,
 )
 from app.services.memory_audit import write_audit
-from app.services.memory_media import absolute_memory_path, delete_memory_file, sniff_media, store_memory_file
+from app.services.media_guard import MediaGuardError, guard_media
+from app.services.memory_media import absolute_memory_path, delete_memory_file, store_memory_file
 from app.services.events import FEATURED_KEY, event_at_iso, get_featured_event_id, parse_event_at, set_featured_event_id
 from app.services.orders import approve_order, reject_order
 from app.services import notify as notify_svc
@@ -133,14 +134,18 @@ class SupportReplyBody(BaseModel):
     body: str
 
 
+# Kept for reference / legacy responses — storage uses media_guard sniff.
 MIME_EXT = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
     "image/webp": ".webp",
-    "image/gif": ".gif",
+    "image/heic": ".heic",
+    "image/heif": ".heif",
+    "image/avif": ".avif",
     "video/mp4": ".mp4",
     "video/webm": ".webm",
     "video/quicktime": ".mov",
+    "video/x-m4v": ".m4v",
 }
 
 
@@ -690,7 +695,7 @@ def admin_tickets_export_zip(
         select(Ticket).where(Ticket.event_id == eid, Ticket.status == "active").order_by(Ticket.id.asc())
     ).all()
     if not rows:
-        raise HTTPException(404, {"error": "no printable tickets", "message": "بلیتی برای خروجی نیست"})
+        raise HTTPException(404, {"error": "no printable tickets", "message": "رزروی برای خروجی نیست"})
     ev = db.get(Event, eid)
     ranks = active_rank_map(db, eid)
     buf = io.BytesIO()
@@ -1016,25 +1021,26 @@ def _store_archive_media(
     caption: str = "",
     event_id: int | None = None,
 ) -> dict:
-    if not re.match(r"^(image|video)/", mime or ""):
-        raise HTTPException(400, {"error": "unsupported type"})
-    ext = MIME_EXT.get(mime)
-    if not ext:
-        raise HTTPException(400, {"error": "unsupported mime type"})
     if len(raw) > 40 * 1024 * 1024:
         raise HTTPException(413, {"error": "file too large"})
+    try:
+        guarded = guard_media(raw, original_name, max_bytes=40 * 1024 * 1024)
+    except MediaGuardError as e:
+        raise HTTPException(400, {"error": e.code}) from e
+    # Ignore client-claimed mime; use sniffed + sanitized result
+    _ = mime
     eid = event_id or _default_event_id(db)
     settings.archive_dir.mkdir(parents=True, exist_ok=True)
     import secrets
 
-    fname = f"{int(datetime.now().timestamp() * 1000):x}-{secrets.token_hex(4)}{ext}"
-    (settings.archive_dir / fname).write_bytes(raw)
+    fname = f"{int(datetime.now().timestamp() * 1000):x}-{secrets.token_hex(4)}{guarded.ext}"
+    (settings.archive_dir / fname).write_bytes(guarded.data)
     m = Media(
         event_id=eid,
         filename=fname,
         original_name=(original_name or "upload")[:200],
-        mime=mime,
-        size=len(raw),
+        mime=guarded.mime,
+        size=len(guarded.data),
         caption=(caption or "")[:500],
         access_level="archive_private",
     )
@@ -1384,12 +1390,10 @@ def admin_media_publish_to_gallery(
         raise HTTPException(404, {"error": "missing_file"})
     raw = src.read_bytes()
     try:
-        kind, mime, ext = sniff_media(raw, m.original_name or m.filename)
-    except Exception:
-        # Fall back to stored mime
-        mime = m.mime or "application/octet-stream"
-        kind = "video" if mime.startswith("video/") else "image"
-        ext = Path(m.filename).suffix or ".bin"
+        guarded = guard_media(raw, m.original_name or m.filename)
+    except MediaGuardError as e:
+        raise HTTPException(400, {"error": e.code, "message": "فایل آرشیو برای انتشار معتبر نیست"}) from e
+    kind, mime, ext, raw = guarded.kind, guarded.mime, guarded.ext, guarded.data
 
     stored = store_memory_file(m.event_id, raw, ext)
     now = datetime.now(timezone.utc)

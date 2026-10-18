@@ -645,8 +645,8 @@
         <nav class="admin-nav" id="admin-nav" aria-label="بخش‌های مدیریت">
           <button type="button" class="admin-nav__btn" data-panel="dashboard" aria-current="page">داشبورد</button>
           <button type="button" class="admin-nav__btn" data-panel="events">رویداد</button>
-          <button type="button" class="admin-nav__btn" data-panel="tickets">بلیت‌ها</button>
-          <button type="button" class="admin-nav__btn" data-panel="orders">سفارش‌ها</button>
+          <button type="button" class="admin-nav__btn" data-panel="tickets">رزروها</button>
+          <button type="button" class="admin-nav__btn" data-panel="orders">درخواست‌های رزرو</button>
           <button type="button" class="admin-nav__btn" data-panel="memories">خاطرات</button>
           <button type="button" class="admin-nav__btn" data-panel="media">آرشیو</button>
           <button type="button" class="admin-nav__btn" data-panel="support">پشتیبانی</button>
@@ -668,12 +668,12 @@
               <span class="kpi__amount" id="kpi-revenue-amount">—</span>
               <span class="kpi__unit">تومان</span>
             </div>
-            <div class="kpi__hint">بلیت فعال × قیمت رویداد</div>
+            <div class="kpi__hint">رزرو ورود فعال × قیمت رویداد</div>
           </div>
           <button type="button" class="kpi kpi--click" data-goto="orders" id="kpi-orders">
-            <div class="kpi__label">سفارش در انتظار</div>
+            <div class="kpi__label">رزرو در انتظار</div>
             <div class="kpi__value" id="kpi-orders-val">—</div>
-            <div class="kpi__hint" id="kpi-orders-hint">کل سفارش‌ها</div>
+            <div class="kpi__hint" id="kpi-orders-hint">کل درخواست‌های رزرو</div>
           </button>
           <button type="button" class="kpi kpi--click" data-goto="memories" id="kpi-memories">
             <div class="kpi__label">خاطرات در انتظار</div>
@@ -688,16 +688,16 @@
           <div class="kpi" id="kpi-groups">
             <div class="kpi__label">گروه A / B</div>
             <div class="kpi__value" id="kpi-groups-val">—</div>
-            <div class="kpi__hint">بلیت‌های فعال</div>
+            <div class="kpi__hint">رزروهای فعال</div>
           </div>
         </div>
 
         <div class="dash-card dash-card--wide" style="margin-bottom:14px;">
           <div class="dash-card__title">اقدامات سریع</div>
           <div class="dash-actions">
-            <button type="button" class="btn btn--ghost" data-goto="orders">بررسی سفارش‌ها</button>
+            <button type="button" class="btn btn--ghost" data-goto="orders">بررسی درخواست‌های رزرو</button>
             <button type="button" class="btn btn--ghost" data-goto="memories">تأیید خاطرات</button>
-            <button type="button" class="btn btn--ghost" data-goto="tickets">مدیریت بلیت</button>
+            <button type="button" class="btn btn--ghost" data-goto="tickets">مدیریت رزرو ورود</button>
             <button type="button" class="btn btn--ghost" data-goto="events">ویرایش رویداد</button>
           </div>
         </div>
@@ -710,8 +710,8 @@
 
         <div class="dash-charts">
           <div class="dash-card">
-            <div class="dash-card__title">سفارش‌ها بر اساس وضعیت</div>
-            <canvas id="chart-orders" height="180" aria-label="نمودار میله‌ای وضعیت سفارش‌ها"></canvas>
+            <div class="dash-card__title">درخواست‌های رزرو بر اساس وضعیت</div>
+            <canvas id="chart-orders" height="180" aria-label="نمودار میله‌ای وضعیت درخواست‌های رزرو"></canvas>
           </div>
           <div class="dash-card">
             <div class="dash-card__title">خاطرات شب</div>
@@ -719,8 +719,8 @@
             <div class="mem-legend" id="mem-legend"></div>
           </div>
           <div class="dash-card dash-card--wide">
-            <div class="dash-card__title">صدور بلیت — ۱۴ روز اخیر</div>
-            <canvas id="chart-issued" height="160" aria-label="نمودار خطی صدور بلیت روزانه"></canvas>
+            <div class="dash-card__title">صدور رزرو ورود — ۱۴ روز اخیر</div>
+            <canvas id="chart-issued" height="160" aria-label="نمودار خطی صدور رزرو ورود روزانه"></canvas>
           </div>
         </div>
       </section>
@@ -732,8 +732,8 @@
           <button type="button" class="btn btn--primary" id="refresh-events">تازه‌سازی</button>
           <button type="button" class="btn btn--ghost" id="feature-event-btn">انتخاب به‌عنوان لندینگ</button>
           <button type="button" class="btn btn--ghost" id="publish-event-btn">انتشار</button>
-          <button type="button" class="btn btn--ghost" id="open-sales-btn">باز کردن فروش</button>
-          <button type="button" class="btn btn--ghost" id="close-sales-btn">بستن فروش</button>
+          <button type="button" class="btn btn--ghost" id="open-sales-btn">باز کردن رزرو</button>
+          <button type="button" class="btn btn--ghost" id="close-sales-btn">بستن رزرو</button>
         </div>
         <div class="status-badges" id="event-live-status"></div>
         <form id="event-form" class="form-grid">
@@ -749,7 +749,7 @@
           <div><label for="ev-host-venue">محل میزبانی (اختیاری)</label><input id="ev-host-venue" placeholder="مثلاً کافه یا فضای میزبان"></div>
           <div class="loc-block" id="ev-location-block">
             <p class="loc-block__title">مکان اجرا (نقشه پیگیری)</p>
-            <p class="loc-block__hint">روی نقشه کلیک کنید تا پین جابه‌جا شود، یا لینک نشان/گوگل‌مپ را بچسبانید تا مختصات دقیق پر شود. فقط با «انتشار روی پیگیری» برای دارندگان بلیت دیده می‌شود.</p>
+            <p class="loc-block__hint">روی نقشه کلیک کنید تا پین جابه‌جا شود، یا لینک نشان/گوگل‌مپ را بچسبانید تا مختصات دقیق پر شود. فقط با «انتشار روی پیگیری» برای دارندگان رزرو ورود دیده می‌شود.</p>
             <div class="loc-row">
               <div><label for="ev-lat">عرض جغرافیایی (lat)</label><input id="ev-lat" dir="ltr" inputmode="decimal" placeholder="37.492" autocomplete="off"></div>
               <div><label for="ev-lng">طول جغرافیایی (lng)</label><input id="ev-lng" dir="ltr" inputmode="decimal" placeholder="49.405" autocomplete="off"></div>
@@ -814,17 +814,17 @@
       </section>
 
       <section class="admin-panel" data-panel="tickets" id="panel-tickets" hidden>
-      <h2>بلیت‌ها</h2>
+      <h2>رزروها</h2>
       <div class="toolbar">
         <button type="button" class="btn btn--ghost" id="refresh-tickets">تازه‌سازی</button>
         <button type="button" class="btn btn--ghost" id="export-csv">خروجی CSV (لیست ورود)</button>
-        <button type="button" class="btn btn--ghost" id="export-tickets-zip">خروجی تصویر بلیت‌ها (ZIP)</button>
-        <button type="button" class="btn btn--ghost" id="sample-ticket-btn">دانلود بلیت نمونه</button>
+        <button type="button" class="btn btn--ghost" id="export-tickets-zip">خروجی تصویر رزروها (ZIP)</button>
+        <button type="button" class="btn btn--ghost" id="sample-ticket-btn">دانلود رزرو نمونه</button>
         <label class="muted" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
           <input type="checkbox" id="tickets-show-revoked"> نمایش لغو‌شده‌ها
         </label>
         <span class="spacer"></span>
-        <button type="button" class="btn btn--primary" id="add-ticket-btn">افزودن بلیت</button>
+        <button type="button" class="btn btn--primary" id="add-ticket-btn">افزودن رزرو</button>
         <span class="muted" id="ticket-count"></span>
       </div>
 
@@ -872,9 +872,9 @@
       </section>
 
       <section class="admin-panel" data-panel="orders" id="panel-orders" hidden>
-      <h2>سفارش‌ها و رسیدها</h2>
+      <h2>درخواست‌های رزرو و رسیدها</h2>
       <div class="toolbar">
-        <div class="filter" id="orders-filter" role="tablist" aria-label="فیلتر وضعیت سفارش">
+        <div class="filter" id="orders-filter" role="tablist" aria-label="فیلتر وضعیت درخواست رزرو">
           <button type="button" data-status="pending">در انتظار</button>
           <button type="button" data-status="approved">تایید شده</button>
           <button type="button" data-status="rejected">رد شده</button>
@@ -891,7 +891,7 @@
       <section class="admin-panel" data-panel="memories" id="panel-memories" hidden>
       <h2>خاطرات شب</h2>
       <div class="card" style="margin-bottom:18px;">
-        <p class="muted" style="margin-bottom:12px;font-size:0.85rem;">لینک QR برای ورود مهمان‌ها با سریال ۴رقمی بلیت. آپلودها تا تأیید شما خصوصی می‌مانند.</p>
+        <p class="muted" style="margin-bottom:12px;font-size:0.85rem;">لینک QR برای ورود مهمان‌ها با سریال ۴رقمی رزرو ورود. آپلودها تا تأیید شما خصوصی می‌مانند.</p>
         <div class="toolbar" style="margin-bottom:12px;flex-wrap:wrap;gap:10px;">
           <input type="text" id="mem-link" dir="ltr" readonly style="flex:1;min-width:200px;font-family:var(--font-mono);font-size:0.8rem;" placeholder="/events/…/memories">
           <button type="button" class="btn btn--ghost btn--sm" id="mem-copy-link">کپی لینک</button>
@@ -1070,7 +1070,7 @@
         var m = d.memories || {};
         var ev = d.event || {};
         document.getElementById('dash-event-title').textContent =
-          (ev.title || 'رویداد') + (ev.salesStatus === 'open' ? ' — فروش باز' : ' — فروش بسته');
+          (ev.title || 'رویداد') + (ev.salesStatus === 'open' ? ' — رزرو باز' : ' — رزرو بسته');
         document.getElementById('kpi-guests-val').textContent =
           toFa(g.active || 0) + ' / ' + toFa(g.capacity || 0);
         document.getElementById('kpi-guests-hint').textContent =
@@ -1109,7 +1109,7 @@
           data: {
             labels: ['در انتظار', 'تأیید', 'رد'],
             datasets: [{
-              label: 'تعداد سفارش',
+              label: 'تعداد درخواست رزرو',
               data: [o.pending || 0, o.approved || 0, o.rejected || 0],
               backgroundColor: ['#F5C542', '#5EC98B', '#FF5A5A'],
               borderWidth: 0,
@@ -1153,7 +1153,7 @@
           data: {
             labels: daily.map(function (x) { return (x.date || '').slice(5); }),
             datasets: [{
-              label: 'بلیت صادرشده',
+              label: 'رزرو ورود صادرشده',
               data: daily.map(function (x) { return x.count || 0; }),
               borderColor: '#D43F5A',
               backgroundColor: 'rgba(212,63,90,0.18)',
@@ -1256,7 +1256,7 @@
       var salesCls = e.salesStatus === 'open' ? 'badge--sales-open' : 'badge--sales-closed';
       el.innerHTML =
         statusBadge('وضعیت: ' + st, stCls) +
-        statusBadge('فروش: ' + (e.salesStatus || 'closed'), salesCls) +
+        statusBadge('رزرو: ' + (e.salesStatus || 'closed'), salesCls) +
         (e.isFeatured ? statusBadge('★ رویداد لندینگ', 'badge--featured') : statusBadge('لندینگ: خیر', 'badge--draft'));
     }
 
@@ -1605,7 +1605,7 @@
           try {
             var j = JSON.parse(txt);
             if (j && j.error === 'ticket_png_unavailable') {
-              msg = j.message || j.detail || 'رندر PNG بلیت در دسترس نیست (Cairo یا Chromium لازم است).';
+              msg = j.message || j.detail || 'رندر PNG رزرو در دسترس نیست (Cairo یا Chromium لازم است).';
             } else {
               msg = (window.WwhApi && WwhApi.errorMessage(j, txt)) || j.message || j.detail || txt;
             }
@@ -1629,9 +1629,9 @@
       api('/api/admin/tickets' + ticketListQuery()).then(function (res) {
         cachedTickets = res.tickets;
         var body = document.getElementById('tickets-body');
-        document.getElementById('ticket-count').textContent = 'مجموع: ' + toFa(res.tickets.length) + ' بلیت';
+        document.getElementById('ticket-count').textContent = 'مجموع: ' + toFa(res.tickets.length) + ' رزرو';
         if (!res.tickets.length) {
-          body.innerHTML = '<tr><td colspan="7" class="muted">هنوز بلیتی ثبت نشده.</td></tr>';
+          body.innerHTML = '<tr><td colspan="7" class="muted">هنوز رزروی ثبت نشده.</td></tr>';
           return;
         }
         body.innerHTML = res.tickets.map(function (t) {
@@ -1644,7 +1644,7 @@
             ? '<span class="muted">—</span>'
             : '<div class="actions">' +
               /* SMS resend parked until enamad — keep markup commented for later
-              '<button type="button" class="ok small" data-resend-issue-sms="' + t.id + '">ارسال مجدد صدور بلیت</button>' +
+              '<button type="button" class="ok small" data-resend-issue-sms="' + t.id + '">ارسال مجدد صدور رزرو ورود</button>' +
               */
               '<button type="button" class="btn btn--ghost btn--sm" data-edit="' + t.id + '">ویرایش</button>' +
               '<button type="button" class="btn btn--ghost btn--sm" data-export="' + t.id + '">چاپ/خروجی</button>' +
@@ -1724,9 +1724,9 @@
         var tid = exportBtn.getAttribute('data-export');
         fetch('/api/admin/tickets/' + tid + '/export', { headers: { Authorization: 'Bearer ' + TOKEN } })
           .then(function (r) { return downloadFromFetchResponse(r, 'ticket-' + tid); })
-          .catch(function (e2) { alert('خطا در خروجی بلیت: ' + e2.message); });
+          .catch(function (e2) { alert('خطا در خروجی رزرو: ' + e2.message); });
       } else if (delBtn) {
-        if (!confirm('این بلیت حذف شود؟')) return;
+        if (!confirm('این رزرو حذف شود؟')) return;
         api('/api/admin/tickets?id=' + delBtn.getAttribute('data-del'), { method: 'DELETE' })
           .then(loadTickets)
           .catch(function (e2) { alert('خطا: ' + e2.message); });
@@ -1742,7 +1742,7 @@
       var q = currentEventId ? ('?eventId=' + currentEventId) : '';
       fetch('/api/admin/tickets/sample' + q, { headers: { Authorization: 'Bearer ' + TOKEN } })
         .then(function (r) { return downloadFromFetchResponse(r, 'ticket-sample'); })
-        .catch(function (e2) { alert('خطا در بلیت نمونه: ' + e2.message); });
+        .catch(function (e2) { alert('خطا در رزرو نمونه: ' + e2.message); });
     });
     document.getElementById('export-tickets-zip').addEventListener('click', function () {
       var q = currentEventId ? ('?eventId=' + currentEventId) : '';
@@ -1753,7 +1753,7 @@
 
     document.getElementById('export-csv').addEventListener('click', function () {
       if (!cachedTickets || !cachedTickets.length) {
-        alert('بلیتی برای خروجی نیست.');
+        alert('رزروی برای خروجی نیست.');
         return;
       }
       var rows = [['serial', 'name', 'phone', 'group', 'created_at']];
@@ -1833,7 +1833,7 @@
       api('/api/admin/orders?status=' + encodeURIComponent(ordersFilter) + (currentEventId ? '&eventId=' + currentEventId : '')).then(function (res) {
         var list = document.getElementById('orders-list');
         if (!res.orders.length) {
-          list.innerHTML = '<p class="empty-note">سفارشی با این وضعیت پیدا نشد.</p>';
+          list.innerHTML = '<p class="empty-note">درخواست رزروی با این وضعیت پیدا نشد.</p>';
           return;
         }
         list.innerHTML = res.orders.map(function (o) {
@@ -1853,20 +1853,20 @@
           var capBadge = n <= 1
             ? '<span class="badge badge--capacity">تک‌نفره</span>'
             : '<span class="badge badge--capacity">' + toFa(n) + ' نفره</span>';
-          var capLine = '<div class="order-card__meta">' + toFa(n) + ' بلیت — ' + o.names.map(escapeHtml).join('، ') + '</div>';
+          var capLine = '<div class="order-card__meta">' + toFa(n) + ' نفر — ' + o.names.map(escapeHtml).join('، ') + '</div>';
           var issued = '';
           if (o.status === 'approved' && o.issuedTicketCount != null) {
-            issued = ' · صادرشده: ' + toFa(o.issuedTicketCount) + ' بلیت';
+            issued = ' · صادرشده: ' + toFa(o.issuedTicketCount) + ' رزرو ورود';
           }
           var actions = '';
           if (o.status === 'pending') {
             actions =
-              '<button type="button" class="btn btn--ok" data-approve="' + o.id + '">تایید و صدور بلیت</button>' +
+              '<button type="button" class="btn btn--ok" data-approve="' + o.id + '">تأیید و صدور رزرو</button>' +
               '<button type="button" class="btn btn--danger" data-reject="' + o.id + '">رد</button>';
           } else if (o.status === 'approved') {
             actions =
               /* SMS resend parked until enamad
-              '<button type="button" class="btn btn--ok btn--sm" data-resend-sms="' + o.id + '">ارسال مجدد صدور بلیت</button>';
+              '<button type="button" class="btn btn--ok btn--sm" data-resend-sms="' + o.id + '">ارسال مجدد صدور رزرو ورود</button>';
               */
               '';
           } else {
@@ -1909,15 +1909,15 @@
         var id = approveBtn.getAttribute('data-approve');
         var ev = cachedEvents.find(function (e) { return Number(e.id) === Number(currentEventId); });
         var warn = (!ev || !ev.eventAt)
-          ? 'تاریخ/ساعت رویداد خالی است؛ بلیت‌ها بدون تاریخ کامل صادر می‌شوند.\n\n'
+          ? 'تاریخ/ساعت رویداد خالی است؛ رزروهای ورود بدون تاریخ کامل صادر می‌شوند.\n\n'
           : '';
-        if (!confirm(warn + 'تایید این سفارش و صدور بلیت‌ها؟')) return;
+        if (!confirm(warn + 'تأیید این درخواست رزرو و صدور رزرو؟')) return;
         approveBtn.disabled = true;
         api('/api/admin/orders/approve?id=' + id, { method: 'POST', headers: authHeaders() })
           .then(function (res) {
             var n = (res.tickets && res.tickets.length) || 0;
             var sms = res.sms || {};
-            var msg = n ? (toFa(n) + ' بلیت صادر شد.') : 'تایید شد.';
+            var msg = n ? (toFa(n) + ' رزرو ورود صادر شد.') : 'رزرو تأیید شد.';
             /* SMS parked (enamad) — never claim a send succeeded while disabled */
             if (sms && !sms.disabled && sms.skipped === false && (sms.sent || sms.failed)) {
               msg += '\nپیامک: ' + toFa(sms.sent || 0) + ' موفق';
@@ -2109,7 +2109,7 @@
           return;
         }
         el.innerHTML = items.map(function (r) {
-          var who = r.actor === 'admin' ? 'ادمین' : (r.actor === 'ticket' ? 'بلیت' : r.actor);
+          var who = r.actor === 'admin' ? 'ادمین' : (r.actor === 'ticket' ? 'رزرو' : r.actor);
           var bit = '#' + (r.itemId || '—') + ' · ' + auditActionLabel(r.action) + ' · ' + who;
           if (r.meta && r.meta.displayName) bit += ' · ' + escapeHtml(r.meta.displayName);
           if (r.meta && r.meta.mediaId) bit += ' · media#' + r.meta.mediaId;
@@ -2392,7 +2392,7 @@
         root: '#admin-uploader',
         toFa: toFa,
         showCaption: true,
-        accept: 'image/*,video/*',
+        accept: 'image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,video/mp4,video/webm,video/quicktime,.jpg,.jpeg,.png,.webp,.heic,.heif,.avif,.mp4,.webm,.mov,.m4v',
         url: '/api/admin/media/upload',
         getHeaders: function () {
           return TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {};

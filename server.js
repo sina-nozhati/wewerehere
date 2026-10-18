@@ -222,7 +222,7 @@ function handleRegister(req, res) {
       const remaining = remainingTickets();
       if (names.length > remaining) {
         return send(res, 409, {
-          error: remaining <= 0 ? 'ظرفیت تکمیل شده است' : 'فقط ' + remaining + ' بلیت باقی مانده است'
+          error: remaining <= 0 ? 'ظرفیت تکمیل شده است' : ('ظرفیت باقی‌مانده: ' + remaining + ' نفر')
         });
       }
 
@@ -588,7 +588,7 @@ function handleAdminOrderApprove(req, res, url) {
   if (!id) return send(res, 400, { error: 'missing id' });
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(id);
   if (!order) return send(res, 404, { error: 'not found' });
-  if (order.status !== 'pending') return send(res, 409, { error: 'این سفارش قبلاً بررسی شده است' });
+  if (order.status !== 'pending') return send(res, 409, { error: 'این درخواست رزرو قبلاً بررسی شده است' });
 
   let names = [];
   try { names = JSON.parse(order.names); } catch { names = []; }
@@ -615,7 +615,7 @@ function handleAdminOrderReject(req, res, url) {
       if (!id) return send(res, 400, { error: 'missing id' });
       const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(id);
       if (!order) return send(res, 404, { error: 'not found' });
-      if (order.status !== 'pending') return send(res, 409, { error: 'این سفارش قبلاً بررسی شده است' });
+      if (order.status !== 'pending') return send(res, 409, { error: 'این درخواست رزرو قبلاً بررسی شده است' });
 
       let body = {};
       try { body = JSON.parse(buf.toString('utf8') || '{}'); } catch { body = {}; }

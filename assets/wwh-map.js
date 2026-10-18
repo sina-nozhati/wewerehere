@@ -295,10 +295,87 @@
     global.open(url, '_blank', 'noopener,noreferrer');
   }
 
+  function ensureChooserStyles() {
+    if (document.getElementById('wwh-map-chooser-css')) return;
+    var style = document.createElement('style');
+    style.id = 'wwh-map-chooser-css';
+    style.textContent =
+      '.wwh-map-chooser{position:fixed;inset:0;z-index:10050;display:flex;align-items:flex-end;justify-content:center;' +
+      'padding:max(12px,env(safe-area-inset-bottom)) 12px 12px;background:rgba(6,8,14,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);' +
+      'font-family:inherit;direction:rtl}' +
+      '.wwh-map-chooser__sheet{width:min(420px,100%);background:#141820;color:#e8eef6;border:1px solid rgba(196,184,214,.28);' +
+      'border-radius:16px;padding:18px 16px 14px;box-shadow:0 18px 48px rgba(0,0,0,.45)}' +
+      '.wwh-map-chooser__title{margin:0 0 6px;font-size:1.05rem;font-weight:700;text-align:center}' +
+      '.wwh-map-chooser__hint{margin:0 0 14px;font-size:.86rem;line-height:1.55;opacity:.78;text-align:center}' +
+      '.wwh-map-chooser__btn{display:block;width:100%;margin:0 0 8px;padding:13px 14px;border-radius:12px;border:1px solid rgba(196,184,214,.35);' +
+      'background:transparent;color:inherit;font:inherit;font-size:.95rem;font-weight:600;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}' +
+      '.wwh-map-chooser__btn--primary{background:rgba(212,63,90,.16);border-color:rgba(212,63,90,.55)}' +
+      '.wwh-map-chooser__btn:active{transform:scale(.98)}' +
+      '.wwh-map-chooser__cancel{margin-top:4px;border-color:transparent;opacity:.7;font-weight:500}';
+    document.head.appendChild(style);
+  }
+
+  function closeMapChooser(root) {
+    if (!root || !root.parentNode) return;
+    try {
+      root.parentNode.removeChild(root);
+    } catch (e) { /* ignore */ }
+    document.documentElement.classList.remove('wwh-map-chooser-open');
+  }
+
+  /**
+   * iPhone/iPad: let the guest pick Apple Maps or Google Maps.
+   * https://maps.apple.com opens Apple Maps; Google’s /maps/dir URL opens the
+   * Google Maps app when installed, otherwise Safari.
+   */
+  function showIosMapChooser(lat, lng) {
+    ensureChooserStyles();
+    closeMapChooser(document.getElementById('wwh-map-chooser'));
+
+    var root = document.createElement('div');
+    root.id = 'wwh-map-chooser';
+    root.className = 'wwh-map-chooser';
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-label', 'انتخاب نقشه');
+    root.innerHTML =
+      '<div class="wwh-map-chooser__sheet">' +
+        '<p class="wwh-map-chooser__title">مسیریابی با کدام نقشه؟</p>' +
+        '<p class="wwh-map-chooser__hint">روی آیفون می‌تونی نقشه‌های اپل یا گوگل مپ را انتخاب کنی.</p>' +
+        '<button type="button" class="wwh-map-chooser__btn wwh-map-chooser__btn--primary" data-map="apple">نقشه‌های اپل</button>' +
+        '<button type="button" class="wwh-map-chooser__btn" data-map="google">گوگل مپ</button>' +
+        '<button type="button" class="wwh-map-chooser__btn wwh-map-chooser__cancel" data-map="cancel">انصراف</button>' +
+      '</div>';
+
+    function onPick(e) {
+      var btn = e.target.closest('[data-map]');
+      if (!btn) return;
+      var which = btn.getAttribute('data-map');
+      closeMapChooser(root);
+      if (which === 'apple') {
+        global.location.href = appleMapsUrl(lat, lng);
+      } else if (which === 'google') {
+        // Universal / web URL — iOS opens Google Maps app if present
+        global.location.href = googleDirectionsUrl(lat, lng);
+      }
+    }
+
+    root.addEventListener('click', function (e) {
+      if (e.target === root) {
+        closeMapChooser(root);
+        return;
+      }
+      onPick(e);
+    });
+
+    document.documentElement.classList.add('wwh-map-chooser-open');
+    document.body.appendChild(root);
+  }
+
   /**
    * Open directions:
    * 1) Android → geo: (OS “Open with…” → Google / Neshan / Balad apps)
-   * 2) iOS → Apple Maps
+   * 2) iOS → sheet: Apple Maps or Google Maps
    * 3) Web fallback → Neshan (works in IR); Google Maps web is last resort
    *    because /maps/dir often renders a black/blank page on IR networks.
    */
@@ -310,7 +387,7 @@
     var webFallback = neshanUrl(la, ln);
 
     if (isIosDevice()) {
-      global.location.href = appleMapsUrl(la, ln);
+      showIosMapChooser(la, ln);
       return;
     }
 
@@ -353,8 +430,10 @@
     openDirections: openDirections,
     googleDirectionsUrl: googleDirectionsUrl,
     googlePinUrl: googlePinUrl,
+    appleMapsUrl: appleMapsUrl,
     neshanUrl: neshanUrl,
     baladUrl: baladUrl,
+    isIosDevice: isIosDevice,
     parseCoord: parseCoord,
     parseMapsUrl: parseMapsUrl,
   };

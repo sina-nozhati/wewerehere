@@ -95,7 +95,7 @@ def list_admin_presets() -> list[dict[str, Any]]:
         presets.append(
             {
                 "id": "ticket",
-                "label": "صدور بلیت",
+                "label": "صدور رزرو ورود",
                 "paramName": _param_name(),
                 "templateId": ticket_tid,
             }
@@ -114,7 +114,7 @@ def list_admin_presets() -> list[dict[str, Any]]:
         presets = [
             {
                 "id": "ticket",
-                "label": "صدور بلیت",
+                "label": "صدور رزرو ورود",
                 "paramName": _param_name(),
                 "templateId": ticket_tid or 0,
             },

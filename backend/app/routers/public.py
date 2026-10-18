@@ -143,7 +143,7 @@ def payment_info(db: Session = Depends(get_db)):
 def orders_legacy(body: OrderCreateBody, db: Session = Depends(get_db)):
     ev = get_featured_event(db)
     if not ev:
-        raise HTTPException(409, {"error": "فروش بلیت فعال نیست"})
+        raise HTTPException(409, {"error": "رزرو برای این رویداد فعلاً باز نیست"})
     if body.eventId and body.eventId != ev.id:
         ev = db.get(Event, body.eventId)
         if not ev:
@@ -169,7 +169,7 @@ def orders_legacy(body: OrderCreateBody, db: Session = Depends(get_db)):
 def orders_for_event(event_id: int, body: OrderCreateBody, db: Session = Depends(get_db)):
     ev = db.get(Event, event_id)
     if not ev or ev.sales_status != "open":
-        raise HTTPException(409, {"error": "فروش این رویداد باز نیست"})
+        raise HTTPException(409, {"error": "رزرو برای این رویداد فعلاً باز نیست"})
     try:
         order = create_order(
             db,
@@ -626,4 +626,4 @@ def order_receipt_image(orderId: int = Query(...), phone: str = Query(""), db: S
 
 @router.post("/api/register")
 def register_removed():
-    raise HTTPException(410, {"error": "این مسیر غیرفعال شده است. از فرم ثبت‌نام استفاده کنید."})
+    raise HTTPException(410, {"error": "این مسیر غیرفعال شده است. از فرم رزرو حضور استفاده کنید."})

@@ -9,15 +9,9 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models import Order, PaymentReceipt
 from app.services.capacity import remaining_tickets
+from app.services.media_guard import MediaGuardError, guard_media
 from app.services.phone import normalize_phone, valid_phone
 from app.services.tickets import issue_ticket
-
-MIME_EXT = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-    "image/gif": ".gif",
-}
 
 MAX_MEDIA = 40 * 1024 * 1024
 
@@ -69,12 +63,6 @@ def create_order(
 
         file_path = ""
         if receipt_image and receipt_image.get("data"):
-            mime = receipt_image.get("mime") or "image/png"
-            if not str(mime).startswith("image/"):
-                raise ValueError("فقط عکس برای رسید قابل قبول است")
-            ext = MIME_EXT.get(mime)
-            if not ext:
-                raise ValueError("unsupported mime type")
             try:
                 raw = base64.b64decode(str(receipt_image["data"]))
             except Exception:
@@ -83,10 +71,25 @@ def create_order(
                 raise ValueError("empty file")
             if len(raw) > MAX_MEDIA:
                 raise ValueError("file too large")
+            try:
+                guarded = guard_media(
+                    raw,
+                    receipt_image.get("name") or "receipt.jpg",
+                    images_only=True,
+                    max_bytes=MAX_MEDIA,
+                )
+            except MediaGuardError as e:
+                if e.code == "image_only":
+                    raise ValueError("فقط عکس برای رسید قابل قبول است") from e
+                if e.code in ("unsupported_type", "image_corrupt", "heic_unsupported"):
+                    raise ValueError("فایل رسید معتبر نیست") from e
+                if e.code == "file_type_denied":
+                    raise ValueError("نوع فایل مجاز نیست") from e
+                raise ValueError(e.code) from e
             settings.receipts_dir.mkdir(parents=True, exist_ok=True)
-            fname = f"{int(datetime.now().timestamp() * 1000):x}-{order.id}{ext}"
+            fname = f"{int(datetime.now().timestamp() * 1000):x}-{order.id}{guarded.ext}"
             path = settings.receipts_dir / fname
-            path.write_bytes(raw)
+            path.write_bytes(guarded.data)
             file_path = str(path.relative_to(settings.storage_root)).replace("\\", "/")
 
         text = (receipt_text or "").strip()[:500]
@@ -124,7 +127,7 @@ def approve_order(db: Session, order_id: int) -> tuple[Order, list[dict], bool]:
         ]
         return order, tickets, False
     if order.status != "payment_submitted" and order.status != "pending":
-        raise ValueError("این سفارش قبلاً بررسی شده است")
+        raise ValueError("این درخواست رزرو قبلاً بررسی شده است")
 
     names = json.loads(order.names_json or "[]")
     if not names:
@@ -134,7 +137,7 @@ def approve_order(db: Session, order_id: int) -> tuple[Order, list[dict], bool]:
     try:
         remaining = remaining_tickets(db, event.id, event.capacity)
         if len(names) > remaining:
-            raise ValueError("ظرفیت کافی برای تأیید این سفارش نیست")
+            raise ValueError("ظرفیت کافی برای تأیید این درخواست رزرو نیست")
 
         issued = []
         for name in names:
@@ -168,7 +171,7 @@ def reject_order(db: Session, order_id: int, note: str) -> Order:
     if not order:
         raise LookupError("not found")
     if order.status not in ("payment_submitted", "pending", "pending_payment"):
-        raise ValueError("این سفارش قبلاً بررسی شده است")
+        raise ValueError("این درخواست رزرو قبلاً بررسی شده است")
     order.status = "rejected"
     order.admin_note = (note or "")[:500]
     order.reviewed_at = datetime.now(timezone.utc)

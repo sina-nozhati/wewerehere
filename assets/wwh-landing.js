@@ -165,7 +165,7 @@
         badge.classList.add('sold-out');
       } else {
         var remFa = typeof toPersian === 'function' ? toPersian(rem) : rem;
-        badge.textContent = remFa + ' بلیت باقی مانده';
+        badge.textContent = 'ظرفیت باقی‌مانده: ' + remFa + ' نفر';
         if (rem <= 10) badge.classList.add('is-low');
       }
     }
@@ -179,7 +179,7 @@
       setMarqueeTexts([
         sch.tagline || window.__wwhEvent.title || 'ما اینجا بودیم',
         sch.datetimeLine || '',
-        rem <= 0 ? 'ظرفیت تکمیل' : (typeof toPersian === 'function' ? toPersian(rem) : rem) + ' بلیت باقی مانده',
+        rem <= 0 ? 'ظرفیت تکمیل' : ('ظرفیت باقی‌مانده: ' + (typeof toPersian === 'function' ? toPersian(rem) : rem) + ' نفر'),
       ]);
     }
   };
