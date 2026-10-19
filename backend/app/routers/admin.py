@@ -703,6 +703,7 @@ def admin_tickets_export_zip(
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
             for t in rows:
                 ticket_number = public_number(t, ranks) or t.display_number
+                # Try PNG first, fallback to SVG (browsers can display SVG natively)
                 body, _, ext = render_ticket_bytes(
                     t.group_name,
                     t.holder_name,
@@ -711,6 +712,7 @@ def admin_tickets_export_zip(
                     event_at=ev.event_at if ev else None,
                     venue=ticket_venue_from_event(ev),
                     city=ev.city if ev else "",
+                    allow_svg_export=True,  # Allow SVG fallback for admin export
                 )
                 safe_name = re.sub(r"[^\w\-]+", "_", t.holder_name)[:40]
                 zf.writestr(f"{t.public_code}-{safe_name}.{ext}", body)
