@@ -1867,7 +1867,7 @@
         .catch(function (e2) { alert('خطا در رزرو نمونه: ' + e2.message); });
     });
 
-    // ZIP Export with inline status bar
+    // ZIP Export with real SSE progress
     document.getElementById('export-tickets-zip').addEventListener('click', function () {
       var btn = this;
       var q = currentEventId ? ('?eventId=' + currentEventId) : '';
@@ -1880,39 +1880,72 @@
         <div class="zip-export-status-bar">\
           <div class="zip-export-progress" id="zip-export-progress" style="width: 0%;"></div>\
         </div>\
-        <div class="zip-export-text" id="zip-export-text">در حال آماده‌سازی ZIP...</div>\
+        <div class="zip-export-text" id="zip-export-text">در حال اتصال...</div>\
       ';
       btn.parentNode.insertBefore(statusBar, btn.nextSibling);
 
       var progressEl = document.getElementById('zip-export-progress');
       var textEl = document.getElementById('zip-export-text');
-      var startTime = Date.now();
 
       btn.disabled = true;
       btn.textContent = 'در حال تولید...';
 
-      // Simulate progress while waiting for response
-      var progressInterval = setInterval(function () {
-        var elapsed = Math.floor((Date.now() - startTime) / 1000);
-        if (elapsed < 30) {
-          textEl.textContent = 'در حال پردازش ' + elapsed + 's...';
-          progressEl.style.width = Math.min(90, elapsed * 3) + '%';
-        }
-      }, 1000);
+      // Use EventSource for real SSE progress
+      var es = new EventSource(exportUrl + (q.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN));
+      var completed = false;
 
-      fetch(exportUrl, { headers: { Authorization: 'Bearer ' + TOKEN } })
-        .then(function (r) { return downloadFromFetchResponse(r, 'wewerehere-tickets'); })
-        .catch(function (e2) { alert('خطا در ZIP: ' + e2.message); })
-        .finally(function () {
-          clearInterval(progressInterval);
-          progressEl.style.width = '100%';
-          textEl.textContent = 'تکمیل شد';
+      es.onopen = function () {
+        textEl.textContent = 'متصل شد، در حال تولید...';
+      };
+
+      es.onmessage = function (event) {
+        try {
+          var data = JSON.parse(event.data);
+          if (data.type === 'progress') {
+            progressEl.style.width = data.percent + '%';
+            textEl.textContent = 'بلیت ' + data.current + ' از ' + data.total + ' (' + data.percent + '%)';
+          } else if (data.type === 'complete') {
+            completed = true;
+            es.close();
+            progressEl.style.width = '100%';
+            textEl.textContent = 'تکمیل شد، در حال دانلود...';
+            // Decode and download
+            var binary = atob(data.content_base64);
+            var len = binary.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+            var blob = new Blob([bytes], { type: 'application/zip' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = data.filename;
+            document.body.appendChild(a);
+            a.click();
+            URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            textEl.textContent = 'تکمیل شد';
+            btn.disabled = false;
+            btn.textContent = 'خروجی تصویر رزروها (ZIP)';
+            setTimeout(function () {
+              if (statusBar.parentNode) statusBar.parentNode.removeChild(statusBar);
+            }, 3000);
+          }
+        } catch (e) {
+          console.error('SSE parse error:', e);
+        }
+      };
+
+      es.onerror = function () {
+        es.close();
+        if (!completed) {
+          textEl.textContent = 'خطا در اتصال';
           btn.disabled = false;
           btn.textContent = 'خروجی تصویر رزروها (ZIP)';
           setTimeout(function () {
             if (statusBar.parentNode) statusBar.parentNode.removeChild(statusBar);
           }, 3000);
-        });
+        }
+      };
     });
 
     document.getElementById('export-csv').addEventListener('click', function () {

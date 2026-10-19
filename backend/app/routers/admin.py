@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, Header
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -682,13 +682,18 @@ html,body{{margin:0;padding:0;background:#0b0a0e;}}
 @router.get("/tickets/export")
 def admin_tickets_export_zip(
     eventId: int | None = Query(None),
+    accept: str = Header(""),
     db: Session = Depends(get_db),
     _: str = Depends(require_admin),
 ):
+    """Export tickets as ZIP.
+    - Accept: text/event-stream → SSE with real-time progress (SVG for speed)
+    - Otherwise → regular ZIP download (backward compatible)"""
     import io
     import zipfile
+    import json
 
-    from fastapi.responses import Response
+    from fastapi.responses import StreamingResponse, Response
 
     eid = eventId or _default_event_id(db)
     rows = db.scalars(
@@ -700,11 +705,63 @@ def admin_tickets_export_zip(
     ranks = active_rank_map(db, eid)
     total = len(rows)
 
+    wants_sse = "text/event-stream" in (accept or "")
+
+    if wants_sse:
+        # SSE mode: stream progress events + final base64 ZIP
+        def event_stream():
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+                for i, t in enumerate(rows):
+                    ticket_number = public_number(t, ranks) or t.display_number
+                    body, _, ext = render_ticket_bytes(
+                        t.group_name,
+                        t.holder_name,
+                        t.public_code,
+                        ticket_number,
+                        event_at=ev.event_at if ev else None,
+                        venue=ticket_venue_from_event(ev),
+                        city=ev.city if ev else "",
+                        output_format="svg",  # SVG for bulk speed
+                        allow_svg_export=True,
+                    )
+                    safe_name = re.sub(r"[^\w\-]+", "_", t.holder_name)[:40]
+                    zf.writestr(f"{t.public_code}-{safe_name}.svg", body)
+
+                    if i % 5 == 0 or i == total - 1:
+                        progress = {
+                            "type": "progress",
+                            "current": i + 1,
+                            "total": total,
+                            "percent": round(((i + 1) / total) * 100),
+                        }
+                        yield f"data: {json.dumps(progress)}\n\n"
+
+            buffer.seek(0)
+            file_data = buffer.getvalue()
+            import base64
+            final_event = {
+                "type": "complete",
+                "filename": "wewerehere-tickets.zip",
+                "content_base64": base64.b64encode(file_data).decode("ascii"),
+            }
+            yield f"data: {json.dumps(final_event)}\n\n"
+
+        return StreamingResponse(
+            event_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    # Regular ZIP mode (backward compatible)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for t in rows:
             ticket_number = public_number(t, ranks) or t.display_number
-            # Use same rendering as individual export: PNG with SVG fallback
             body, _, ext = render_ticket_bytes(
                 t.group_name,
                 t.holder_name,
@@ -713,10 +770,11 @@ def admin_tickets_export_zip(
                 event_at=ev.event_at if ev else None,
                 venue=ticket_venue_from_event(ev),
                 city=ev.city if ev else "",
+                output_format="svg",
                 allow_svg_export=True,
             )
             safe_name = re.sub(r"[^\w\-]+", "_", t.holder_name)[:40]
-            zf.writestr(f"{t.public_code}-{safe_name}.{ext}", body)
+            zf.writestr(f"{t.public_code}-{safe_name}.svg", body)
 
     buf.seek(0)
     return Response(
