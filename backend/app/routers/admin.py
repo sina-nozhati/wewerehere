@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.auth import check_rate_limit, create_session, require_admin, revoke_session, verify_admin_password
+from app.auth import check_rate_limit, create_session, require_admin, require_admin_token, revoke_session, verify_admin_password
 from app.config import settings
 from app.storage_paths import receipt_path as _receipt_path
 from app.db import get_db
@@ -683,9 +683,8 @@ html,body{{margin:0;padding:0;background:#0b0a0e;}}
 def admin_tickets_export_zip(
     eventId: int | None = Query(None),
     accept: str = Header(""),
-    token: str | None = Query(None),  # For EventSource which can't send headers
     db: Session = Depends(get_db),
-    _: str = Depends(require_admin),
+    _: str = Depends(require_admin_token),
 ):
     """Export tickets as ZIP.
     - Accept: text/event-stream → SSE with real-time progress (SVG for speed)

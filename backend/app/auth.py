@@ -3,7 +3,7 @@ import time
 from typing import Annotated
 
 import bcrypt
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.config import settings
@@ -45,6 +45,21 @@ def is_valid_session(token: str | None) -> bool:
         _sessions.pop(token, None)
         return False
     return True
+
+
+def require_admin_token(
+    creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    token_query: str | None = Query(None, alias="token"),
+) -> str:
+    """Accept token from either Authorization header or ?token= query param (for EventSource)."""
+    token = None
+    if creds:
+        token = creds.credentials
+    elif token_query:
+        token = token_query
+    if not is_valid_session(token):
+        raise HTTPException(status_code=401, detail="unauthorized")
+    return token
 
 
 def require_admin(
