@@ -682,13 +682,15 @@ html,body{{margin:0;padding:0;background:#0b0a0e;}}
 @router.get("/tickets/export")
 def admin_tickets_export_zip(
     eventId: int | None = Query(None),
+    format: str = Query("png", pattern="^(png|svg)$"),
     accept: str = Header(""),
     db: Session = Depends(get_db),
     _: str = Depends(require_admin_token),
 ):
     """Export tickets as ZIP.
-    - Accept: text/event-stream → SSE with real-time progress (SVG for speed)
-    - Otherwise → regular ZIP download (backward compatible)"""
+    - Accept: text/event-stream → SSE with real-time progress
+    - Otherwise → regular ZIP download (backward compatible)
+    - format: png or svg"""
     import io
     import zipfile
     import json
@@ -706,6 +708,9 @@ def admin_tickets_export_zip(
     total = len(rows)
 
     wants_sse = "text/event-stream" in (accept or "")
+    use_svg = format == "svg"
+    output_fmt = "svg" if use_svg else "png"
+    ext = "svg" if use_svg else "png"
 
     if wants_sse:
         # SSE mode: stream progress events + final base64 ZIP
@@ -714,7 +719,7 @@ def admin_tickets_export_zip(
             with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
                 for i, t in enumerate(rows):
                     ticket_number = public_number(t, ranks) or t.display_number
-                    body, _, ext = render_ticket_bytes(
+                    body, _, _ = render_ticket_bytes(
                         t.group_name,
                         t.holder_name,
                         t.public_code,
@@ -722,11 +727,11 @@ def admin_tickets_export_zip(
                         event_at=ev.event_at if ev else None,
                         venue=ticket_venue_from_event(ev),
                         city=ev.city if ev else "",
-                        output_format="svg",  # SVG for bulk speed
+                        output_format=output_fmt,
                         allow_svg_export=True,
                     )
                     safe_name = re.sub(r"[^\w\-]+", "_", t.holder_name)[:40]
-                    zf.writestr(f"{t.public_code}-{safe_name}.svg", body)
+                    zf.writestr(f"{t.public_code}-{safe_name}.{ext}", body)
 
                     if i % 5 == 0 or i == total - 1:
                         progress = {
@@ -762,7 +767,7 @@ def admin_tickets_export_zip(
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for t in rows:
             ticket_number = public_number(t, ranks) or t.display_number
-            body, _, ext = render_ticket_bytes(
+            body, _, _ = render_ticket_bytes(
                 t.group_name,
                 t.holder_name,
                 t.public_code,
@@ -770,11 +775,11 @@ def admin_tickets_export_zip(
                 event_at=ev.event_at if ev else None,
                 venue=ticket_venue_from_event(ev),
                 city=ev.city if ev else "",
-                output_format="svg",
+                output_format=output_fmt,
                 allow_svg_export=True,
             )
             safe_name = re.sub(r"[^\w\-]+", "_", t.holder_name)[:40]
-            zf.writestr(f"{t.public_code}-{safe_name}.svg", body)
+            zf.writestr(f"{t.public_code}-{safe_name}.{ext}", body)
 
     buf.seek(0)
     return Response(

@@ -940,7 +940,14 @@
       <div class="toolbar">
         <button type="button" class="btn btn--ghost" id="refresh-tickets">تازه‌سازی</button>
         <button type="button" class="btn btn--ghost" id="export-csv">خروجی CSV (لیست ورود)</button>
-        <button type="button" class="btn btn--ghost" id="export-tickets-zip">خروجی تصویر رزروها (ZIP)</button>
+        <div class="export-format-group" style="display:inline-flex;align-items:center;gap:8px;">
+          <label for="export-format" class="muted" style="font-size:0.75rem;white-space:nowrap;">فرمت:</label>
+          <select id="export-format" class="export-format-select" style="padding:8px 32px 8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.8rem;cursor:pointer;appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a7a85' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 8px center;">
+            <option value="png">PNG (تصویر)</option>
+            <option value="svg">SVG (برق)</option>
+          </select>
+          <button type="button" class="btn btn--ghost" id="export-tickets-zip">خروجی ZIP</button>
+        </div>
         <button type="button" class="btn btn--ghost" id="sample-ticket-btn">دانلود رزرو نمونه</button>
         <label class="muted" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
           <input type="checkbox" id="tickets-show-revoked"> نمایش لغو‌شده‌ها
@@ -1867,11 +1874,13 @@
         .catch(function (e2) { alert('خطا در رزرو نمونه: ' + e2.message); });
     });
 
-    // ZIP Export with real SSE progress
+    // ZIP Export with format selector
     document.getElementById('export-tickets-zip').addEventListener('click', function () {
       var btn = this;
+      var formatSelect = document.getElementById('export-format');
+      var format = formatSelect ? formatSelect.value : 'png';
       var q = currentEventId ? ('?eventId=' + currentEventId) : '';
-      var exportUrl = '/api/admin/tickets/export' + q;
+      var exportUrl = '/api/admin/tickets/export' + q + (q.includes('?') ? '&' : '?') + 'format=' + format;
 
       // Create inline status bar above the button
       var statusBar = document.createElement('div');
