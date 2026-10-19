@@ -1890,8 +1890,9 @@
       btn.disabled = true;
       btn.textContent = 'در حال تولید...';
 
-      // Use EventSource for real SSE progress
-      var es = new EventSource(exportUrl + (q.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN));
+      // Use EventSource for real SSE progress (token via query param since EventSource can't send headers)
+      var sseUrl = exportUrl + (q.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(TOKEN);
+      var es = new EventSource(sseUrl);
       var completed = false;
 
       es.onopen = function () {

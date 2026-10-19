@@ -683,6 +683,7 @@ html,body{{margin:0;padding:0;background:#0b0a0e;}}
 def admin_tickets_export_zip(
     eventId: int | None = Query(None),
     accept: str = Header(""),
+    token: str | None = Query(None),  # For EventSource which can't send headers
     db: Session = Depends(get_db),
     _: str = Depends(require_admin),
 ):
