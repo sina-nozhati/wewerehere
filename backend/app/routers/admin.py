@@ -688,7 +688,7 @@ def admin_tickets_export_zip(
     import io
     import zipfile
 
-    from fastapi.responses import StreamingResponse
+    from fastapi.responses import Response
 
     eid = eventId or _default_event_id(db)
     rows = db.scalars(
@@ -700,34 +700,27 @@ def admin_tickets_export_zip(
     ranks = active_rank_map(db, eid)
     total = len(rows)
 
-    def generate():
-        buffer = io.BytesIO()
-        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-            for i, t in enumerate(rows):
-                ticket_number = public_number(t, ranks) or t.display_number
-                # Try PNG first, fallback to SVG (browsers can display SVG natively)
-                body, _, ext = render_ticket_bytes(
-                    t.group_name,
-                    t.holder_name,
-                    t.public_code,
-                    ticket_number,
-                    event_at=ev.event_at if ev else None,
-                    venue=ticket_venue_from_event(ev),
-                    city=ev.city if ev else "",
-                    allow_svg_export=True,  # Allow SVG fallback for admin export
-                )
-                safe_name = re.sub(r"[^\w\-]+", "_", t.holder_name)[:40]
-                zf.writestr(f"{t.public_code}-{safe_name}.{ext}", body)
-        buffer.seek(0)
-        # Stream in 64KB chunks
-        while True:
-            chunk = buffer.read(65536)
-            if not chunk:
-                break
-            yield chunk
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for t in rows:
+            ticket_number = public_number(t, ranks) or t.display_number
+            # Use same rendering as individual export: PNG with SVG fallback
+            body, _, ext = render_ticket_bytes(
+                t.group_name,
+                t.holder_name,
+                t.public_code,
+                ticket_number,
+                event_at=ev.event_at if ev else None,
+                venue=ticket_venue_from_event(ev),
+                city=ev.city if ev else "",
+                allow_svg_export=True,
+            )
+            safe_name = re.sub(r"[^\w\-]+", "_", t.holder_name)[:40]
+            zf.writestr(f"{t.public_code}-{safe_name}.{ext}", body)
 
-    return StreamingResponse(
-        generate(),
+    buf.seek(0)
+    return Response(
+        content=buf.getvalue(),
         media_type="application/zip",
         headers={
             "Content-Disposition": 'attachment; filename="wewerehere-tickets.zip"',
