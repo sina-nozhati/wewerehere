@@ -610,6 +610,92 @@
         background: var(--surface);
       }
     }
+
+    /* Export Progress Overlay */
+    .export-progress-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeIn 200ms var(--ease-out);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .export-progress-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+      animation: slideUp 300ms var(--ease-out);
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .export-progress-header {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .export-progress-bar-container {
+      height: 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .export-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+      border-radius: var(--radius-full);
+      transition: width 300ms var(--ease-out);
+      width: 0%;
+    }
+
+    .export-progress-text {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .export-progress-detail {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 16px;
+      min-height: 1.2em;
+    }
+
+    .export-cancel-btn {
+      width: 100%;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .export-progress-overlay, .export-progress-modal, .export-progress-bar {
+        animation: none;
+        transition: none;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1744,17 +1830,117 @@
         .then(function (r) { return downloadFromFetchResponse(r, 'ticket-sample'); })
         .catch(function (e2) { alert('خطا در رزرو نمونه: ' + e2.message); });
     });
+
+    // ZIP Export with progress
     document.getElementById('export-tickets-zip').addEventListener('click', function () {
       var btn = this;
       var q = currentEventId ? ('?eventId=' + currentEventId) : '';
+      var exportUrl = '/api/admin/tickets/export' + q;
+
+      // Create progress overlay
+      var overlay = document.createElement('div');
+      overlay.className = 'export-progress-overlay';
+      overlay.innerHTML = '\
+        <div class="export-progress-modal">\
+          <div class="export-progress-header">خروجی تصویر رزروها (ZIP)</div>\
+          <div class="export-progress-bar-container">\
+            <div class="export-progress-bar" id="export-progress-bar" style="width: 0%;"></div>\
+          </div>\
+          <div class="export-progress-text" id="export-progress-text">در حال آماده‌سازی...</div>\
+          <div class="export-progress-detail" id="export-progress-detail"></div>\
+          <button type="button" class="btn btn--ghost export-cancel-btn" id="export-cancel-btn" style="margin-top: 16px;">انصراف</button>\
+        </div>\
+      ';
+      document.body.appendChild(overlay);
+
+      var progressBar = document.getElementById('export-progress-bar');
+      var progressText = document.getElementById('export-progress-text');
+      var progressDetail = document.getElementById('export-progress-detail');
+      var cancelBtn = document.getElementById('export-cancel-btn');
+      var cancelled = false;
+
+      function closeOverlay() {
+        document.body.removeChild(overlay);
+        btn.disabled = false;
+        btn.textContent = 'خروجی تصویر رزروها (ZIP)';
+      }
+
+      cancelBtn.addEventListener('click', function () {
+        cancelled = true;
+        progressText.textContent = 'در حال انصراف...';
+      });
+
       btn.disabled = true;
       btn.textContent = 'در حال تولید ZIP...';
-      fetch('/api/admin/tickets/export' + q, { headers: { Authorization: 'Bearer ' + TOKEN } })
-        .then(function (r) { return downloadFromFetchResponse(r, 'wewerehere-tickets'); })
-        .catch(function (e2) { alert('خطا در ZIP: ' + e2.message); })
-        .finally(function () {
-          btn.disabled = false;
-          btn.textContent = 'خروجی تصویر رزروها (ZIP)';
+
+      // Fetch with streaming progress
+      fetch(exportUrl, { headers: { Authorization: 'Bearer ' + TOKEN } })
+        .then(function (response) {
+          if (!response.ok) {
+            return response.json().then(function (err) {
+              throw new Error(err.error || err.message || 'HTTP ' + response.status);
+            });
+          }
+
+          // Get total count from header if available
+          var totalTickets = 0;
+          var contentLength = response.headers.get('X-Total-Tickets');
+          if (contentLength) totalTickets = parseInt(contentLength, 10);
+
+          var reader = response.body.getReader();
+          var chunks = [];
+          var received = 0;
+          var lastPercent = -1;
+
+          function readChunk() {
+            if (cancelled) {
+              reader.cancel();
+              closeOverlay();
+              return;
+            }
+            return reader.read().then(function (_ref) {
+              var done = _ref.done;
+              var value = _ref.value;
+              if (done) {
+                // Download complete
+                var blob = new Blob(chunks, { type: 'application/zip' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'wewerehere-tickets.zip';
+                document.body.appendChild(a);
+                a.click();
+                URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                closeOverlay();
+                return;
+              }
+              chunks.push(value);
+              received += value.length;
+
+              // Update progress based on ticket count (approximate)
+              if (totalTickets > 0) {
+                // Estimate: each ticket ~50-200KB, use chunks as proxy
+                var estimatedTickets = Math.min(totalTickets, Math.floor(received / 80000));
+                var percent = Math.min(100, Math.round((estimatedTickets / totalTickets) * 100));
+                if (percent !== lastPercent) {
+                  lastPercent = percent;
+                  progressBar.style.width = percent + '%';
+                  progressText.textContent = 'در حال پردازش... ' + percent + '%';
+                  progressDetail.textContent = estimatedTickets + ' از ' + totalTickets + ' بلیت پردازش شده';
+                }
+              } else {
+                progressDetail.textContent = (received / 1024).toFixed(1) + ' KB دریافت شده';
+              }
+              return readChunk();
+            });
+          }
+
+          return readChunk();
+        })
+        .catch(function (e2) {
+          if (!cancelled) alert('خطا در ZIP: ' + e2.message);
+          closeOverlay();
         });
     });
 

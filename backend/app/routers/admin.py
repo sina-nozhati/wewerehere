@@ -688,7 +688,7 @@ def admin_tickets_export_zip(
     import io
     import zipfile
 
-    from fastapi.responses import Response
+    from fastapi.responses import StreamingResponse
 
     eid = eventId or _default_event_id(db)
     rows = db.scalars(
@@ -698,10 +698,12 @@ def admin_tickets_export_zip(
         raise HTTPException(404, {"error": "no printable tickets", "message": "رزروی برای خروجی نیست"})
     ev = db.get(Event, eid)
     ranks = active_rank_map(db, eid)
-    buf = io.BytesIO()
-    try:
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            for t in rows:
+    total = len(rows)
+
+    def generate():
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for i, t in enumerate(rows):
                 ticket_number = public_number(t, ranks) or t.display_number
                 # Try PNG first, fallback to SVG (browsers can display SVG natively)
                 body, _, ext = render_ticket_bytes(
@@ -716,19 +718,22 @@ def admin_tickets_export_zip(
                 )
                 safe_name = re.sub(r"[^\w\-]+", "_", t.holder_name)[:40]
                 zf.writestr(f"{t.public_code}-{safe_name}.{ext}", body)
-    except TicketRenderError as e:
-        raise HTTPException(
-            503,
-            {
-                "error": "ticket_png_unavailable",
-                "message": str(e),
-                "detail": str(e),
-            },
-        )
-    return Response(
-        content=buf.getvalue(),
+        buffer.seek(0)
+        # Stream in 64KB chunks
+        while True:
+            chunk = buffer.read(65536)
+            if not chunk:
+                break
+            yield chunk
+
+    return StreamingResponse(
+        generate(),
         media_type="application/zip",
-        headers={"Content-Disposition": 'attachment; filename="wewerehere-tickets.zip"'},
+        headers={
+            "Content-Disposition": 'attachment; filename="wewerehere-tickets.zip"',
+            "X-Total-Tickets": str(total),
+            "Cache-Control": "no-cache",
+        },
     )
 
 
