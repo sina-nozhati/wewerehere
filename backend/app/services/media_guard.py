@@ -13,7 +13,7 @@ import io
 import logging
 from dataclasses import dataclass
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 log = logging.getLogger("wwh.media_guard")
 
@@ -218,6 +218,7 @@ def sanitize_image(data: bytes, sniff_mime: str) -> tuple[bytes, str, str]:
     try:
         with Image.open(io.BytesIO(data)) as img:
             img.load()
+            img = ImageOps.exif_transpose(img) or img
             fmt = (img.format or "").upper()
 
             # Phone camera HEIF family → always JPEG

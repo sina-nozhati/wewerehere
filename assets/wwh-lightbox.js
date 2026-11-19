@@ -228,7 +228,11 @@
     if (!slide) return;
     var v = slide.querySelector('video');
     if (v) {
-      try { v.pause(); } catch (e) {}
+      try {
+        v.pause();
+        v.removeAttribute('src');
+        v.load();
+      } catch (e) {}
     }
     slide.innerHTML = '';
     slide.style.transform = '';
@@ -269,13 +273,18 @@
         v.controls = true;
         v.playsInline = true;
         v.setAttribute('playsinline', '');
+        v.setAttribute('controlsList', 'nodownload');
+        v.setAttribute('disablePictureInPicture', '');
+        v.setAttribute('oncontextmenu', 'return false;');
         v.preload = 'metadata';
+        v.autoplay = true;
         slide.appendChild(v);
       } else {
         var img = document.createElement('img');
         img.src = url;
         img.alt = item.caption || item.title || '';
         img.draggable = false;
+        img.setAttribute('oncontextmenu', 'return false;');
         slide.appendChild(img);
       }
 

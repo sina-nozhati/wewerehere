@@ -29,6 +29,7 @@ class DownloadManager:
         asset: MediaAsset,
         *,
         as_attachment: bool = False,
+        prefer_web: bool = True,
         filename_override: str | None = None,
     ) -> Response:
         """Resolve an asset into an authorized FastAPI Response (FileResponse, RedirectResponse, or Proxy)."""
@@ -47,10 +48,17 @@ class DownloadManager:
             path = adapter.resolve_local_path(asset.provider_file_id or asset.stored_name)
             if not path or not path.is_file():
                 raise HTTPException(404, "File missing on storage server")
+            media_type = asset.mime
+            if prefer_web and not as_attachment and asset.media_category == "memories_video":
+                web_candidate = path.with_name(f"{path.stem}_web.mp4")
+                if web_candidate.is_file():
+                    path = web_candidate
+                    media_type = "video/mp4"
+
             headers = {}
             if as_attachment:
                 headers["Content-Disposition"] = f'attachment; filename="{download_name}"'
-            return FileResponse(path, media_type=asset.mime, headers=headers)
+            return FileResponse(path, media_type=media_type, headers=headers)
 
         # External Cloud Provider (Files.ir, S3)
         try:
@@ -73,6 +81,7 @@ class DownloadManager:
         item: MemoryItem,
         *,
         as_attachment: bool = False,
+        prefer_web: bool = True,
     ) -> Response:
         """Find or register MediaAsset for a MemoryItem and return its authorized download response."""
         asset = MediaRegistry.get_asset_by_memory_item_id(db, item.id)
@@ -83,6 +92,7 @@ class DownloadManager:
             db,
             asset,
             as_attachment=as_attachment,
+            prefer_web=prefer_web,
             filename_override=f"memory-{item.id}{item.stored_name[-4:] if '.' in item.stored_name else ''}",
         )
 

@@ -32,11 +32,16 @@ from app.services.memory_media import (
     absolute_memory_path,
     assert_video_duration_ok,
     delete_memory_file,
+    ensure_thumbnail,
+    find_existing_media_path,
+    guard_and_prepare,
     max_bytes_for_kind,
     relative_stored_name,
-    guard_and_prepare,
+    resolve_video_web_path,
     store_memory_file,
+    thumbnail_stored_name,
     transcode_video_720p,
+    transcode_video_high_quality,
     video_max_sec,
 )
 from app.services.tickets import active_rank_map, public_number
@@ -310,17 +315,15 @@ async def memories_upload(
                         raise
                     tc = transcode_video_720p(path)
                     if tc:
-                        new_path, mime, size_bytes = tc
-                        rel = relative_stored_name(new_path)
-                        if rel:
-                            stored = rel
+                        web_path, web_mime, web_size = tc
+                        rel = relative_stored_name(web_path)
                         write_audit(
                             db,
                             event_id=ev.id,
                             ticket_id=sess.ticket_id,
                             actor="system",
                             action="transcode",
-                            meta={"stored": stored, "sizeBytes": size_bytes},
+                            meta={"stored": stored, "webStored": rel, "sizeBytes": web_size},
                         )
                     else:
                         write_audit(
@@ -331,6 +334,10 @@ async def memories_upload(
                             action="transcode_skipped",
                             meta={"stored": stored},
                         )
+            try:
+                ensure_thumbnail(stored, kind)
+            except Exception as e:
+                log.warning("Initial thumbnail generation failed: %s", e)
             item = MemoryItem(
                 event_id=ev.id,
                 ticket_id=sess.ticket_id,
@@ -521,6 +528,11 @@ async def memories_upload_complete(
     db.commit()
     db.refresh(item)
 
+    try:
+        ensure_thumbnail(item.stored_name, item.media_kind)
+    except Exception as e:
+        log.warning("Direct upload thumbnail generation skipped/failed: %s", e)
+
     remaining = max(0, int(settings.memory_max_files_per_ticket) - count_ticket_uploads(db, sess.ticket_id))
     return {
         "ok": True,
@@ -582,6 +594,8 @@ def memories_gallery(
                 "mediaKind": m.media_kind,
                 "mime": m.mime,
                 "url": f"/api/memories/file/{m.id}",
+                "thumbUrl": f"/api/memories/file/{m.id}/thumb",
+                "thumb_url": f"/api/memories/file/{m.id}/thumb",
                 "createdAt": _iso(m.created_at),
                 "likeCount": likes.get(m.id, 0),
                 "commentCount": comments.get(m.id, 0),
@@ -619,6 +633,8 @@ def memories_leaderboard(
                 "mediaKind": m.media_kind,
                 "mime": m.mime,
                 "url": f"/api/memories/file/{m.id}",
+                "thumbUrl": f"/api/memories/file/{m.id}/thumb",
+                "thumb_url": f"/api/memories/file/{m.id}/thumb",
                 "likeCount": lc,
             }
         )
@@ -652,6 +668,8 @@ def memories_mine(
                 "mediaKind": m.media_kind,
                 "mime": m.mime,
                 "url": f"/api/memories/file/{m.id}",
+                "thumbUrl": f"/api/memories/file/{m.id}/thumb",
+                "thumb_url": f"/api/memories/file/{m.id}/thumb",
                 "createdAt": _iso(m.created_at),
             }
             for m in rows
@@ -783,6 +801,7 @@ def memories_comments_create(
 @router.get("/api/memories/file/{item_id}")
 async def memories_file(
     item_id: int,
+    original: bool = False,
     db: Session = Depends(get_db),
     creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
 ):
@@ -809,4 +828,55 @@ async def memories_file(
         raise HTTPException(404, {"error": "not_found"})
 
     from app.services.storage.download_manager import DownloadManager
-    return await DownloadManager.resolve_memory_item_response(db, item)
+    return await DownloadManager.resolve_memory_item_response(
+        db,
+        item,
+        as_attachment=original,
+        prefer_web=not original,
+    )
+
+
+@router.get("/api/memories/file/{item_id}/thumb")
+@router.get("/api/memories/thumb/{item_id}")
+async def memories_thumb(
+    item_id: int,
+    db: Session = Depends(get_db),
+    creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
+):
+    item = db.get(MemoryItem, item_id)
+    if not item:
+        raise HTTPException(404, {"error": "not_found"})
+
+    allowed = False
+    if item.status == "approved":
+        allowed = True
+    else:
+        # Owner session (same ticket) may preview own pending; never rejected publicly
+        token = _bearer_token(creds)
+        sess = get_valid_session(db, token) if token else None
+        if (
+            sess
+            and sess.event_id == item.event_id
+            and sess.ticket_id == item.ticket_id
+            and item.status == "pending"
+        ):
+            allowed = True
+
+    if not allowed:
+        raise HTTPException(404, {"error": "not_found"})
+
+    thumb_path = ensure_thumbnail(item.stored_name, item.media_kind)
+    if thumb_path and thumb_path.is_file():
+        return FileResponse(
+            thumb_path,
+            media_type="image/webp",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    # Fallback for images if thumbnail generation failed (serve original if it's an image)
+    if item.media_kind == "image":
+        orig_path = find_existing_media_path(item.stored_name)
+        if orig_path and orig_path.is_file():
+            return FileResponse(orig_path, media_type=item.mime)
+
+    raise HTTPException(404, {"error": "thumbnail_unavailable"})

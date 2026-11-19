@@ -673,3 +673,238 @@ def test_video_ok_duration_skips_transcode_gracefully(client: TestClient, monkey
     assert up.status_code == 200
     assert up.json()["accepted"] == 1
     assert up.json()["results"][0]["durationMs"] == 12000
+
+
+def test_video_transcode_parameters_and_preserve_original(tmp_path, monkeypatch):
+    """Verify video bitrate target >= 12 Mbps tuning, libx264 CRF 18-20, faststart, and preservation."""
+    from app.services import memory_media as mm
+    from pathlib import Path
+
+    orig_video = tmp_path / "orig_clip.mp4"
+    orig_video.write_bytes(b"dummy_original_video_data_12345678")
+
+    captured_cmds = []
+
+    def fake_which(bin_name):
+        return "fake_ffmpeg" if "ffmpeg" in bin_name else "fake_ffprobe"
+
+    def fake_probe_meta(path):
+        return {"width": 1920, "height": 1080, "duration": 10.0, "fps": 30.0}
+
+    def fake_subprocess_run(cmd, *args, **kwargs):
+        captured_cmds.append(cmd)
+        # Create output file
+        out_path = Path(cmd[-1])
+        out_path.write_bytes(b"encoded_web_video_data_high_quality_test" * 10)
+        class DummyProc:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+        return DummyProc()
+
+    monkeypatch.setattr(mm, "_which", fake_which)
+    monkeypatch.setattr(mm, "probe_video_meta", fake_probe_meta)
+    monkeypatch.setattr("subprocess.run", fake_subprocess_run)
+
+    res = mm.transcode_video_high_quality(orig_video)
+    assert res is not None
+    web_path, mime, size = res
+    assert mime == "video/mp4"
+    assert web_path.name == "orig_clip_web.mp4"
+    # Original file is preserved!
+    assert orig_video.is_file()
+    assert orig_video.read_bytes() == b"dummy_original_video_data_12345678"
+
+    # Verify command line arguments
+    assert len(captured_cmds) == 1
+    c = captured_cmds[0]
+    assert "-c:v" in c and c[c.index("-c:v") + 1] == "libx264"
+    assert "-crf" in c and c[c.index("-crf") + 1] in ("18", "19", "20")
+    # Minimum 12 Mbps target for 1080p
+    assert "-b:v" in c and c[c.index("-b:v") + 1] == "12M"
+    assert "-maxrate" in c and c[c.index("-maxrate") + 1] == "16M"
+    assert "-bufsize" in c and c[c.index("-bufsize") + 1] == "24M"
+    assert "-pix_fmt" in c and c[c.index("-pix_fmt") + 1] == "yuv420p"
+    assert "+faststart" in c
+    assert "-c:a" in c and c[c.index("-c:a") + 1] == "aac"
+    assert "-b:a" in c and c[c.index("-b:a") + 1] == "192k"
+
+    # Test low-res sensible bitrate adjustment (avoid bloat on small clips)
+    captured_cmds.clear()
+    monkeypatch.setattr(mm, "probe_video_meta", lambda p: {"width": 640, "height": 360, "duration": 5.0})
+    res_low = mm.transcode_video_high_quality(orig_video)
+    assert res_low is not None
+    c_low = captured_cmds[0]
+    assert c_low[c_low.index("-b:v") + 1] == "4M"
+
+
+def test_image_thumbnail_generation(tmp_path):
+    """Verify WebP image thumbnail generation: max dim <= 720px, quality 78-82, compact size."""
+    from app.services import memory_media as mm
+    from PIL import Image
+
+    src_img = tmp_path / "high_res_photo.jpg"
+    img = Image.new("RGB", (2400, 1600), color=(120, 40, 200))
+    img.save(src_img, format="JPEG", quality=95)
+
+    dest_thumb = tmp_path / "high_res_photo_thumb.webp"
+    res = mm.generate_image_thumbnail(src_img, dest_thumb, max_dim=720, quality=80)
+    assert res is not None
+    assert dest_thumb.is_file()
+    assert dest_thumb.stat().st_size > 0
+
+    with Image.open(dest_thumb) as thumb:
+        assert thumb.format == "WEBP"
+        w, h = thumb.size
+        assert max(w, h) == 720
+        assert w == 720
+        assert h == 480  # Aspect ratio preserved!
+
+
+def test_video_poster_thumbnail_extraction(tmp_path, monkeypatch):
+    """Verify video poster thumbnail extraction: extracts frame to compact WebP."""
+    from app.services import memory_media as mm
+    from PIL import Image
+
+    orig_video = tmp_path / "sample_video.mp4"
+    orig_video.write_bytes(b"dummy_video_bytes")
+    dest_thumb = tmp_path / "sample_video_thumb.webp"
+
+    # Generate a real 1280x720 frame to return via pipe
+    frame_buf = BytesIO()
+    fimg = Image.new("RGB", (1280, 720), color=(20, 80, 150))
+    fimg.save(frame_buf, format="PNG")
+    frame_bytes = frame_buf.getvalue()
+
+    def fake_run(cmd, *args, **kwargs):
+        class DummyProc:
+            returncode = 0
+            stdout = frame_bytes
+            stderr = ""
+        return DummyProc()
+
+    monkeypatch.setattr(mm, "_which", lambda b: "fake_ffmpeg")
+    monkeypatch.setattr("subprocess.run", fake_run)
+
+    res = mm.generate_video_thumbnail(orig_video, dest_thumb, max_dim=720, quality=80)
+    assert res is not None
+    assert dest_thumb.is_file()
+    with Image.open(dest_thumb) as thumb:
+        assert thumb.format == "WEBP"
+        assert max(thumb.size) == 720
+
+
+def test_gallery_and_mine_expose_thumb_urls_and_serve_thumbnails(client: TestClient):
+    """Verify thumbUrl / thumb_url exposed on /api/memories responses and endpoints serve 200 WebP."""
+    from PIL import Image
+
+    # 1. Gate and upload image
+    token = _gate(client).json()["sessionToken"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    img_buf = BytesIO()
+    Image.new("RGB", (1600, 1200), color=(50, 100, 150)).save(img_buf, format="JPEG")
+    img_bytes = img_buf.getvalue()
+
+    up = client.post(
+        "/api/events/night-test/memories/upload",
+        data={"consentPublish": "true"},
+        files=[("files", ("mem1.jpg", BytesIO(img_bytes), "image/jpeg"))],
+        headers=headers,
+    )
+    assert up.status_code == 200
+    item_id = up.json()["results"][0]["id"]
+
+    # In "mine" list (pending)
+    mine = client.get("/api/events/night-test/memories/mine", headers=headers)
+    assert mine.status_code == 200
+    mine_item = next(x for x in mine.json()["items"] if x["id"] == item_id)
+    assert "thumbUrl" in mine_item
+    assert "thumb_url" in mine_item
+    assert mine_item["thumbUrl"] == f"/api/memories/file/{item_id}/thumb"
+    assert mine_item["thumb_url"] == f"/api/memories/file/{item_id}/thumb"
+
+    # Pending item thumbnail accessible by owner ticket
+    thumb_resp = client.get(f"/api/memories/file/{item_id}/thumb", headers=headers)
+    assert thumb_resp.status_code == 200
+    assert "image/webp" in thumb_resp.headers["content-type"]
+
+    # Also test /api/memories/thumb/{id} alias
+    thumb_resp_alias = client.get(f"/api/memories/thumb/{item_id}", headers=headers)
+    assert thumb_resp_alias.status_code == 200
+    assert "image/webp" in thumb_resp_alias.headers["content-type"]
+
+    # Anonymous access to pending item is 404
+    assert client.get(f"/api/memories/file/{item_id}/thumb").status_code == 404
+
+    # 2. Approve via admin
+    admin = _auth(client)
+    mod = client.post(
+        "/api/admin/memories/moderate",
+        json={"ids": [item_id], "status": "approved"},
+        headers=admin,
+    )
+    assert mod.status_code == 200
+
+    # 3. Check public gallery exposes thumbUrl & thumb_url
+    gal = client.get("/api/events/night-test/memories/gallery")
+    assert gal.status_code == 200
+    gal_item = next(x for x in gal.json()["items"] if x["id"] == item_id)
+    assert gal_item["thumbUrl"] == f"/api/memories/file/{item_id}/thumb"
+    assert gal_item["thumb_url"] == f"/api/memories/file/{item_id}/thumb"
+
+    # Public anonymous access to approved thumbnail is 200
+    pub_thumb = client.get(f"/api/memories/file/{item_id}/thumb")
+    assert pub_thumb.status_code == 200
+    assert "image/webp" in pub_thumb.headers["content-type"]
+
+
+def test_legacy_memory_on_demand_thumbnail_and_backfill(client: TestClient):
+    """Verify legacy memory without existing thumbnail file auto-generates on-demand and via backfill."""
+    from PIL import Image
+    from app.services import memory_media as mm
+    from app.models import MemoryItem
+    from app.db import get_db
+
+    # Upload and approve
+    token = _gate(client).json()["sessionToken"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    img_buf = BytesIO()
+    Image.new("RGB", (800, 600), color=(90, 10, 40)).save(img_buf, format="JPEG")
+    up = client.post(
+        "/api/events/night-test/memories/upload",
+        data={"consentPublish": "true"},
+        files=[("files", ("legacy.jpg", BytesIO(img_buf.getvalue()), "image/jpeg"))],
+        headers=headers,
+    )
+    item_id = up.json()["results"][0]["id"]
+    admin = _auth(client)
+    client.post("/api/admin/memories/moderate", json={"ids": [item_id], "status": "approved"}, headers=admin)
+
+    # Simulate legacy item by removing its thumbnail file from disk
+    db = client._TestingSession()
+    try:
+        item = db.get(MemoryItem, item_id)
+        assert item is not None
+        src_path = mm.find_existing_media_path(item.stored_name)
+        assert src_path is not None
+        thumb_path = src_path.with_name(f"{src_path.stem}_thumb.webp")
+        if thumb_path.exists():
+            thumb_path.unlink()
+        assert not thumb_path.exists()
+    finally:
+        db.close()
+
+    # Requesting thumbnail on-demand should re-generate it without re-upload!
+    resp = client.get(f"/api/memories/file/{item_id}/thumb")
+    assert resp.status_code == 200
+    assert "image/webp" in resp.headers["content-type"]
+    assert thumb_path.exists()
+
+    # Test backfill endpoint
+    backfill_resp = client.post("/api/admin/memories/backfill-thumbnails", headers=admin)
+    assert backfill_resp.status_code == 200
+    assert backfill_resp.json()["ok"] is True
+    assert backfill_resp.json()["total"] >= 1
+

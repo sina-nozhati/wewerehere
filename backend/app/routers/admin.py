@@ -1280,6 +1280,8 @@ def _memory_admin_row(
         "likeCount": like_count,
         "commentCount": comment_count,
         "url": f"/api/admin/memories/file/{m.id}",
+        "thumbUrl": f"/api/admin/memories/file/{m.id}/thumb",
+        "thumb_url": f"/api/admin/memories/file/{m.id}/thumb",
     }
 
 
@@ -1377,12 +1379,59 @@ def admin_memories_audit(
 
 
 @router.get("/memories/file/{item_id}")
-async def admin_memories_file(item_id: int, db: Session = Depends(get_db), _: str = Depends(require_admin)):
+async def admin_memories_file(
+    item_id: int,
+    original: bool = False,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
     m = db.get(MemoryItem, item_id)
     if not m:
         raise HTTPException(404, "not found")
     from app.services.storage.download_manager import DownloadManager
-    return await DownloadManager.resolve_memory_item_response(db, m)
+    return await DownloadManager.resolve_memory_item_response(
+        db,
+        m,
+        as_attachment=original,
+        prefer_web=not original,
+    )
+
+
+@router.get("/memories/file/{item_id}/thumb")
+@router.get("/memories/thumb/{item_id}")
+async def admin_memories_thumb(
+    item_id: int,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    from app.services.memory_media import ensure_thumbnail, find_existing_media_path
+    m = db.get(MemoryItem, item_id)
+    if not m:
+        raise HTTPException(404, "not found")
+    thumb_path = ensure_thumbnail(m.stored_name, m.media_kind)
+    if thumb_path and thumb_path.is_file():
+        return FileResponse(
+            thumb_path,
+            media_type="image/webp",
+            headers={"Cache-Control": "private, max-age=86400"},
+        )
+    if m.media_kind == "image":
+        orig_path = find_existing_media_path(m.stored_name)
+        if orig_path and orig_path.is_file():
+            return FileResponse(orig_path, media_type=m.mime)
+    raise HTTPException(404, "thumbnail_unavailable")
+
+
+@router.post("/memories/backfill-thumbnails")
+def admin_memories_backfill_thumbnails(
+    eventId: int | None = Query(None),
+    force: bool = Query(False),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    from app.services.memory_media import backfill_thumbnails
+    res = backfill_thumbnails(db, event_id=eventId, force=force)
+    return {"ok": True, **res}
 
 
 @router.post("/memories/moderate")

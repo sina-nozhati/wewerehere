@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 import logging
 import re
@@ -10,6 +11,9 @@ import shutil
 import subprocess
 import unicodedata
 from pathlib import Path
+from typing import Any
+
+from PIL import Image, ImageOps
 
 from app.config import settings
 
@@ -127,6 +131,55 @@ def absolute_memory_path(stored_name: str) -> Path | None:
     return path if path.is_file() else None
 
 
+def resolve_memory_path(stored_name: str) -> Path | None:
+    """Resolve destination path under memories_dir safely (even if file does not exist yet)."""
+    raw = (stored_name or "").replace("\\", "/").lstrip("/")
+    if not raw or ".." in raw.split("/"):
+        return None
+    root = settings.memories_dir.resolve()
+    path = (settings.memories_dir / raw).resolve()
+    if not str(path).startswith(str(root)):
+        return None
+    return path
+
+
+def find_existing_media_path(stored_name: str) -> Path | None:
+    """Find media file across memories_dir, storage_root, archive_dir, and legacy uploads."""
+    p = absolute_memory_path(stored_name)
+    if p and p.is_file():
+        return p
+    try:
+        from app.services.storage.local_adapter import LocalStorageAdapter
+
+        p_local = LocalStorageAdapter().resolve_local_path(stored_name)
+        if p_local and p_local.is_file():
+            return p_local
+    except Exception:
+        pass
+    return None
+
+
+def thumbnail_stored_name(stored_name: str) -> str:
+    """Derive stored_name for thumbnail WebP companion."""
+    p = Path(stored_name)
+    return str(p.with_name(f"{p.stem}_thumb.webp")).replace("\\", "/")
+
+
+def web_video_stored_name(stored_name: str) -> str:
+    """Derive stored_name for web-optimized MP4 companion."""
+    p = Path(stored_name)
+    return str(p.with_name(f"{p.stem}_web.mp4")).replace("\\", "/")
+
+
+def resolve_video_web_path(stored_name: str) -> Path | None:
+    """Find web-optimized MP4 companion file if it exists."""
+    src = find_existing_media_path(stored_name)
+    if not src:
+        return None
+    web = src.with_name(f"{src.stem}_web.mp4")
+    return web if web.is_file() else None
+
+
 def delete_memory_file(stored_name: str) -> None:
     path = absolute_memory_path(stored_name)
     if path and path.is_file():
@@ -134,14 +187,106 @@ def delete_memory_file(stored_name: str) -> None:
             path.unlink()
         except OSError:
             pass
+        # Clean up companion web video and thumbnail
+        web_path = path.with_name(f"{path.stem}_web.mp4")
+        if web_path.is_file():
+            try:
+                web_path.unlink()
+            except OSError:
+                pass
+        thumb_path = path.with_name(f"{path.stem}_thumb.webp")
+        if thumb_path.is_file():
+            try:
+                thumb_path.unlink()
+            except OSError:
+                pass
 
 
 def _which(bin_name: str) -> str | None:
-    return shutil.which(bin_name) or None
+    found = shutil.which(bin_name)
+    if found:
+        return found
+    # Windows fallback search
+    for candidate in [
+        r"C:\Program Files\DownloadHelper CoApp",
+        r"C:\Program Files\ffmpeg\bin",
+        r"C:\ffmpeg\bin",
+    ]:
+        p = Path(candidate) / (bin_name if bin_name.endswith(".exe") else f"{bin_name}.exe")
+        if p.is_file():
+            return str(p)
+    return None
+
+
+def probe_video_meta(path: Path) -> dict[str, Any]:
+    """Return dict with duration, width, height, bitrate, fps or empty dict."""
+    probe = _which(settings.memory_ffprobe_bin) or _which("ffprobe")
+    if not probe:
+        return {}
+    try:
+        proc = subprocess.run(
+            [
+                probe,
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=width,height,r_frame_rate,bit_rate:format=duration,bit_rate",
+                "-of",
+                "json",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        if proc.returncode != 0:
+            log.warning("ffprobe failed: %s", (proc.stderr or "")[:200])
+            return {}
+        data = json.loads(proc.stdout or "{}")
+        meta: dict[str, Any] = {}
+        fmt = data.get("format") or {}
+        streams = data.get("streams") or []
+        v_stream = streams[0] if streams else {}
+
+        dur = float(fmt.get("duration") or v_stream.get("duration") or 0)
+        if dur > 0:
+            meta["duration"] = dur
+
+        w = int(v_stream.get("width") or 0)
+        h = int(v_stream.get("height") or 0)
+        if w > 0 and h > 0:
+            meta["width"] = w
+            meta["height"] = h
+
+        br = int(v_stream.get("bit_rate") or fmt.get("bit_rate") or 0)
+        if br > 0:
+            meta["bitrate"] = br
+
+        fps_raw = str(v_stream.get("r_frame_rate") or "")
+        if "/" in fps_raw:
+            num, den = fps_raw.split("/", 1)
+            try:
+                num_f, den_f = float(num), float(den)
+                if den_f > 0:
+                    meta["fps"] = round(num_f / den_f, 2)
+            except ValueError:
+                pass
+
+        return meta
+    except Exception as e:
+        log.warning("probe_video_meta error: %s", e)
+        return {}
 
 
 def probe_video_duration_sec(path: Path) -> float | None:
     """Return duration in seconds via ffprobe, or None if unavailable/failed."""
+    meta = probe_video_meta(path)
+    dur = meta.get("duration")
+    if dur and dur > 0:
+        return dur
     probe = _which(settings.memory_ffprobe_bin) or _which("ffprobe")
     if not probe:
         return None
@@ -162,15 +307,13 @@ def probe_video_duration_sec(path: Path) -> float | None:
             timeout=60,
             check=False,
         )
-        if proc.returncode != 0:
-            log.warning("ffprobe failed: %s", (proc.stderr or "")[:200])
-            return None
-        data = json.loads(proc.stdout or "{}")
-        dur = float((data.get("format") or {}).get("duration") or 0)
-        return dur if dur > 0 else None
-    except (OSError, subprocess.TimeoutExpired, ValueError, json.JSONDecodeError) as e:
-        log.warning("ffprobe error: %s", e)
-        return None
+        if proc.returncode == 0:
+            data = json.loads(proc.stdout or "{}")
+            d = float((data.get("format") or {}).get("duration") or 0)
+            return d if d > 0 else None
+    except Exception:
+        pass
+    return None
 
 
 def assert_video_duration_ok(path: Path) -> float | None:
@@ -183,13 +326,50 @@ def assert_video_duration_ok(path: Path) -> float | None:
     return dur
 
 
-def transcode_video_720p(path: Path) -> tuple[Path, str, int] | None:
-    """Transcode in-place-ish to H.264 720p MP4. Returns (new_path, mime, size) or None."""
+def transcode_video_high_quality(path: Path) -> tuple[Path, str, int] | None:
+    """Generate high visual fidelity web playback stream/file while preserving the original.
+
+    Codec & Encoder: H.264 libx264, CRF 19, -pix_fmt yuv420p, -movflags +faststart, AAC audio 192k.
+    Bitrate target: >= 12 Mbps (12,000 kbps) for 1080p+, scaled appropriately for lower resolutions.
+    Preserves original file untouched.
+    """
     ffmpeg = _which(settings.memory_ffmpeg_bin) or _which("ffmpeg")
     if not ffmpeg:
         log.info("ffmpeg not found; skip transcode")
         return None
-    out = path.with_name(path.stem + "_720p.mp4")
+
+    # Destination is alongside original, e.g. stem_web.mp4
+    out = path.with_name(f"{path.stem}_web.mp4")
+
+    # Probe resolution to keep bitrate sensible to input resolution/framerate
+    meta = probe_video_meta(path)
+    w = meta.get("width") or 0
+    h = meta.get("height") or 0
+    max_dim = max(w, h)
+    min_dim = min(w, h)
+
+    # Bitrate parameters:
+    # Target minimum video bitrate of 12 Mbps (12,000 kbps) for high visual fidelity
+    if max_dim >= 1920 or min_dim >= 1080 or (w == 0 and h == 0):
+        bv = "12M"
+        maxrate = "16M"
+        bufsize = "24M"
+    elif max_dim >= 1280 or min_dim >= 720:
+        bv = "8M"
+        maxrate = "12M"
+        bufsize = "16M"
+    else:
+        # Sensible lower bitrate for low-res (e.g. 480p/360p) to avoid bloat
+        bv = "4M"
+        maxrate = "6M"
+        bufsize = "8M"
+
+    # Scale filter: cap 4K to 1080p, ensure even dimensions for libx264
+    if max_dim > 1920:
+        vf = "scale='if(gt(iw,ih),min(1920,iw),-2)':'if(gt(iw,ih),-2,min(1920,ih))':force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2"
+    else:
+        vf = "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+
     try:
         proc = subprocess.run(
             [
@@ -197,16 +377,30 @@ def transcode_video_720p(path: Path) -> tuple[Path, str, int] | None:
                 "-y",
                 "-i",
                 str(path),
+                "-map",
+                "0:v:0",
+                "-map",
+                "0:a?",
                 "-vf",
-                "scale=-2:720",
+                vf,
                 "-c:v",
                 "libx264",
                 "-preset",
-                "veryfast",
+                "fast",
                 "-crf",
-                "28",
+                "19",
+                "-b:v",
+                bv,
+                "-maxrate",
+                maxrate,
+                "-bufsize",
+                bufsize,
+                "-pix_fmt",
+                "yuv420p",
                 "-c:a",
                 "aac",
+                "-b:a",
+                "192k",
                 "-movflags",
                 "+faststart",
                 str(out),
@@ -224,20 +418,9 @@ def transcode_video_720p(path: Path) -> tuple[Path, str, int] | None:
             except OSError:
                 pass
             return None
-        # Replace original with compressed mp4 (even if original was webm)
-        final = path.with_suffix(".mp4")
-        if final.resolve() != out.resolve():
-            if final.exists():
-                final.unlink()
-            out.replace(final)
-        else:
-            final = out
-        if path.resolve() != final.resolve() and path.exists():
-            try:
-                path.unlink()
-            except OSError:
-                pass
-        return final, "video/mp4", int(final.stat().st_size)
+
+        # Original file at `path` is preserved!
+        return out, "video/mp4", int(out.stat().st_size)
     except (OSError, subprocess.TimeoutExpired) as e:
         log.warning("ffmpeg error: %s", e)
         try:
@@ -246,6 +429,165 @@ def transcode_video_720p(path: Path) -> tuple[Path, str, int] | None:
         except OSError:
             pass
         return None
+
+
+# Backward-compatible alias
+transcode_video_720p = transcode_video_high_quality
+
+
+def generate_image_thumbnail(
+    src_path: Path,
+    dest_path: Path,
+    *,
+    max_dim: int = 720,
+    quality: int = 80,
+) -> Path | None:
+    """Generate compact WebP thumbnail (max dim 640-720px, WebP quality 78-82) from image."""
+    try:
+        with Image.open(src_path) as img:
+            img = ImageOps.exif_transpose(img) or img
+            if img.mode in ("RGBA", "LA") or ("transparency" in getattr(img, "info", {})):
+                if img.mode != "RGBA":
+                    img = img.convert("RGBA")
+            else:
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+            img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            img.save(dest_path, format="WEBP", quality=quality, method=4)
+            return dest_path if dest_path.is_file() and dest_path.stat().st_size > 0 else None
+    except Exception as e:
+        log.warning("generate_image_thumbnail failed for %s: %s", src_path, e)
+        return None
+
+
+def generate_video_thumbnail(
+    src_path: Path,
+    dest_path: Path,
+    *,
+    max_dim: int = 720,
+    quality: int = 80,
+) -> Path | None:
+    """Generate video poster thumbnail (ffmpeg frame at 1s to WebP, quality 78-82)."""
+    ffmpeg = _which(settings.memory_ffmpeg_bin) or _which("ffmpeg")
+    if not ffmpeg:
+        log.warning("ffmpeg not found; cannot generate video thumbnail for %s", src_path)
+        return None
+    try:
+        # Seek to 1s
+        cmd = [
+            ffmpeg,
+            "-y",
+            "-ss",
+            "00:00:01.000",
+            "-i",
+            str(src_path),
+            "-vframes",
+            "1",
+            "-f",
+            "image2pipe",
+            "-vcodec",
+            "png",
+            "pipe:1",
+        ]
+        proc = subprocess.run(cmd, capture_output=True, timeout=30, check=False)
+        frame_bytes = proc.stdout
+        # If seek to 1s failed (video shorter than 1s), seek to 0s
+        if not frame_bytes or proc.returncode != 0:
+            cmd2 = [
+                ffmpeg,
+                "-y",
+                "-ss",
+                "00:00:00.000",
+                "-i",
+                str(src_path),
+                "-vframes",
+                "1",
+                "-f",
+                "image2pipe",
+                "-vcodec",
+                "png",
+                "pipe:1",
+            ]
+            proc2 = subprocess.run(cmd2, capture_output=True, timeout=30, check=False)
+            frame_bytes = proc2.stdout
+
+        if not frame_bytes:
+            log.warning("Could not extract video frame from %s", src_path)
+            return None
+
+        with Image.open(io.BytesIO(frame_bytes)) as img:
+            img = ImageOps.exif_transpose(img) or img
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+            img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            img.save(dest_path, format="WEBP", quality=quality, method=4)
+            return dest_path if dest_path.is_file() and dest_path.stat().st_size > 0 else None
+    except Exception as e:
+        log.warning("generate_video_thumbnail error for %s: %s", src_path, e)
+        return None
+
+
+def ensure_thumbnail(
+    stored_name: str,
+    media_kind: str = "image",
+    *,
+    force: bool = False,
+) -> Path | None:
+    """Ensure thumbnail WebP exists alongside media file; generate on-demand if missing."""
+    src = find_existing_media_path(stored_name)
+    if not src or not src.is_file():
+        dest_thumb = resolve_memory_path(thumbnail_stored_name(stored_name))
+        if dest_thumb and dest_thumb.is_file() and not force:
+            return dest_thumb
+        return None
+
+    dest_thumb = src.with_name(f"{src.stem}_thumb.webp")
+    if not force and dest_thumb.is_file() and dest_thumb.stat().st_size > 0:
+        return dest_thumb
+
+    if media_kind == "image":
+        return generate_image_thumbnail(src, dest_thumb)
+    elif media_kind == "video":
+        web_src = src.with_name(f"{src.stem}_web.mp4")
+        video_input = web_src if web_src.is_file() else src
+        return generate_video_thumbnail(video_input, dest_thumb)
+    return None
+
+
+def backfill_thumbnails(
+    db,
+    event_id: int | None = None,
+    *,
+    force: bool = False,
+) -> dict[str, int]:
+    """Auto-generate thumbnails for all memories that don't have them yet."""
+    from sqlalchemy import select
+    from app.models import MemoryItem
+
+    q = select(MemoryItem)
+    if event_id is not None:
+        q = q.where(MemoryItem.event_id == int(event_id))
+    items = db.scalars(q).all()
+
+    stats = {"total": len(items), "created": 0, "already_present": 0, "failed": 0}
+    for item in items:
+        src = find_existing_media_path(item.stored_name)
+        if not src:
+            stats["failed"] += 1
+            continue
+        thumb_file = src.with_name(f"{src.stem}_thumb.webp")
+        if not force and thumb_file.is_file() and thumb_file.stat().st_size > 0:
+            stats["already_present"] += 1
+            continue
+        res = ensure_thumbnail(item.stored_name, item.media_kind, force=force)
+        if res and res.is_file():
+            stats["created"] += 1
+        else:
+            stats["failed"] += 1
+
+    return stats
 
 
 def relative_stored_name(path: Path) -> str | None:
