@@ -105,11 +105,11 @@ _sms_rate: dict[str, list[float]] = {}
 
 
 class EventBody(BaseModel):
-    slug: str
-    title: str
+    slug: str = ""
+    title: str = ""
     episodeNumber: int | None = None
     description: str = ""
-    eventAt: str
+    eventAt: str = ""
     city: str = ""
     venue: str = ""
     hostName: str = ""
@@ -341,35 +341,58 @@ def _apply_event_location(ev: Event, body: EventBody) -> None:
 
 @router.post("/events")
 def admin_create_event(body: EventBody, db: Session = Depends(get_db), _: str = Depends(require_admin)):
-    if db.scalar(select(Event).where(Event.slug == body.slug)):
-        raise HTTPException(409, {"error": "slug exists"})
+    slug = (body.slug or "").strip().lower()
+    if not slug:
+        raise HTTPException(400, {"error": "شناسه رویداد (slug) الزامی است"})
+    title = (body.title or "").strip()
+    if not title:
+        raise HTTPException(400, {"error": "عنوان رویداد الزامی است"})
+    if not (body.eventAt or "").strip():
+        raise HTTPException(400, {"error": "تاریخ و ساعت اجرای رویداد الزامی است"})
+    try:
+        parsed_event_at = parse_event_at(body.eventAt)
+    except ValueError as e:
+        raise HTTPException(400, {"error": str(e) or "فرمت تاریخ و ساعت نامعتبر است"}) from e
+
+    capacity = int(body.capacity or 50)
+    if capacity < 1:
+        raise HTTPException(400, {"error": "ظرفیت رویداد باید حداقل ۱ نفر باشد"})
+
+    if db.scalar(select(Event).where(Event.slug == slug)):
+        raise HTTPException(409, {"error": f"شناسه '{slug}' قبلاً ثبت شده است. لطفاً شناسه دیگری انتخاب کنید"})
+
     ev = Event(
-        slug=body.slug,
-        title=body.title,
+        slug=slug,
+        title=title,
         episode_number=body.episodeNumber,
-        description=body.description,
-        event_at=parse_event_at(body.eventAt),
-        city=body.city,
-        venue=body.venue,
-        host_name=body.hostName,
-        host_venue=body.hostVenue,
-        capacity=body.capacity,
-        ticket_price=body.ticketPrice,
-        payment_card_number=body.paymentCardNumber,
-        payment_card_holder=body.paymentCardHolder,
-        payment_bank_name=body.paymentBankName,
-        payment_instructions=body.paymentInstructions,
-        status=body.status,
-        sales_status=body.salesStatus,
-        setlist_json=body.setlistJson,
-        artists_json=body.artistsJson,
+        description=body.description or "",
+        event_at=parsed_event_at,
+        city=body.city or "",
+        venue=body.venue or "",
+        host_name=body.hostName or "",
+        host_venue=body.hostVenue or "",
+        capacity=capacity,
+        ticket_price=body.ticketPrice or 0,
+        payment_card_number=body.paymentCardNumber or "",
+        payment_card_holder=body.paymentCardHolder or "",
+        payment_bank_name=body.paymentBankName or "",
+        payment_instructions=body.paymentInstructions or "",
+        status=body.status or "draft",
+        sales_status=body.salesStatus or "closed",
+        setlist_json=body.setlistJson or "[]",
+        artists_json=body.artistsJson or "[]",
     )
     _apply_event_location(ev, body)
     db.add(ev)
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, {"error": f"خطا در ثبت رویداد در دیتابیس: {e}"}) from e
     db.refresh(ev)
     if not get_featured_event_id(db):
         set_featured_event_id(db, ev.id)
+        db.commit()
     return {"id": ev.id}
 
 
@@ -378,28 +401,54 @@ def admin_update_event(event_id: int, body: EventBody, db: Session = Depends(get
     ev = db.get(Event, event_id)
     if not ev:
         raise HTTPException(404, "not found")
-    ev.slug = body.slug
-    ev.title = body.title
+
+    slug = (body.slug or "").strip().lower()
+    if not slug:
+        raise HTTPException(400, {"error": "شناسه رویداد (slug) الزامی است"})
+    title = (body.title or "").strip()
+    if not title:
+        raise HTTPException(400, {"error": "عنوان رویداد الزامی است"})
+    if not (body.eventAt or "").strip():
+        raise HTTPException(400, {"error": "تاریخ و ساعت اجرای رویداد الزامی است"})
+    try:
+        parsed_event_at = parse_event_at(body.eventAt)
+    except ValueError as e:
+        raise HTTPException(400, {"error": str(e) or "فرمت تاریخ و ساعت نامعتبر است"}) from e
+
+    capacity = int(body.capacity or 50)
+    if capacity < 1:
+        raise HTTPException(400, {"error": "ظرفیت رویداد باید حداقل ۱ نفر باشد"})
+
+    clash = db.scalar(select(Event).where(Event.slug == slug, Event.id != event_id))
+    if clash:
+        raise HTTPException(409, {"error": f"شناسه '{slug}' قبلاً برای رویداد دیگری ثبت شده است"})
+
+    ev.slug = slug
+    ev.title = title
     ev.episode_number = body.episodeNumber
-    ev.description = body.description
-    ev.event_at = parse_event_at(body.eventAt)
-    ev.city = body.city
-    ev.venue = body.venue
-    ev.host_name = body.hostName
-    ev.host_venue = body.hostVenue
+    ev.description = body.description or ""
+    ev.event_at = parsed_event_at
+    ev.city = body.city or ""
+    ev.venue = body.venue or ""
+    ev.host_name = body.hostName or ""
+    ev.host_venue = body.hostVenue or ""
     _apply_event_location(ev, body)
-    ev.capacity = body.capacity
-    ev.ticket_price = body.ticketPrice
-    ev.payment_card_number = body.paymentCardNumber
-    ev.payment_card_holder = body.paymentCardHolder
-    ev.payment_bank_name = body.paymentBankName
-    ev.payment_instructions = body.paymentInstructions
-    ev.status = body.status
-    ev.sales_status = body.salesStatus
-    ev.setlist_json = body.setlistJson
-    ev.artists_json = body.artistsJson
+    ev.capacity = capacity
+    ev.ticket_price = body.ticketPrice or 0
+    ev.payment_card_number = body.paymentCardNumber or ""
+    ev.payment_card_holder = body.paymentCardHolder or ""
+    ev.payment_bank_name = body.paymentBankName or ""
+    ev.payment_instructions = body.paymentInstructions or ""
+    ev.status = body.status or "draft"
+    ev.sales_status = body.salesStatus or "closed"
+    ev.setlist_json = body.setlistJson or "[]"
+    ev.artists_json = body.artistsJson or "[]"
     ev.updated_at = datetime.now(timezone.utc)
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, {"error": f"خطا در به‌روزرسانی رویداد در دیتابیس: {e}"}) from e
     return {"ok": True}
 
 
@@ -408,9 +457,11 @@ def admin_feature(event_id: int, db: Session = Depends(get_db), _: str = Depends
     ev = db.get(Event, event_id)
     if not ev:
         raise HTTPException(404, "not found")
+    # If the event was draft or cancelled, auto-promote to published so landing can display it
     if ev.status in ("draft", "cancelled"):
-        raise HTTPException(409, {"error": "رویداد پیش‌نویس یا لغوشده را بدون تأیید نمی‌توان featured کرد"})
+        ev.status = "published"
     set_featured_event_id(db, event_id)
+    db.commit()
     return {"ok": True, "featuredEventId": event_id}
 
 
@@ -1066,13 +1117,12 @@ def admin_media_list(eventId: int | None = Query(None), db: Session = Depends(ge
 
 
 @router.get("/media-file/{media_id}")
-def admin_media_file(media_id: int, db: Session = Depends(get_db), _: str = Depends(require_admin)):
-    from app.routers.public import _file_response
-
+async def admin_media_file(media_id: int, db: Session = Depends(get_db), _: str = Depends(require_admin)):
     m = db.get(Media, media_id)
     if not m:
         raise HTTPException(404, "not found")
-    return _file_response(m)
+    from app.services.storage.download_manager import DownloadManager
+    return await DownloadManager.resolve_archive_media_response(db, m)
 
 
 def _store_archive_media(
@@ -1110,6 +1160,11 @@ def _store_archive_media(
     db.add(m)
     db.commit()
     db.refresh(m)
+    try:
+        from app.services.storage.media_registry import MediaRegistry
+        MediaRegistry.get_or_create_local_asset_for_archive(db, m)
+    except Exception:
+        pass
     return {
         "id": m.id,
         "url": f"/api/admin/media-file/{m.id}",
@@ -1322,16 +1377,12 @@ def admin_memories_audit(
 
 
 @router.get("/memories/file/{item_id}")
-def admin_memories_file(item_id: int, db: Session = Depends(get_db), _: str = Depends(require_admin)):
-    from fastapi.responses import FileResponse
-
+async def admin_memories_file(item_id: int, db: Session = Depends(get_db), _: str = Depends(require_admin)):
     m = db.get(MemoryItem, item_id)
     if not m:
         raise HTTPException(404, "not found")
-    path = absolute_memory_path(m.stored_name)
-    if not path:
-        raise HTTPException(404, "missing file")
-    return FileResponse(path, media_type=m.mime)
+    from app.services.storage.download_manager import DownloadManager
+    return await DownloadManager.resolve_memory_item_response(db, m)
 
 
 @router.post("/memories/moderate")

@@ -303,3 +303,55 @@ def test_admin_media_multipart_upload(client: TestClient, tmp_path, monkeypatch)
         data={"eventId": str(ev_id)},
     )
     assert too_big.status_code == 413
+
+
+def test_admin_create_event_validations_and_persian_digits(client: TestClient):
+    headers = _auth(client)
+
+    # 1. Missing title
+    r = client.post("/api/admin/events", headers=headers, json={"slug": "no-title", "eventAt": "2026-10-10T18:00:00"})
+    assert r.status_code == 400
+    assert "عنوان" in r.text
+
+    # 2. Duplicate slug
+    r = client.post(
+        "/api/admin/events",
+        headers=headers,
+        json={"slug": "panel-test", "title": "تکراری", "eventAt": "2026-10-10T18:00:00", "capacity": 50},
+    )
+    assert r.status_code == 409
+    assert "قبلاً ثبت شده" in r.text
+
+    # 3. Persian digits in eventAt
+    r = client.post(
+        "/api/admin/events",
+        headers=headers,
+        json={"slug": "persian-digits-ev", "title": "رویداد با تاریخ فارسی", "eventAt": "۲۰۲۶-۱۰-۱۵T۱۹:۳۰:۰۰", "capacity": 50},
+    )
+    assert r.status_code == 200
+    new_id = r.json()["id"]
+    assert new_id
+
+    # 4. Patch duplicate slug clash
+    r_patch = client.patch(
+        f"/api/admin/events/{new_id}",
+        headers=headers,
+        json={"slug": "panel-test", "title": "تغییر به اسلاگ تکراری", "eventAt": "2026-10-15T19:30:00"},
+    )
+    assert r_patch.status_code == 409
+
+    # 5. Feature draft event auto-promotes to published
+    r_draft = client.post(
+        "/api/admin/events",
+        headers=headers,
+        json={"slug": "draft-event", "title": "رویداد پیش‌نویس", "eventAt": "2026-12-01T20:00:00", "status": "draft"},
+    )
+    draft_id = r_draft.json()["id"]
+    r_feat = client.post(f"/api/admin/events/{draft_id}/feature", headers=headers)
+    assert r_feat.status_code == 200
+    assert r_feat.json()["featuredEventId"] == draft_id
+    # check that status was promoted to published
+    ev_check = client.get("/api/admin/events", headers=headers).json()["events"]
+    draft_ev = next(e for e in ev_check if e["id"] == draft_id)
+    assert draft_ev["status"] == "published"
+

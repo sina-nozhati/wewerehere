@@ -364,6 +364,14 @@
     .sms-error-summary a { color: var(--accent-soft); }
     #sms-form input.error, #sms-form select.error { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(255, 90, 90, 0.25); }
 
+    .req { color: var(--danger, #ff5a5a); margin-inline-start: 4px; font-weight: 700; font-size: 1.05em; }
+    .input-error { border-color: var(--danger, #ff5a5a) !important; box-shadow: 0 0 0 2px rgba(255, 90, 90, 0.25) !important; }
+    .form-banner { padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 0.88rem; line-height: 1.5; }
+    .form-banner--err { background: rgba(255, 90, 90, 0.12); border: 1px solid var(--danger, #ff5a5a); color: #ff8e8e; }
+    .form-banner--ok { background: rgba(94, 201, 139, 0.12); border: 1px solid var(--ok, #5ec98b); color: #7de0a6; }
+    html.wwh-authenticated #login-view { display: none !important; }
+    html.wwh-authenticated #admin-view { display: block !important; }
+
     #login-view { max-width: 380px; margin: calc(12vh + var(--safe-t)) auto 0; padding: 0 4px; }
     #login-view form { display: flex; flex-direction: column; gap: 14px; }
     [hidden] { display: none !important; }
@@ -735,6 +743,12 @@
   </style>
 </head>
 <body>
+  <script>
+    (function () {
+      var t = sessionStorage.getItem('wwh_token') || localStorage.getItem('wwh_token');
+      if (t) document.documentElement.classList.add('wwh-authenticated');
+    })();
+  </script>
   <div class="wrap">
 
     <!-- Login -->
@@ -758,8 +772,11 @@
       <header class="admin-topbar">
         <h1>پنل مدیریت — WE WERE HERE</h1>
         <span class="spacer"></span>
-        <label class="muted" for="event-select" style="font-size:0.78rem;">رویداد فعال:</label>
-        <select id="event-select" style="width:auto;min-width:180px;padding:8px 10px;"></select>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <label class="muted" for="event-select" style="font-size:0.78rem;">مدیریت رویداد:</label>
+          <select id="event-select" style="width:auto;min-width:180px;padding:8px 10px;"></select>
+          <button type="button" class="btn btn--ghost btn--sm" id="topbar-feature-btn" title="این رویداد را به‌عنوان رویداد فعال لندینگ سایت تنظیم کن">★ فعال‌سازی روی لندینگ</button>
+        </div>
         <button type="button" class="btn btn--ghost" id="logout">خروج</button>
       </header>
 
@@ -772,6 +789,7 @@
           <button type="button" class="admin-nav__btn" data-panel="memories">خاطرات</button>
           <button type="button" class="admin-nav__btn" data-panel="media">آرشیو</button>
           <button type="button" class="admin-nav__btn" data-panel="support">پشتیبانی</button>
+          <button type="button" class="admin-nav__btn" data-panel="storage">ذخیره‌سازی</button>
         </nav>
 
         <div class="admin-main">
@@ -858,16 +876,17 @@
           <button type="button" class="btn btn--ghost" id="close-sales-btn">بستن رزرو</button>
         </div>
         <div class="status-badges" id="event-live-status"></div>
+        <div id="event-form-alert" class="form-banner" hidden></div>
         <form id="event-form" class="form-grid">
-          <div><label for="ev-slug">Slug</label><input id="ev-slug" dir="ltr" placeholder="third-shahrivar"></div>
-          <div><label for="ev-title">عنوان</label><input id="ev-title" placeholder="ما اینجا بودیم"></div>
-          <div><label for="ev-episode">شماره اپیزود</label><input id="ev-episode" type="number" min="1"></div>
-          <div><label for="ev-at">تاریخ و ساعت اجرا</label><input id="ev-at" dir="ltr" placeholder="انتخاب از تقویم" autocomplete="off"></div>
-          <div><label for="ev-capacity">ظرفیت</label><input id="ev-capacity" type="number" min="1" value="50"></div>
-          <div><label for="ev-price">قیمت (تومان)</label><input id="ev-price" dir="ltr" inputmode="numeric"></div>
-          <div><label for="ev-city">شهر</label><input id="ev-city" placeholder="تهران"></div>
-          <div><label for="ev-venue">محل</label><input id="ev-venue" placeholder=""></div>
-          <div><label for="ev-host-name">میزبان (اختیاری)</label><input id="ev-host-name" placeholder="نام میزبان / برند"></div>
+          <div><label for="ev-slug">Slug (شناسه انگلیسی یکتا) <span class="req">*</span></label><input id="ev-slug" dir="ltr" placeholder="مثلاً: guilanshah یا episode-4"></div>
+          <div><label for="ev-title">عنوان رویداد <span class="req">*</span></label><input id="ev-title" placeholder="ما اینجا بودیم — اپیزود ۴"></div>
+          <div><label for="ev-episode">شماره اپیزود (اختیاری)</label><input id="ev-episode" type="number" min="1" placeholder="مثلاً: 4"></div>
+          <div><label for="ev-at">تاریخ و ساعت اجرا <span class="req">*</span></label><input id="ev-at" dir="ltr" placeholder="انتخاب از تقویم" autocomplete="off"></div>
+          <div><label for="ev-capacity">ظرفیت کل (نفر) <span class="req">*</span></label><input id="ev-capacity" type="number" min="1" value="50"></div>
+          <div><label for="ev-price">قیمت بلیت (تومان - ۰ برای رایگان)</label><input id="ev-price" dir="ltr" inputmode="numeric" placeholder="0"></div>
+          <div><label for="ev-city">شهر (اختیاری)</label><input id="ev-city" placeholder="تهران"></div>
+          <div><label for="ev-venue">محل اجرا (اختیاری)</label><input id="ev-venue" placeholder=""></div>
+          <div><label for="ev-host-name">نام میزبان (اختیاری)</label><input id="ev-host-name" placeholder="نام میزبان / برند"></div>
           <div><label for="ev-host-venue">محل میزبانی (اختیاری)</label><input id="ev-host-venue" placeholder="مثلاً کافه یا فضای میزبان"></div>
           <div class="loc-block" id="ev-location-block">
             <p class="loc-block__title">مکان اجرا (نقشه پیگیری)</p>
@@ -881,11 +900,11 @@
             <label class="loc-toggle"><input type="checkbox" id="ev-loc-published"> انتشار مکان روی صفحه پیگیری</label>
             <div id="ev-map-picker" role="application" aria-label="انتخاب مکان روی نقشه"></div>
           </div>
-          <div><label for="ev-card">شماره کارت</label><input id="ev-card" dir="ltr" inputmode="numeric"></div>
-          <div><label for="ev-card-holder">دارنده کارت</label><input id="ev-card-holder"></div>
-          <div><label for="ev-bank">بانک</label><input id="ev-bank"></div>
-          <div style="grid-column:1/-1;"><label for="ev-desc">توضیحات</label><textarea id="ev-desc" rows="2"></textarea></div>
-          <div style="grid-column:1/-1;"><label for="ev-setlist">ست‌لیست (JSON)</label><textarea id="ev-setlist" rows="6" dir="ltr" placeholder='[{"title":"...","artist":"...","duration":"4:13"}]'></textarea></div>
+          <div><label for="ev-card">شماره کارت پرداخت (اختیاری)</label><input id="ev-card" dir="ltr" inputmode="numeric"></div>
+          <div><label for="ev-card-holder">نام دارنده کارت (اختیاری)</label><input id="ev-card-holder"></div>
+          <div><label for="ev-bank">نام بانک (اختیاری)</label><input id="ev-bank"></div>
+          <div style="grid-column:1/-1;"><label for="ev-desc">توضیحات (اختیاری)</label><textarea id="ev-desc" rows="2"></textarea></div>
+          <div style="grid-column:1/-1;"><label for="ev-setlist">ست‌لیست (JSON - اختیاری)</label><textarea id="ev-setlist" rows="6" dir="ltr" placeholder='[{"title":"...","artist":"...","duration":"4:13"}]'></textarea></div>
         </form>
         <div class="toolbar" style="margin-top:14px;margin-bottom:0;">
           <button type="button" class="btn btn--primary" id="save-event-btn">ذخیره رویداد</button>
@@ -1062,6 +1081,125 @@
       </div>
       <div class="media-grid" id="media-list"></div>
       </section>
+
+      <section class="admin-panel" data-panel="storage" id="panel-storage" hidden>
+        <div class="toolbar" style="align-items:center;margin-bottom:12px;">
+          <div>
+            <h2 style="margin:0;">مدیریت رسانه و فضای ابری</h2>
+            <p class="muted" style="margin:4px 0 0 0;font-size:0.8rem;">اتصال به Files.ir و S3، تخصیص ارائه‌دهنده به رویدادها، و نظارت بر مصرف فضا.</p>
+          </div>
+          <button type="button" class="btn btn--ghost" id="refresh-storage" onclick="loadStorage()">تازه‌سازی وضعیت</button>
+        </div>
+
+        <!-- Global Storage Monitoring KPIs -->
+        <div class="kpi-grid" style="margin-bottom:20px;">
+          <div class="kpi">
+            <div class="kpi__label">کل فضای ابری</div>
+            <div class="kpi__value" id="storage-kpi-cap">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi__label">فضای مصرف‌شده</div>
+            <div class="kpi__value" id="storage-kpi-used">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi__label">فضای باقی‌مانده</div>
+            <div class="kpi__value" id="storage-kpi-avail">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi__label">رزروهای فعال در صف</div>
+            <div class="kpi__value" id="storage-kpi-res">—</div>
+          </div>
+        </div>
+
+        <!-- Global Storage Capacity Meter -->
+        <div class="card" style="margin-bottom:20px;padding:16px 20px;">
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:8px;font-weight:700;">
+            <span>میزان مصرف کلی فضای ذخیره‌سازی ابری</span>
+            <span id="storage-kpi-meter-text">—٪</span>
+          </div>
+          <div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden;">
+            <div id="storage-kpi-meter-bar" style="height:100%;width:0%;background:var(--accent,#4caf50);transition:width 0.4s ease;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);margin-top:6px;">
+            <span>هشدار در ۸۰٪</span>
+            <span>وضعیت بحرانی در ۹۰٪</span>
+            <span>تکمیل در ۱۰۰٪</span>
+          </div>
+        </div>
+
+        <!-- Event Storage Routing Configuration -->
+        <div class="card" style="margin-bottom:20px;">
+          <h3 style="margin:0 0 8px 0;font-size:1rem;">پیکربندی ذخیره‌سازی رویداد جاری (<span id="storage-event-title">انتخاب‌شده</span>)</h3>
+          <p class="muted" style="margin:0 0 16px 0;font-size:0.8rem;">تعیین ارائه‌دهنده اصلی و اولویت ارائه‌دهندگان جایگزین (Fallback) برای آپلودهای آینده این رویداد. فایل‌های قبلی همواره از ارائه‌دهنده اصلی خود خوانده می‌شوند.</p>
+          <div id="event-storage-config-body"><p class="muted">در حال بارگذاری…</p></div>
+        </div>
+
+        <!-- Configured Storage Providers -->
+        <h3 style="margin:24px 0 12px 0;font-size:1rem;">ارائه‌دهندگان ذخیره‌سازی ابری (Storage Providers)</h3>
+        <div id="storage-providers-list"><p class="muted">در حال بارگذاری…</p></div>
+
+        <!-- Event Media Overview -->
+        <div class="card" style="margin-top:20px;">
+          <h3 style="margin:0 0 12px 0;font-size:1rem;">نمای کلی فایل‌های رویداد انتخابی (Media Registry)</h3>
+          <div id="event-media-overview-wrap"><p class="muted">در حال بارگذاری…</p></div>
+        </div>
+
+        <!-- Recent Routing & Fallback Activity Logs -->
+        <div class="card" style="margin-top:20px;">
+          <h3 style="margin:0 0 12px 0;font-size:1rem;">لاگ فعالیت‌های اخیر مسیریابی و Fallback</h3>
+          <table style="width:100%;font-size:0.8rem;">
+            <thead>
+              <tr>
+                <th>شناسه</th>
+                <th>تصمیم</th>
+                <th>حجم</th>
+                <th>دلیل / جزئیات</th>
+              </tr>
+            </thead>
+            <tbody id="storage-routing-logs-body">
+              <tr><td colspan="4" class="muted" style="text-align:center;">در حال بارگذاری…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Provider Edit Modal -->
+        <div id="storage-edit-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+          <div class="card" style="max-width:520px;width:100%;max-height:90vh;overflow-y:auto;background:var(--surface,#1a1a1a);border:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <h3 style="margin:0;font-size:1.1rem;" id="modal-prov-title">ویرایش تنظیمات ارائه‌دهنده</h3>
+              <button type="button" class="btn btn--sm btn--ghost" onclick="closeEditProviderModal()">✕</button>
+            </div>
+            <form id="storage-prov-edit-form" onsubmit="handleSaveProviderForm(event)">
+              <input type="hidden" id="edit-prov-id">
+              <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:0.8rem;margin-bottom:4px;">نام نمایشی:</label>
+                <input type="text" id="edit-prov-name" style="width:100%;padding:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);" required>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:0.8rem;margin-bottom:4px;">سقف حجم هر فایل (مگابایت):</label>
+                <input type="number" id="edit-prov-max-mb" style="width:100%;padding:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);" required>
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:0.8rem;margin-bottom:4px;">سقف تعداد فایل مجاز (اشتراک):</label>
+                <input type="number" id="edit-prov-max-files" style="width:100%;padding:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);">
+              </div>
+              <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:0.8rem;margin-bottom:4px;">سقف کل فضای اشتراک (گیگابایت):</label>
+                <input type="number" id="edit-prov-cap-gb" style="width:100%;padding:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);">
+              </div>
+
+              <!-- Provider specific fields container -->
+              <div id="modal-prov-custom-fields" style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:12px;"></div>
+
+              <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button type="button" class="btn btn--ghost" onclick="closeEditProviderModal()">انصراف</button>
+                <button type="submit" class="btn btn--primary" id="btn-save-prov-modal">ذخیره تنظیمات</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
         </div><!-- /.admin-main -->
       </div><!-- /.admin-shell -->
     </div><!-- /#admin-view -->
@@ -1077,7 +1215,7 @@
   <script src="/assets/wwh-uploader.js"></script>
   <script src="/assets/wwh-lightbox.js"></script>
   <script>
-    var TOKEN = sessionStorage.getItem('wwh_token') || null;
+    var TOKEN = sessionStorage.getItem('wwh_token') || localStorage.getItem('wwh_token') || null;
     var eventAtPicker = null;
     var FA = '۰۱۲۳۴۵۶۷۸۹';
     var cachedTickets = [];
@@ -1114,7 +1252,7 @@
     }
 
     // ---- panel navigation --------------------------------------------------
-    var ADMIN_PANELS = ['dashboard', 'events', 'tickets', 'orders', 'memories', 'media', 'support'];
+    var ADMIN_PANELS = ['dashboard', 'events', 'tickets', 'orders', 'memories', 'media', 'support', 'storage'];
     var currentPanel = 'dashboard';
     var chartOrders = null;
     var chartMemories = null;
@@ -1151,6 +1289,7 @@
       if (id === 'memories') loadMemories();
       if (id === 'media') loadMedia();
       if (id === 'support') loadSupport();
+      if (id === 'storage') loadStorage();
       if (id === 'events') { /* form already filled via loadEvents */ }
     }
 
@@ -1311,6 +1450,7 @@
     var loginView = document.getElementById('login-view');
     var adminView = document.getElementById('admin-view');
     function showAdmin() {
+      document.documentElement.classList.add('wwh-authenticated');
       loginView.hidden = true; adminView.hidden = false;
       loadEvents().then(function () {
         loadTickets(); loadMedia(); loadMemories(); loadOrders(); loadSupport();
@@ -1321,6 +1461,7 @@
       });
     }
     function showLogin() {
+      document.documentElement.classList.remove('wwh-authenticated');
       destroyCharts();
       adminView.hidden = true;
       loginView.hidden = false;
@@ -1334,12 +1475,20 @@
       var err = document.getElementById('login-error');
       btn.disabled = true; err.hidden = true;
       api('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) })
-        .then(function (res) { TOKEN = res.token; sessionStorage.setItem('wwh_token', TOKEN); showAdmin(); })
+        .then(function (res) {
+          TOKEN = res.token;
+          sessionStorage.setItem('wwh_token', TOKEN);
+          localStorage.setItem('wwh_token', TOKEN);
+          showAdmin();
+        })
         .catch(function (e2) { err.textContent = 'ورود ناموفق: ' + e2.message; err.hidden = false; })
         .finally(function () { btn.disabled = false; });
     });
     document.getElementById('logout').addEventListener('click', function () {
-      sessionStorage.removeItem('wwh_token'); TOKEN = null; showLogin();
+      sessionStorage.removeItem('wwh_token');
+      localStorage.removeItem('wwh_token');
+      TOKEN = null;
+      showLogin();
     });
 
     // ---- tickets CRUD ------------------------------------------------------
@@ -1353,24 +1502,53 @@
     var tfSave = document.getElementById('tf-save');
     var tfStatus = document.getElementById('tf-status');
 
+    function updateTopbarFeatureBtn(cur) {
+      var btn = document.getElementById('topbar-feature-btn');
+      if (!btn) return;
+      if (!cur) {
+        btn.disabled = true;
+        btn.textContent = '★ فعال‌سازی روی لندینگ';
+        btn.style.opacity = '0.5';
+        return;
+      }
+      if (cur.isFeatured) {
+        btn.disabled = true;
+        btn.style.opacity = '0.9';
+        btn.style.borderColor = 'var(--accent, #d43f5a)';
+        btn.style.color = 'var(--accent, #d43f5a)';
+        btn.textContent = '★ رویداد فعال لندینگ';
+      } else {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+        btn.textContent = '★ فعال‌سازی روی لندینگ';
+      }
+    }
+
     function loadEvents() {
       return api('/api/admin/events').then(function (res) {
         cachedEvents = res.events || [];
         var sel = document.getElementById('event-select');
         if (!cachedEvents.length) {
           sel.innerHTML = '<option value="">—</option>';
+          updateTopbarFeatureBtn(null);
           return;
         }
-        if (!currentEventId) {
+        if (!currentEventId || !cachedEvents.some(function (e) { return e.id === currentEventId; })) {
           var featured = cachedEvents.find(function (e) { return e.isFeatured; });
           currentEventId = featured ? featured.id : cachedEvents[0].id;
         }
         sel.innerHTML = cachedEvents.map(function (e) {
-          return '<option value="' + e.id + '">' + escapeHtml(e.title) + (e.isFeatured ? ' ★' : '') + '</option>';
+          var prefix = e.isFeatured ? '★ [لندینگ فعال] ' : '';
+          return '<option value="' + e.id + '">' + escapeHtml(prefix + e.title) + '</option>';
         }).join('');
         sel.value = String(currentEventId);
         var cur = cachedEvents.find(function (e) { return e.id === currentEventId; });
-        if (cur) fillEventForm(cur);
+        if (cur) {
+          fillEventForm(cur);
+          updateTopbarFeatureBtn(cur);
+        }
       }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
     }
 
@@ -1502,10 +1680,30 @@
       }).catch(function () { /* map CDN optional offline */ });
     }
 
+    function showEventAlert(html, type) {
+      var box = document.getElementById('event-form-alert');
+      if (!box) return;
+      box.className = 'form-banner form-banner--' + (type || 'err');
+      box.innerHTML = html;
+      box.hidden = false;
+    }
+
+    function hideEventAlert() {
+      var box = document.getElementById('event-form-alert');
+      if (box) { box.hidden = true; box.innerHTML = ''; }
+    }
+
     function fillEventForm(e) {
       editingEventId = e.id;
       editingEventStatus = e.status || 'draft';
       editingEventSalesStatus = e.salesStatus || 'closed';
+      hideEventAlert();
+      document.querySelectorAll('#event-form .input-error').forEach(function (el) {
+        el.classList.remove('input-error');
+      });
+      var saveBtn = document.getElementById('save-event-btn');
+      if (saveBtn) saveBtn.textContent = 'ذخیره تغییرات رویداد';
+
       document.getElementById('ev-slug').value = e.slug || '';
       document.getElementById('ev-title').value = e.title || '';
       document.getElementById('ev-episode').value = e.episodeNumber || '';
@@ -1529,20 +1727,31 @@
       document.getElementById('ev-bank').value = e.paymentBankName || '';
       document.getElementById('ev-setlist').value = e.setlistJson || '[]';
       updateEventLiveStatus(e);
+      updateTopbarFeatureBtn(e);
       ensureAdminMap();
     }
 
     document.getElementById('event-select').addEventListener('change', function () {
       currentEventId = Number(this.value) || null;
       var cur = cachedEvents.find(function (e) { return e.id === currentEventId; });
-      if (cur) fillEventForm(cur);
+      if (cur) {
+        fillEventForm(cur);
+        updateTopbarFeatureBtn(cur);
+      }
       loadTickets(); loadMedia(); loadMemories(); loadOrders();
       if (currentPanel === 'dashboard') loadDashboard();
       else if (currentPanel === 'support') loadSupport();
+      else if (currentPanel === 'storage' && window.loadStorage) loadStorage();
     });
+
     document.getElementById('refresh-events').addEventListener('click', loadEvents);
+
     document.getElementById('new-event-btn').addEventListener('click', function () {
       editingEventId = null;
+      hideEventAlert();
+      document.querySelectorAll('#event-form .input-error').forEach(function (el) {
+        el.classList.remove('input-error');
+      });
       document.getElementById('ev-slug').value = '';
       document.getElementById('ev-title').value = '';
       document.getElementById('ev-episode').value = '';
@@ -1570,8 +1779,19 @@
       document.getElementById('ev-setlist').value = '[]';
       editingEventStatus = 'draft';
       editingEventSalesStatus = 'closed';
+
+      var liveEl = document.getElementById('event-live-status');
+      if (liveEl) {
+        liveEl.innerHTML = '<span class="badge badge--pending">در حال ایجاد رویداد جدید (فیلدهای * الزامی هستند)</span>';
+      }
+      var saveBtn = document.getElementById('save-event-btn');
+      if (saveBtn) saveBtn.textContent = 'ثبت رویداد جدید';
+
+      showEventAlert('در حال ایجاد رویداد جدید — لطفاً فیلدهای الزامی (*) را پر کرده و روی «ثبت رویداد جدید» بزنید.', 'ok');
+      document.getElementById('ev-title').focus();
       ensureAdminMap();
     });
+
     document.getElementById('ev-lat').addEventListener('change', syncAdminMapPin);
     document.getElementById('ev-lng').addEventListener('change', syncAdminMapPin);
     document.getElementById('ev-loc-label').addEventListener('change', syncAdminMapPin);
@@ -1582,23 +1802,74 @@
     document.getElementById('ev-loc-paste').addEventListener('paste', function () {
       setTimeout(applyPastedMapsUrl, 0);
     });
+
     document.getElementById('save-event-btn').addEventListener('click', function () {
       var st = document.getElementById('event-status');
+      var saveBtn = document.getElementById('save-event-btn');
+      hideEventAlert();
+
+      var slugEl = document.getElementById('ev-slug');
+      var titleEl = document.getElementById('ev-title');
+      var atEl = document.getElementById('ev-at');
+      var capEl = document.getElementById('ev-capacity');
+
+      [slugEl, titleEl, atEl, capEl].forEach(function (el) { el.classList.remove('input-error'); });
+
+      var title = titleEl.value.trim();
+      var slug = slugEl.value.trim().toLowerCase().replace(/\s+/g, '-');
+      slugEl.value = slug;
+      var capacity = Number(capEl.value) || 0;
+
+      var errors = [];
+      if (!title) {
+        errors.push('عنوان رویداد الزامی است.');
+        titleEl.classList.add('input-error');
+      }
+      if (!slug) {
+        errors.push('شناسه رویداد (Slug) به انگلیسی الزامی است (مثلاً: episode-4).');
+        slugEl.classList.add('input-error');
+      } else if (!/^[a-z0-9\-_]+$/.test(slug)) {
+        errors.push('شناسه (Slug) فقط باید شامل حروف انگلیسی کوچک، اعداد و خط تیره (-) باشد.');
+        slugEl.classList.add('input-error');
+      }
+
+      var eventAtVal = (eventAtPicker && eventAtPicker.selectedDates[0])
+        ? pickerDateToTehranIso(eventAtPicker.selectedDates[0])
+        : atEl.value.trim();
+
+      if (!eventAtVal) {
+        errors.push('تاریخ و ساعت اجرای رویداد الزامی است (از تقویم انتخاب کنید).');
+        atEl.classList.add('input-error');
+      }
+
+      if (capacity < 1) {
+        errors.push('ظرفیت کل رویداد باید حداقل ۱ نفر باشد.');
+        capEl.classList.add('input-error');
+      }
+
       var setlistRaw = document.getElementById('ev-setlist').value.trim() || '[]';
       try {
         JSON.parse(setlistRaw);
       } catch (err) {
-        setStatus(st, 'ست‌لیست JSON معتبر نیست.', 'err');
+        errors.push('فرمت ست‌لیست (JSON) نامعتبر است.');
+        document.getElementById('ev-setlist').classList.add('input-error');
+      }
+
+      if (errors.length > 0) {
+        showEventAlert(errors.join('<br>'), 'err');
+        setStatus(st, 'لطفاً فیلدهای الزامی را تکمیل کنید.', 'err');
+        alert('لطفاً فیلدهای الزامی رویداد را تکمیل کنید:\n• ' + errors.join('\n• '));
+        var first = document.querySelector('#event-form .input-error');
+        if (first) first.focus();
         return;
       }
+
       var body = {
-        slug: document.getElementById('ev-slug').value.trim(),
-        title: document.getElementById('ev-title').value.trim(),
+        slug: slug,
+        title: title,
         episodeNumber: Number(document.getElementById('ev-episode').value) || null,
         description: document.getElementById('ev-desc').value.trim(),
-        eventAt: (eventAtPicker && eventAtPicker.selectedDates[0])
-          ? pickerDateToTehranIso(eventAtPicker.selectedDates[0])
-          : (document.getElementById('ev-at').value.trim() || new Date().toISOString()),
+        eventAt: eventAtVal,
         city: document.getElementById('ev-city').value.trim(),
         venue: document.getElementById('ev-venue').value.trim(),
         hostName: document.getElementById('ev-host-name').value.trim(),
@@ -1607,7 +1878,7 @@
         locationLng: (window.WwhMap ? WwhMap.parseCoord(document.getElementById('ev-lng').value) : null),
         locationLabel: document.getElementById('ev-loc-label').value.trim(),
         locationPublished: !!document.getElementById('ev-loc-published').checked,
-        capacity: Number(document.getElementById('ev-capacity').value) || 50,
+        capacity: capacity,
         ticketPrice: Number(String(document.getElementById('ev-price').value).replace(/\D/g, '')) || 0,
         paymentCardNumber: document.getElementById('ev-card').value.trim(),
         paymentCardHolder: document.getElementById('ev-card-holder').value.trim(),
@@ -1618,22 +1889,62 @@
         status: editingEventStatus,
         salesStatus: editingEventSalesStatus
       };
-      var path = editingEventId ? ('/api/admin/events/' + editingEventId) : '/api/admin/events';
-      var method = editingEventId ? 'PATCH' : 'POST';
+
+      var isNew = !editingEventId;
+      var path = isNew ? '/api/admin/events' : ('/api/admin/events/' + editingEventId);
+      var method = isNew ? 'POST' : 'PATCH';
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'در حال ذخیره…';
+      setStatus(st, 'در حال ذخیره…');
+
       api(path, { method: method, headers: authHeaders(), body: JSON.stringify(body) })
         .then(function (res) {
-          if (!editingEventId && res.id) { editingEventId = res.id; currentEventId = res.id; }
+          if (isNew && res && res.id) {
+            editingEventId = res.id;
+            currentEventId = res.id;
+          }
+          saveBtn.textContent = 'ذخیره تغییرات رویداد';
           setStatus(st, 'ذخیره شد.', 'ok');
-          loadEvents();
+          showEventAlert(isNew ? '✓ رویداد جدید با موفقیت ایجاد و ذخیره شد.' : '✓ تغییرات رویداد ذخیره شد.', 'ok');
+          alert(isNew ? 'رویداد جدید با موفقیت ایجاد و ذخیره شد.' : 'تغییرات رویداد با موفقیت ذخیره شد.');
+          loadEvents().then(function () {
+            loadTickets(); loadMedia(); loadMemories(); loadOrders();
+            if (currentPanel === 'dashboard') loadDashboard();
+            else if (currentPanel === 'storage' && window.loadStorage) loadStorage();
+          });
         })
-        .catch(function (e2) { setStatus(st, 'خطا: ' + e2.message, 'err'); });
+        .catch(function (e2) {
+          setStatus(st, 'خطا: ' + e2.message, 'err');
+          showEventAlert('خطا در ذخیره رویداد: ' + e2.message, 'err');
+          alert('خطا در ذخیره رویداد:\n' + e2.message);
+        })
+        .finally(function () {
+          saveBtn.disabled = false;
+        });
     });
-    document.getElementById('feature-event-btn').addEventListener('click', function () {
-      if (!editingEventId) return alert('ابتدا رویداد را ذخیره کنید.');
-      api('/api/admin/events/' + editingEventId + '/feature', { method: 'POST', headers: authHeaders() })
-        .then(loadEvents)
-        .catch(function (e2) { alert(e2.message); });
-    });
+
+    function activateCurrentEventOnLanding() {
+      var curId = editingEventId || currentEventId;
+      if (!curId) return alert('ابتدا یک رویداد را انتخاب یا ذخیره کنید.');
+      var cur = cachedEvents.find(function (e) { return e.id === curId; });
+      var title = cur ? cur.title : 'این رویداد';
+      api('/api/admin/events/' + curId + '/feature', { method: 'POST', headers: authHeaders() })
+        .then(function () {
+          loadEvents().then(function () {
+            alert('رویداد «' + title + '» با موفقیت به‌عنوان رویداد فعال لندینگ سایت تنظیم شد.');
+          });
+        })
+        .catch(function (e2) {
+          alert('خطا در فعال‌سازی لندینگ: ' + (e2.message || 'خطا'));
+        });
+    }
+
+    var topbarFeatureBtn = document.getElementById('topbar-feature-btn');
+    if (topbarFeatureBtn) {
+      topbarFeatureBtn.addEventListener('click', activateCurrentEventOnLanding);
+    }
+    document.getElementById('feature-event-btn').addEventListener('click', activateCurrentEventOnLanding);
     document.getElementById('publish-event-btn').addEventListener('click', function () {
       if (!editingEventId) return;
       api('/api/admin/events/' + editingEventId + '/publish', { method: 'POST', headers: authHeaders() })
@@ -2684,10 +2995,427 @@
 
     // ---- boot --------------------------------------------------------------
     if (TOKEN) {
-      api('/api/admin/tickets').then(showAdmin).catch(function () { showLogin(); });
+      showAdmin();
     } else {
       showLogin();
     }
+
+    // ---- Storage Management (Media Storage Manager) --------------------------
+    var cachedStorageOverview = null;
+    var cachedStorageProviders = [];
+
+    function formatBytes(n) {
+      n = Number(n) || 0;
+      if (n < 1024) return toFa(Math.round(n)) + ' بایت';
+      if (n < 1024 * 1024) return toFa((n / 1024).toFixed(1)) + ' کیلوبایت';
+      if (n < 1024 * 1024 * 1024) return toFa((n / (1024 * 1024)).toFixed(1)) + ' مگابایت';
+      return toFa((n / (1024 * 1024 * 1024)).toFixed(2)) + ' گیگابایت';
+    }
+
+    function loadStorage() {
+      var evTitle = document.getElementById('storage-event-title');
+      if (evTitle) {
+        var currentEv = cachedEvents.find(function(e) { return e.id === currentEventId; });
+        evTitle.textContent = currentEv ? currentEv.title : 'رویداد جاری';
+      }
+      loadStorageOverview();
+      loadEventStorageConfig();
+      loadEventMediaOverview();
+    }
+
+    function loadStorageOverview() {
+      var listEl = document.getElementById('storage-providers-list');
+      if (listEl) listEl.innerHTML = '<p class="muted">در حال دریافت وضعیت ارائه‌دهندگان…</p>';
+
+      api('/api/admin/storage/monitor').then(function(res) {
+        cachedStorageOverview = res;
+        renderStorageKpis(res.global);
+        renderStorageProviders(res.providers);
+        renderStorageRoutingLogs(res.recentRoutingLogs);
+      }).catch(function(err) {
+        if (listEl) listEl.innerHTML = '<p class="err">خطا در دریافت وضعیت: ' + escapeHtml(err.message) + '</p>';
+      });
+    }
+
+    function renderStorageKpis(g) {
+      if (!g) return;
+      var capEl = document.getElementById('storage-kpi-cap');
+      var usedEl = document.getElementById('storage-kpi-used');
+      var availEl = document.getElementById('storage-kpi-avail');
+      var resEl = document.getElementById('storage-kpi-res');
+      var meterEl = document.getElementById('storage-kpi-meter-bar');
+      var meterText = document.getElementById('storage-kpi-meter-text');
+
+      if (capEl) capEl.textContent = formatBytes(g.totalCapacityBytes);
+      if (usedEl) usedEl.textContent = formatBytes(g.totalUsedBytes);
+      if (availEl) availEl.textContent = formatBytes(g.totalAvailableBytes);
+      if (resEl) resEl.textContent = toFa(g.activeReservationsCount || 0) + ' فایل';
+
+      var pct = g.percentUsed || 0;
+      if (meterEl) {
+        meterEl.style.width = Math.min(100, pct) + '%';
+        if (pct >= 90) meterEl.style.background = 'var(--danger, #e53935)';
+        else if (pct >= 80) meterEl.style.background = 'var(--warn, #fdd835)';
+        else meterEl.style.background = 'var(--accent, #4caf50)';
+      }
+      if (meterText) meterText.textContent = toFa(pct.toFixed(1)) + '٪ مصرف شده';
+    }
+
+    function renderStorageProviders(providers) {
+      cachedStorageProviders = providers || [];
+      var listEl = document.getElementById('storage-providers-list');
+      if (!listEl) return;
+      if (!providers || !providers.length) {
+        listEl.innerHTML = '<p class="muted">هیچ ارائه‌دهنده‌ای ثبت نشده است.</p>';
+        return;
+      }
+      var html = '';
+      providers.forEach(function(p) {
+        var isFiles = p.providerType === 'files_ir';
+        var isS3 = p.providerType === 's3';
+        var typeLabel = isFiles ? 'Files.ir (رسمی)' : (isS3 ? 'S3-Compatible' : 'حافظه محلی VPS');
+        var badgeClass = p.healthStatus === 'healthy' ? 'badge--approved' : (p.healthStatus === 'unreachable' ? 'badge--revoked' : 'badge--pending');
+        var badgeText = p.healthStatus === 'healthy' ? 'سالم و متصل' : (p.healthStatus === 'unreachable' ? 'قطع ارتباط' : (p.healthStatus === 'unconfigured' ? 'تنظیم‌نشده' : 'در حال بررسی'));
+
+        var u = p.usage || {};
+        var usedBytes = u.usedBytes || 0;
+        var totBytes = u.totalBytes || p.totalCapacityBytes || 0;
+        var pct = u.percentUsed || (totBytes > 0 ? (usedBytes / totBytes * 100) : 0);
+
+        html += '<div class="card storage-provider-card' + (p.isEnabled ? '' : ' storage-provider-card--disabled') + '" style="margin-bottom:14px;">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">';
+        html += '<div>';
+        html += '<div style="display:flex;align-items:center;gap:8px;">';
+        html += '<strong style="font-size:1.05rem;">' + escapeHtml(p.name) + '</strong>';
+        html += '<span class="status-badge ' + badgeClass + '">' + badgeText + '</span>';
+        if (!p.isEnabled) html += '<span class="status-badge" style="background:#555;color:#fff;">غیرفعال</span>';
+        html += '</div>';
+        html += '<div class="muted" style="margin-top:4px;font-size:0.8rem;">نوع: ' + typeLabel + ' · اولویت پیش‌فرض: ' + toFa(p.priority) + '</div>';
+        html += '</div>';
+
+        html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+        html += '<button type="button" class="btn btn--sm btn--ghost" onclick="testProviderConnection(' + p.providerId + ')">تست اتصال</button>';
+        html += '<button type="button" class="btn btn--sm btn--ghost" onclick="openEditProviderModal(' + p.providerId + ')">ویرایش تنظیمات</button>';
+        html += '<button type="button" class="btn btn--sm ' + (p.isEnabled ? 'btn--danger' : 'btn--primary') + '" onclick="toggleProviderEnabled(' + p.providerId + ', ' + (!p.isEnabled) + ')">' + (p.isEnabled ? 'غیرفعال‌سازی' : 'فعال‌سازی') + '</button>';
+        html += '</div>';
+        html += '</div>';
+
+        // Storage progress bar
+        html += '<div style="margin-top:14px;">';
+        html += '<div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px;">';
+        html += '<span>مصرف فضا: ' + formatBytes(usedBytes) + ' از ' + formatBytes(totBytes) + '</span>';
+        html += '<span>' + toFa(pct.toFixed(1)) + '٪</span>';
+        html += '</div>';
+        html += '<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">';
+        var barColor = pct >= 90 ? 'var(--danger, #e53935)' : (pct >= 80 ? 'var(--warn, #fdd835)' : 'var(--accent, #4caf50)');
+        html += '<div style="height:100%;width:' + Math.min(100, pct) + '%;background:' + barColor + ';"></div>';
+        html += '</div>';
+        html += '</div>';
+
+        // Provider details
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;margin-top:12px;font-size:0.8rem;" class="muted">';
+        html += '<div>حداکثر حجم هر فایل: ' + formatBytes(p.maxFileSizeBytes || 0) + '</div>';
+        html += '<div>سقف تعداد فایل: ' + (p.fileCountLimit ? toFa(p.fileCountLimit) + ' فایل' : 'نامحدود') + '</div>';
+        if (p.lastHealthCheckAt) {
+          html += '<div>آخرین بررسی: ' + toFa(new Date(p.lastHealthCheckAt).toLocaleTimeString('fa-IR')) + '</div>';
+        }
+        if (p.healthError) {
+          html += '<div style="grid-column:1/-1;color:var(--danger,#e53935);">خطا: ' + escapeHtml(p.healthError) + '</div>';
+        }
+        html += '</div>';
+
+        html += '</div>';
+      });
+      listEl.innerHTML = html;
+    }
+
+    function loadEventStorageConfig() {
+      if (!currentEventId) return;
+      var container = document.getElementById('event-storage-config-body');
+      if (container) container.innerHTML = '<p class="muted">در حال بارگذاری تنظیمات رویداد…</p>';
+
+      api('/api/admin/storage/events/' + currentEventId).then(function(cfg) {
+        renderEventStorageConfig(cfg);
+      }).catch(function(err) {
+        if (container) container.innerHTML = '<p class="err">خطا: ' + escapeHtml(err.message) + '</p>';
+      });
+    }
+
+    function renderEventStorageConfig(cfg) {
+      var container = document.getElementById('event-storage-config-body');
+      if (!container) return;
+
+      var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:16px;">';
+
+      // Primary Provider
+      html += '<div>';
+      html += '<label style="display:block;font-size:0.85rem;font-weight:700;margin-bottom:6px;">ارائه‌دهنده اصلی (Primary Provider):</label>';
+      html += '<select id="event-primary-provider-sel" style="width:100%;padding:8px 12px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);">';
+      cachedStorageProviders.forEach(function(p) {
+        var sel = p.providerId === cfg.primaryProviderId ? ' selected' : '';
+        html += '<option value="' + p.providerId + '"' + sel + '>' + escapeHtml(p.name) + (p.isEnabled ? '' : ' (غیرفعال)') + '</option>';
+      });
+      html += '</select>';
+      html += '<p class="muted" style="margin-top:4px;font-size:0.75rem;">آپلودهای جدید ابتدا به این ارائه‌دهنده هدایت می‌شوند.</p>';
+      html += '</div>';
+
+      // Fallback Providers
+      html += '<div>';
+      html += '<label style="display:block;font-size:0.85rem;font-weight:700;margin-bottom:6px;">ارائه‌دهندگان جایگزین (Fallback Providers):</label>';
+      var fallbacks = cfg.fallbackProviderIds || [];
+      html += '<div id="event-fallbacks-checks" style="display:flex;flex-direction:column;gap:6px;">';
+      cachedStorageProviders.forEach(function(p) {
+        if (p.providerId === cfg.primaryProviderId) return;
+        var checked = fallbacks.indexOf(p.providerId) >= 0 ? ' checked' : '';
+        html += '<label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;">';
+        html += '<input type="checkbox" value="' + p.providerId + '"' + checked + ' class="event-fallback-chk"> ';
+        html += escapeHtml(p.name) + (p.isEnabled ? '' : ' (غیرفعال)');
+        html += '</label>';
+      });
+      html += '</div>';
+      html += '<p class="muted" style="margin-top:4px;font-size:0.75rem;">در صورت پر شدن یا قطعی ارائه‌دهنده اصلی، فایل‌ها به این سرویس‌ها فرستاده می‌شوند.</p>';
+      html += '</div>';
+
+      html += '</div>';
+
+      // Status & Action button
+      var statusBadge = cfg.routingStatus === 'active' ? '<span class="status-badge badge--approved">فعال (عادی)</span>' : (cfg.routingStatus === 'degraded' ? '<span class="status-badge badge--pending">استفاده از جایگزین</span>' : '<span class="status-badge badge--revoked">خطا / پر شده</span>');
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);flex-wrap:wrap;gap:10px;">';
+      html += '<div style="font-size:0.85rem;">وضعیت مسیریابی رویداد: ' + statusBadge + '</div>';
+      html += '<button type="button" class="btn btn--primary" id="btn-save-event-storage" onclick="saveEventStorageConfig()">ذخیره تنظیمات مسیریابی رویداد</button>';
+      html += '</div>';
+
+      // Mapped standard folders
+      if (cfg.folders && cfg.folders.length) {
+        html += '<div style="margin-top:18px;">';
+        html += '<strong style="font-size:0.85rem;">پوشه‌های استاندارد نگاشت‌شده در فضای ابری:</strong>';
+        html += '<ul style="margin:8px 0 0 0;padding-right:20px;font-size:0.8rem;" class="muted">';
+        cfg.folders.forEach(function(f) {
+          html += '<li><code>' + escapeHtml(f.path) + '</code> (شناسه: ' + escapeHtml(f.folderId) + ')</li>';
+        });
+        html += '</ul>';
+        html += '</div>';
+      }
+
+      container.innerHTML = html;
+    }
+
+    function saveEventStorageConfig() {
+      if (!currentEventId) return;
+      var sel = document.getElementById('event-primary-provider-sel');
+      var primaryId = sel ? Number(sel.value) : 1;
+
+      var fallbacks = [];
+      document.querySelectorAll('.event-fallback-chk:checked').forEach(function(chk) {
+        fallbacks.push(Number(chk.value));
+      });
+
+      var btn = document.getElementById('btn-save-event-storage');
+      if (btn) { btn.disabled = true; btn.textContent = 'در حال ذخیره…'; }
+
+      api('/api/admin/storage/events/' + currentEventId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ primaryProviderId: primaryId, fallbackProviderIds: fallbacks })
+      }).then(function() {
+        alert('تنظیمات ذخیره‌سازی رویداد با موفقیت ذخیره شد.');
+        loadEventStorageConfig();
+      }).catch(function(err) {
+        alert('خطا در ذخیره تنظیمات: ' + err.message);
+      }).finally(function() {
+        if (btn) { btn.disabled = false; btn.textContent = 'ذخیره تنظیمات مسیریابی رویداد'; }
+      });
+    }
+
+    function loadEventMediaOverview() {
+      if (!currentEventId) return;
+      var wrapEl = document.getElementById('event-media-overview-wrap');
+      if (wrapEl) wrapEl.innerHTML = '<p class="muted">در حال بارگذاری آمار فایل‌های رویداد…</p>';
+
+      api('/api/admin/storage/events/' + currentEventId + '/media-overview').then(function(ov) {
+        renderEventMediaOverview(ov);
+      }).catch(function(err) {
+        if (wrapEl) wrapEl.innerHTML = '<p class="muted">هنوز فایلی برای این رویداد در رجیستری ابری ثبت نشده است.</p>';
+      });
+    }
+
+    function renderEventMediaOverview(ov) {
+      var wrapEl = document.getElementById('event-media-overview-wrap');
+      if (!wrapEl) return;
+      if (!ov || !ov.totalCount) {
+        wrapEl.innerHTML = '<p class="muted">هنوز هیچ فایلی برای این رویداد ثبت نشده است.</p>';
+        return;
+      }
+      var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:12px;margin-bottom:14px;">';
+      html += '<div class="kpi"><div class="kpi__label">کل فایل‌های رویداد</div><div class="kpi__value">' + toFa(ov.totalCount) + '</div></div>';
+      html += '<div class="kpi"><div class="kpi__label">عکس‌ها</div><div class="kpi__value">' + toFa(ov.photosCount) + '</div></div>';
+      html += '<div class="kpi"><div class="kpi__label">ویدیوها</div><div class="kpi__value">' + toFa(ov.videosCount) + '</div></div>';
+      html += '<div class="kpi"><div class="kpi__label">کل حجم مصرفی</div><div class="kpi__value" style="font-size:1.1rem;">' + formatBytes(ov.totalSizeBytes) + '</div></div>';
+      html += '</div>';
+
+      if (ov.providerBreakdown && Object.keys(ov.providerBreakdown).length) {
+        html += '<strong style="font-size:0.85rem;">تفکیک فایل‌ها بر اساس ارائه‌دهنده واقعی:</strong>';
+        html += '<table style="width:100%;margin-top:8px;font-size:0.8rem;"><thead><tr><th>ارائه‌دهنده</th><th>تعداد فایل</th><th>حجم</th></tr></thead><tbody>';
+        for (var provName in ov.providerBreakdown) {
+          var item = ov.providerBreakdown[provName];
+          html += '<tr><td>' + escapeHtml(provName) + '</td><td>' + toFa(item.count) + '</td><td>' + formatBytes(item.size) + '</td></tr>';
+        }
+        html += '</tbody></table>';
+      }
+      wrapEl.innerHTML = html;
+    }
+
+    function renderStorageRoutingLogs(logs) {
+      var tbody = document.getElementById('storage-routing-logs-body');
+      if (!tbody) return;
+      if (!logs || !logs.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="muted" style="text-align:center;">هنوز رویداد مسیریابی ثبت نشده است.</td></tr>';
+        return;
+      }
+      var html = '';
+      logs.slice(0, 15).forEach(function(l) {
+        var decBadge = l.decision === 'selected' ? '<span class="status-badge badge--approved">انتخاب شد</span>' : (l.decision === 'rejected_all' ? '<span class="status-badge badge--revoked">رد همه</span>' : '<span class="status-badge badge--pending">رد به دلیل فضا/خطا</span>');
+        html += '<tr>';
+        html += '<td>' + toFa(l.id) + '</td>';
+        html += '<td>' + decBadge + '</td>';
+        html += '<td>' + formatBytes(l.fileSize) + '</td>';
+        html += '<td class="muted">' + escapeHtml(l.reason) + '</td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    function testProviderConnection(providerId) {
+      api('/api/admin/storage/providers/' + providerId + '/test', { method: 'POST' }).then(function(res) {
+        alert(res.message || (res.isHealthy ? 'اتصال برقرار است.' : 'خطا در برقراری ارتباط'));
+        loadStorageOverview();
+      }).catch(function(err) {
+        alert('خطا در تست اتصال: ' + err.message);
+      });
+    }
+
+    function toggleProviderEnabled(providerId, enabled) {
+      api('/api/admin/storage/providers/' + providerId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isEnabled: enabled })
+      }).then(function() {
+        loadStorageOverview();
+      }).catch(function(err) {
+        alert('خطا در تغییر وضعیت ارائه‌دهنده: ' + err.message);
+      });
+    }
+
+    var editingProviderId = null;
+    function openEditProviderModal(providerId) {
+      editingProviderId = providerId;
+      var p = cachedStorageProviders.find(function(item) { return item.providerId === providerId; });
+      if (!p) return;
+
+      var modal = document.getElementById('storage-edit-modal');
+      var title = document.getElementById('modal-prov-title');
+      var nameInp = document.getElementById('edit-prov-name');
+      var maxMbInp = document.getElementById('edit-prov-max-mb');
+      var maxFiles = document.getElementById('edit-prov-max-files');
+      var capGbInp = document.getElementById('edit-prov-cap-gb');
+      var customFields = document.getElementById('modal-prov-custom-fields');
+
+      if (title) title.textContent = 'ویرایش تنظیمات: ' + p.name;
+      if (nameInp) nameInp.value = p.name;
+      if (maxMbInp) maxMbInp.value = Math.round((p.maxFileSizeBytes || 0) / (1024 * 1024));
+      if (maxFiles) maxFiles.value = p.fileCountLimit || '';
+      if (capGbInp) capGbInp.value = Math.round((p.totalCapacityBytes || 0) / (1024 * 1024 * 1024));
+
+      var cfg = p.config || {};
+      var fHtml = '';
+      if (p.providerType === 'files_ir') {
+        fHtml += '<div style="margin-bottom:12px;"><label style="display:block;font-size:0.8rem;margin-bottom:4px;">Files.ir API Key (کلید دسترسی):</label>';
+        fHtml += '<input type="password" id="edit-prov-apikey" value="' + escapeHtml(cfg.api_key || '') + '" placeholder="' + (cfg.has_api_key ? '•••••• (تنظیم‌شده)' : 'کلید جدید را وارد کنید') + '" style="width:100%;padding:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);"></div>';
+
+        fHtml += '<div style="margin-bottom:12px;"><label style="display:block;font-size:0.8rem;margin-bottom:4px;">آدرس API Endpoint:</label>';
+        fHtml += '<input type="text" id="edit-prov-endpoint" value="' + escapeHtml(cfg.api_endpoint || 'https://my.files.ir/api/v1') + '" style="width:100%;padding:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);"></div>';
+
+        fHtml += '<div style="margin-bottom:12px;"><label style="display:block;font-size:0.8rem;margin-bottom:4px;">شناسه فضای کاری (Workspace ID):</label>';
+        fHtml += '<input type="number" id="edit-prov-workspace" value="' + (cfg.workspace_id || 0) + '" style="width:100%;padding:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);"><span class="muted" style="font-size:0.75rem;">(عدد ۰ برای درایو شخصی)</span></div>';
+      } else if (p.providerType === 's3') {
+        fHtml += '<div style="margin-bottom:12px;"><label style="display:block;font-size:0.8rem;margin-bottom:4px;">آدرس مخزن S3 Endpoint:</label>';
+        fHtml += '<input type="text" id="edit-s3-endpoint" value="' + escapeHtml(cfg.endpoint || '') + '" placeholder="مثلاً: https://s3.ir-thr-at1.arvanstorage.ir" style="width:100%;padding:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);"></div>';
+
+        fHtml += '<div style="margin-bottom:12px;"><label style="display:block;font-size:0.8rem;margin-bottom:4px;">نام باکت (Bucket Name):</label>';
+        fHtml += '<input type="text" id="edit-s3-bucket" value="' + escapeHtml(cfg.bucket || '') + '" style="width:100%;padding:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);"></div>';
+
+        fHtml += '<div style="margin-bottom:12px;"><label style="display:block;font-size:0.8rem;margin-bottom:4px;">S3 Access Key:</label>';
+        fHtml += '<input type="text" id="edit-s3-access" value="' + escapeHtml(cfg.access_key || '') + '" style="width:100%;padding:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);"></div>';
+
+        fHtml += '<div style="margin-bottom:12px;"><label style="display:block;font-size:0.8rem;margin-bottom:4px;">S3 Secret Key:</label>';
+        fHtml += '<input type="password" id="edit-s3-secret" value="' + escapeHtml(cfg.secret_key || '') + '" placeholder="' + (cfg.has_secret_key ? '•••••• (تنظیم‌شده)' : 'کلید محرمانه جدید') + '" style="width:100%;padding:8px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);"></div>';
+      } else {
+        fHtml += '<p class="muted" style="font-size:0.8rem;">این ارائه‌دهنده مربوط به حافظه داخلی سرور VPS است و نیاز به کلید ابری ندارد.</p>';
+      }
+
+      if (customFields) customFields.innerHTML = fHtml;
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeEditProviderModal() {
+      var modal = document.getElementById('storage-edit-modal');
+      if (modal) modal.style.display = 'none';
+      editingProviderId = null;
+    }
+
+    function handleSaveProviderForm(e) {
+      e.preventDefault();
+      if (!editingProviderId) return;
+
+      var p = cachedStorageProviders.find(function(item) { return item.providerId === editingProviderId; });
+      if (!p) return;
+
+      var nameVal = document.getElementById('edit-prov-name').value;
+      var maxMbVal = Number(document.getElementById('edit-prov-max-mb').value) || 100;
+      var maxFilesVal = Number(document.getElementById('edit-prov-max-files').value) || null;
+      var capGbVal = Number(document.getElementById('edit-prov-cap-gb').value) || null;
+
+      var newCfg = Object.assign({}, p.config || {});
+      if (p.providerType === 'files_ir') {
+        var apikey = document.getElementById('edit-prov-apikey').value;
+        if (apikey && !apikey.includes('...')) newCfg.api_key = apikey;
+        newCfg.api_endpoint = document.getElementById('edit-prov-endpoint').value;
+        newCfg.workspace_id = Number(document.getElementById('edit-prov-workspace').value) || 0;
+      } else if (p.providerType === 's3') {
+        newCfg.endpoint = document.getElementById('edit-s3-endpoint').value;
+        newCfg.bucket = document.getElementById('edit-s3-bucket').value;
+        var s3acc = document.getElementById('edit-s3-access').value;
+        if (s3acc && !s3acc.includes('...')) newCfg.access_key = s3acc;
+        var s3sec = document.getElementById('edit-s3-secret').value;
+        if (s3sec && !s3sec.includes('...')) newCfg.secret_key = s3sec;
+      }
+
+      var payload = {
+        name: nameVal,
+        maxFileSizeBytes: maxMbVal * 1024 * 1024,
+        fileCountLimit: maxFilesVal,
+        totalCapacityBytes: capGbVal ? (capGbVal * 1024 * 1024 * 1024) : null,
+        config: newCfg
+      };
+
+      var btn = document.getElementById('btn-save-prov-modal');
+      if (btn) { btn.disabled = true; btn.textContent = 'در حال ذخیره…'; }
+
+      api('/api/admin/storage/providers/' + editingProviderId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function() {
+        alert('تنظیمات ارائه‌دهنده با موفقیت به‌روزرسانی شد.');
+        closeEditProviderModal();
+        loadStorageOverview();
+      }).catch(function(err) {
+        alert('خطا در ذخیره تنظیمات: ' + err.message);
+      }).finally(function() {
+        if (btn) { btn.disabled = false; btn.textContent = 'ذخیره تنظیمات'; }
+      });
+    }
+
   </script>
 </body>
 </html>

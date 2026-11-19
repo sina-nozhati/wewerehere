@@ -85,8 +85,18 @@ def public_events_query(db: Session):
     ).all()
 
 
+_FA_EN_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+
+
 def parse_event_at(iso: str) -> datetime:
-    dt = datetime.fromisoformat((iso or "").replace("Z", "+00:00"))
+    raw = (iso or "").strip().translate(_FA_EN_DIGITS)
+    if not raw:
+        raise ValueError("تاریخ و ساعت رویداد الزامی است")
+    clean = raw.replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(clean)
+    except ValueError as e:
+        raise ValueError("فرمت تاریخ و ساعت نامعتبر است") from e
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=TEHRAN)
     return dt.astimezone(timezone.utc)
