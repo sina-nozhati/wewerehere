@@ -795,39 +795,39 @@
         <div class="admin-main">
       <section class="admin-panel" data-panel="dashboard" id="panel-dashboard">
         <h2>داشبورد اجرا</h2>
-        <p class="muted" id="dash-event-title" style="margin-bottom:14px;">آمار رویداد فعال</p>
+        <p class="muted" id="dash-event-title" style="margin-bottom:14px;"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:160px;height:18px;display:inline-block;" aria-hidden="true"></span></p>
         <div class="kpi-grid" id="kpi-grid">
           <button type="button" class="kpi kpi--click" data-goto="tickets" id="kpi-guests">
             <div class="kpi__label">مهمانان فعال</div>
-            <div class="kpi__value" id="kpi-guests-val">—</div>
+            <div class="kpi__value" id="kpi-guests-val"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:64px;height:30px;display:inline-block;" aria-hidden="true"></span></div>
             <div class="kpi__hint" id="kpi-guests-hint">از ظرفیت</div>
           </button>
           <div class="kpi" id="kpi-revenue">
             <div class="kpi__label">درآمد تخمینی</div>
             <div class="kpi__value kpi__value--money" id="kpi-revenue-val">
-              <span class="kpi__amount" id="kpi-revenue-amount">—</span>
+              <span class="kpi__amount" id="kpi-revenue-amount"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:84px;height:30px;display:inline-block;" aria-hidden="true"></span></span>
               <span class="kpi__unit">تومان</span>
             </div>
             <div class="kpi__hint">رزرو ورود فعال × قیمت رویداد</div>
           </div>
           <button type="button" class="kpi kpi--click" data-goto="orders" id="kpi-orders">
             <div class="kpi__label">رزرو در انتظار</div>
-            <div class="kpi__value" id="kpi-orders-val">—</div>
+            <div class="kpi__value" id="kpi-orders-val"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:40px;height:30px;display:inline-block;" aria-hidden="true"></span></div>
             <div class="kpi__hint" id="kpi-orders-hint">کل درخواست‌های رزرو</div>
           </button>
           <button type="button" class="kpi kpi--click" data-goto="memories" id="kpi-memories">
             <div class="kpi__label">خاطرات در انتظار</div>
-            <div class="kpi__value" id="kpi-memories-val">—</div>
+            <div class="kpi__value" id="kpi-memories-val"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:40px;height:30px;display:inline-block;" aria-hidden="true"></span></div>
             <div class="kpi__hint" id="kpi-memories-hint">تأیید / رد</div>
           </button>
           <button type="button" class="kpi kpi--click" data-goto="support" id="kpi-support">
             <div class="kpi__label">پشتیبانی باز</div>
-            <div class="kpi__value" id="kpi-support-val">—</div>
+            <div class="kpi__value" id="kpi-support-val"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:40px;height:30px;display:inline-block;" aria-hidden="true"></span></div>
             <div class="kpi__hint">تیکت‌های فعال</div>
           </button>
           <div class="kpi" id="kpi-groups">
             <div class="kpi__label">گروه A / B</div>
-            <div class="kpi__value" id="kpi-groups-val">—</div>
+            <div class="kpi__value" id="kpi-groups-val"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:70px;height:30px;display:inline-block;" aria-hidden="true"></span></div>
             <div class="kpi__hint">رزروهای فعال</div>
           </div>
         </div>
@@ -845,7 +845,7 @@
         <div class="dash-card dash-card--wide" style="margin-bottom:14px;">
           <div class="dash-card__title">پرشدن ظرفیت</div>
           <div class="capacity-track" aria-hidden="true"><div class="capacity-bar" id="capacity-bar"></div></div>
-          <p class="muted" id="capacity-label" style="font-size:0.8rem;">—</p>
+          <p class="muted" id="capacity-label" style="font-size:0.8rem;"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:140px;height:16px;display:inline-block;" aria-hidden="true"></span></p>
         </div>
 
         <div class="dash-charts">
@@ -919,7 +919,16 @@
         <h2 style="margin:0;">پشتیبانی</h2>
         <button type="button" class="btn btn--ghost" id="refresh-support">تازه‌سازی</button>
       </div>
-      <div class="orders-list" id="support-list"><p class="empty-note">در حال بارگذاری…</p></div>
+      <div class="orders-list" id="support-list">
+        <div class="order-card skeleton-card" aria-hidden="true" style="pointer-events:none;opacity:0.85;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span class="wwh-skeleton wwh-skeleton--rounded" style="width:140px;height:20px;"></span>
+            <span class="wwh-skeleton wwh-skeleton--pill" style="width:50px;height:20px;"></span>
+          </div>
+          <span class="wwh-skeleton wwh-skeleton--rounded" style="width:200px;height:14px;display:block;margin-bottom:12px;"></span>
+          <span class="wwh-skeleton wwh-skeleton--rounded" style="width:100%;height:32px;display:block;"></span>
+        </div>
+      </div>
 
       <!-- SMS panel hidden until enamad / sms.ir template approval (re-enable with notify.SMS_ENABLED) -->
       <div id="sms-admin-section" hidden>
@@ -1014,7 +1023,35 @@
           <thead>
             <tr><th>سریال</th><th>نام</th><th>تلفن</th><th>گروه</th><th>وضعیت</th><th>زمان ثبت</th><th>عملیات</th></tr>
           </thead>
-          <tbody id="tickets-body"><tr><td colspan="7" class="muted">در حال بارگذاری…</td></tr></tbody>
+          <tbody id="tickets-body">
+            <tr class="skeleton-row" aria-hidden="true">
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:44px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:100px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:90px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:26px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--pill" style="width:52px;height:20px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:84px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:72px;height:26px;"></span></td>
+            </tr>
+            <tr class="skeleton-row" aria-hidden="true">
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:44px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:120px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:90px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:26px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--pill" style="width:52px;height:20px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:84px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:72px;height:26px;"></span></td>
+            </tr>
+            <tr class="skeleton-row" aria-hidden="true">
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:44px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:85px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:90px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:26px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--pill" style="width:52px;height:20px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:84px;height:16px;"></span></td>
+              <td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:72px;height:26px;"></span></td>
+            </tr>
+          </tbody>
         </table>
       </div>
       </section>
@@ -1032,7 +1069,18 @@
         <button type="button" class="btn btn--ghost" id="refresh-orders">تازه‌سازی</button>
       </div>
       <div class="orders-list" id="orders-list">
-        <p class="empty-note">در حال بارگذاری…</p>
+        <div class="order-card skeleton-card" aria-hidden="true" style="pointer-events:none;opacity:0.85;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div>
+              <span class="wwh-skeleton wwh-skeleton--rounded" style="width:130px;height:20px;display:block;"></span>
+              <span class="wwh-skeleton wwh-skeleton--rounded" style="width:160px;height:14px;display:block;margin-top:6px;"></span>
+            </div>
+            <span class="wwh-skeleton wwh-skeleton--pill" style="width:64px;height:24px;"></span>
+          </div>
+          <div style="margin-top:10px;">
+            <span class="wwh-skeleton wwh-skeleton--rounded" style="width:100%;height:38px;display:block;"></span>
+          </div>
+        </div>
       </div>
       </section>
 
@@ -1061,7 +1109,15 @@
           <button type="button" class="btn btn--ghost btn--sm" id="mem-reject-sel" disabled>رد انتخابی</button>
         </div>
       </div>
-      <div class="media-grid" id="mem-list"><p class="muted">در حال بارگذاری…</p></div>
+      <div class="media-grid" id="mem-list">
+        <div class="card skeleton-card" aria-hidden="true" style="pointer-events:none;opacity:0.85;padding:8px;">
+          <div class="wwh-skeleton wwh-skeleton--rounded" style="width:100%;aspect-ratio:4/3;display:block;"></div>
+          <div style="padding:10px 4px 4px;">
+            <span class="wwh-skeleton wwh-skeleton--rounded" style="width:65%;height:14px;display:block;"></span>
+            <span class="wwh-skeleton wwh-skeleton--rounded" style="width:40%;height:12px;display:block;margin-top:6px;"></span>
+          </div>
+        </div>
+      </div>
       <div class="card" style="margin-top:20px;">
         <h3 style="font-size:0.95rem;margin-bottom:10px;">گزارش فعالیت</h3>
         <p class="muted" style="font-size:0.8rem;margin-bottom:10px;">لاگ آپلود، تأیید، حذف، لایک و انتشار آرشیو برای رویداد فعلی.</p>
@@ -1079,7 +1135,14 @@
         <button type="button" class="btn btn--ghost" id="refresh-media">تازه‌سازی گالری</button>
         <span class="muted" id="media-count"></span>
       </div>
-      <div class="media-grid" id="media-list"></div>
+      <div class="media-grid" id="media-list">
+        <div class="card skeleton-card" aria-hidden="true" style="pointer-events:none;opacity:0.85;padding:8px;">
+          <div class="wwh-skeleton wwh-skeleton--rounded" style="width:100%;aspect-ratio:4/3;display:block;"></div>
+          <div style="padding:10px 4px 4px;">
+            <span class="wwh-skeleton wwh-skeleton--rounded" style="width:60%;height:14px;display:block;"></span>
+          </div>
+        </div>
+      </div>
       </section>
 
       <section class="admin-panel" data-panel="storage" id="panel-storage" hidden>
@@ -1095,19 +1158,19 @@
         <div class="kpi-grid" style="margin-bottom:20px;">
           <div class="kpi">
             <div class="kpi__label">کل فضای ابری</div>
-            <div class="kpi__value" id="storage-kpi-cap">—</div>
+            <div class="kpi__value" id="storage-kpi-cap"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:70px;height:24px;display:inline-block;" aria-hidden="true"></span></div>
           </div>
           <div class="kpi">
             <div class="kpi__label">فضای مصرف‌شده</div>
-            <div class="kpi__value" id="storage-kpi-used">—</div>
+            <div class="kpi__value" id="storage-kpi-used"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:70px;height:24px;display:inline-block;" aria-hidden="true"></span></div>
           </div>
           <div class="kpi">
             <div class="kpi__label">فضای باقی‌مانده</div>
-            <div class="kpi__value" id="storage-kpi-avail">—</div>
+            <div class="kpi__value" id="storage-kpi-avail"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:70px;height:24px;display:inline-block;" aria-hidden="true"></span></div>
           </div>
           <div class="kpi">
             <div class="kpi__label">رزروهای فعال در صف</div>
-            <div class="kpi__value" id="storage-kpi-res">—</div>
+            <div class="kpi__value" id="storage-kpi-res"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:70px;height:24px;display:inline-block;" aria-hidden="true"></span></div>
           </div>
         </div>
 
@@ -1115,7 +1178,7 @@
         <div class="card" style="margin-bottom:20px;padding:16px 20px;">
           <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:8px;font-weight:700;">
             <span>میزان مصرف کلی فضای ذخیره‌سازی ابری</span>
-            <span id="storage-kpi-meter-text">—٪</span>
+            <span id="storage-kpi-meter-text"><span class="wwh-skeleton wwh-skeleton--rounded" style="width:36px;height:16px;display:inline-block;" aria-hidden="true"></span></span>
           </div>
           <div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden;">
             <div id="storage-kpi-meter-bar" style="height:100%;width:0%;background:var(--accent,#4caf50);transition:width 0.4s ease;"></div>
@@ -1329,37 +1392,168 @@
       Chart.defaults.font.family = "'Vazirmatn', Tahoma, sans-serif";
     }
 
+    // ---- Skeleton Loaders (Lazy Skeleton System) ---------------------------
+    function renderDashboardSkeleton() {
+      var kpiGuests = document.getElementById('kpi-guests-val');
+      var kpiRev = document.getElementById('kpi-revenue-amount');
+      var kpiOrders = document.getElementById('kpi-orders-val');
+      var kpiMem = document.getElementById('kpi-memories-val');
+      var kpiSup = document.getElementById('kpi-support-val');
+      var kpiGrp = document.getElementById('kpi-groups-val');
+      var capLabel = document.getElementById('capacity-label');
+      var evTitle = document.getElementById('dash-event-title');
+      if (kpiGuests) kpiGuests.innerHTML = '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:64px;height:28px;display:inline-block;" aria-hidden="true"></span>';
+      if (kpiRev) kpiRev.innerHTML = '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:84px;height:28px;display:inline-block;" aria-hidden="true"></span>';
+      if (kpiOrders) kpiOrders.innerHTML = '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:40px;height:28px;display:inline-block;" aria-hidden="true"></span>';
+      if (kpiMem) kpiMem.innerHTML = '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:40px;height:28px;display:inline-block;" aria-hidden="true"></span>';
+      if (kpiSup) kpiSup.innerHTML = '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:40px;height:28px;display:inline-block;" aria-hidden="true"></span>';
+      if (kpiGrp) kpiGrp.innerHTML = '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:68px;height:28px;display:inline-block;" aria-hidden="true"></span>';
+      if (capLabel) capLabel.innerHTML = '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:140px;height:16px;display:inline-block;" aria-hidden="true"></span>';
+      if (evTitle) evTitle.innerHTML = '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:160px;height:18px;display:inline-block;" aria-hidden="true"></span>';
+    }
+
+    function renderTicketsSkeleton() {
+      var body = document.getElementById('tickets-body');
+      if (!body) return;
+      var rows = '';
+      for (var i = 0; i < 5; i++) {
+        var wName = (80 + (i % 3) * 20) + 'px';
+        rows += '<tr class="skeleton-row" aria-hidden="true">' +
+          '<td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:44px;height:16px;"></span></td>' +
+          '<td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:' + wName + ';height:16px;"></span></td>' +
+          '<td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:90px;height:16px;"></span></td>' +
+          '<td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:26px;height:16px;"></span></td>' +
+          '<td><span class="wwh-skeleton wwh-skeleton--pill" style="width:52px;height:20px;"></span></td>' +
+          '<td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:84px;height:16px;"></span></td>' +
+          '<td><span class="wwh-skeleton wwh-skeleton--rounded" style="width:72px;height:26px;"></span></td>' +
+        '</tr>';
+      }
+      body.innerHTML = rows;
+    }
+
+    function renderOrdersSkeleton() {
+      var list = document.getElementById('orders-list');
+      if (!list) return;
+      var cards = '';
+      for (var i = 0; i < 3; i++) {
+        var wTitle = (120 + (i % 2) * 40) + 'px';
+        cards += '<div class="order-card" aria-hidden="true" style="pointer-events:none;opacity:0.85;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+            '<div>' +
+              '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:' + wTitle + ';height:20px;display:block;"></span>' +
+              '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:160px;height:14px;display:block;margin-top:6px;"></span>' +
+            '</div>' +
+            '<span class="wwh-skeleton wwh-skeleton--pill" style="width:64px;height:24px;"></span>' +
+          '</div>' +
+          '<div style="margin-top:10px;">' +
+            '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:100%;height:38px;display:block;"></span>' +
+          '</div>' +
+        '</div>';
+      }
+      list.innerHTML = cards;
+    }
+
+    function renderSupportSkeleton() {
+      var list = document.getElementById('support-list');
+      if (!list) return;
+      var cards = '';
+      for (var i = 0; i < 3; i++) {
+        cards += '<div class="order-card" aria-hidden="true" style="pointer-events:none;opacity:0.85;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+            '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:140px;height:20px;"></span>' +
+            '<span class="wwh-skeleton wwh-skeleton--pill" style="width:50px;height:20px;"></span>' +
+          '</div>' +
+          '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:200px;height:14px;display:block;margin-bottom:12px;"></span>' +
+          '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:100%;height:32px;display:block;"></span>' +
+        '</div>';
+      }
+      list.innerHTML = cards;
+    }
+
+    function renderMemoriesSkeleton() {
+      var list = document.getElementById('mem-list');
+      if (!list) return;
+      var items = '';
+      for (var i = 0; i < 4; i++) {
+        items += '<div class="card" aria-hidden="true" style="pointer-events:none;opacity:0.85;padding:8px;">' +
+          '<div class="wwh-skeleton wwh-skeleton--rounded" style="width:100%;aspect-ratio:4/3;display:block;"></div>' +
+          '<div style="padding:10px 4px 4px;">' +
+            '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:65%;height:14px;display:block;"></span>' +
+            '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:40%;height:12px;display:block;margin-top:6px;"></span>' +
+          '</div>' +
+        '</div>';
+      }
+      list.innerHTML = items;
+    }
+
+    function renderMediaSkeleton() {
+      var list = document.getElementById('media-list');
+      if (!list) return;
+      var items = '';
+      for (var i = 0; i < 4; i++) {
+        items += '<div class="card" aria-hidden="true" style="pointer-events:none;opacity:0.85;padding:8px;">' +
+          '<div class="wwh-skeleton wwh-skeleton--rounded" style="width:100%;aspect-ratio:4/3;display:block;"></div>' +
+          '<div style="padding:10px 4px 4px;">' +
+            '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:60%;height:14px;display:block;"></span>' +
+          '</div>' +
+        '</div>';
+      }
+      list.innerHTML = items;
+    }
+
+    function renderStorageSkeleton() {
+      ['storage-kpi-cap', 'storage-kpi-used', 'storage-kpi-avail', 'storage-kpi-res'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:70px;height:24px;display:inline-block;" aria-hidden="true"></span>';
+      });
+      var meterText = document.getElementById('storage-kpi-meter-text');
+      if (meterText) meterText.innerHTML = '<span class="wwh-skeleton wwh-skeleton--rounded" style="width:36px;height:16px;display:inline-block;" aria-hidden="true"></span>';
+    }
+
     function loadDashboard() {
       if (!TOKEN) return;
+      renderDashboardSkeleton();
       var q = currentEventId ? ('?eventId=' + encodeURIComponent(currentEventId)) : '';
       api('/api/admin/dashboard' + q).then(function (d) {
         var g = d.guests || {};
         var o = d.orders || {};
         var m = d.memories || {};
         var ev = d.event || {};
-        document.getElementById('dash-event-title').textContent =
-          (ev.title || 'رویداد') + (ev.salesStatus === 'open' ? ' — رزرو باز' : ' — رزرو بسته');
-        document.getElementById('kpi-guests-val').textContent =
-          toFa(g.active || 0) + ' / ' + toFa(g.capacity || 0);
-        document.getElementById('kpi-guests-hint').textContent =
-          'پرشدن ' + toFa(g.fillPercent || 0) + '٪';
-        document.getElementById('kpi-revenue-amount').textContent =
-          formatTomanAmount((d.revenue && d.revenue.estimatedToman) || 0);
-        document.getElementById('kpi-orders-val').textContent = toFa(o.pending || 0);
-        document.getElementById('kpi-orders-hint').textContent =
-          'کل ' + toFa(o.total || 0) + ' · تأیید ' + toFa(o.approved || 0);
-        document.getElementById('kpi-memories-val').textContent = toFa(m.pending || 0);
-        document.getElementById('kpi-memories-hint').textContent =
-          'تأیید ' + toFa(m.approved || 0) + ' · رد ' + toFa(m.rejected || 0);
-        document.getElementById('kpi-support-val').textContent = toFa(d.supportOpen || 0);
-        document.getElementById('kpi-groups-val').textContent =
-          toFa(g.groupA || 0) + ' / ' + toFa(g.groupB || 0);
+        var evTitleEl = document.getElementById('dash-event-title');
+        var kpiGuestsEl = document.getElementById('kpi-guests-val');
+        var kpiGuestsHintEl = document.getElementById('kpi-guests-hint');
+        var kpiRevEl = document.getElementById('kpi-revenue-amount');
+        var kpiOrdersEl = document.getElementById('kpi-orders-val');
+        var kpiOrdersHintEl = document.getElementById('kpi-orders-hint');
+        var kpiMemEl = document.getElementById('kpi-memories-val');
+        var kpiMemHintEl = document.getElementById('kpi-memories-hint');
+        var kpiSupEl = document.getElementById('kpi-support-val');
+        var kpiGrpEl = document.getElementById('kpi-groups-val');
+        var capLabelEl = document.getElementById('capacity-label');
+
+        if (evTitleEl) evTitleEl.textContent = (ev.title || 'رویداد') + (ev.salesStatus === 'open' ? ' — رزرو باز' : ' — رزرو بسته');
+        if (kpiGuestsEl) kpiGuestsEl.textContent = toFa(g.active || 0) + ' / ' + toFa(g.capacity || 0);
+        if (kpiGuestsHintEl) kpiGuestsHintEl.textContent = 'پرشدن ' + toFa(g.fillPercent || 0) + '٪';
+        if (kpiRevEl) kpiRevEl.textContent = formatTomanAmount((d.revenue && d.revenue.estimatedToman) || 0);
+        if (kpiOrdersEl) kpiOrdersEl.textContent = toFa(o.pending || 0);
+        if (kpiOrdersHintEl) kpiOrdersHintEl.textContent = 'کل ' + toFa(o.total || 0) + ' · تأیید ' + toFa(o.approved || 0);
+        if (kpiMemEl) kpiMemEl.textContent = toFa(m.pending || 0);
+        if (kpiMemHintEl) kpiMemHintEl.textContent = 'تأیید ' + toFa(m.approved || 0) + ' · رد ' + toFa(m.rejected || 0);
+        if (kpiSupEl) kpiSupEl.textContent = toFa(d.supportOpen || 0);
+        if (kpiGrpEl) kpiGrpEl.textContent = toFa(g.groupA || 0) + ' / ' + toFa(g.groupB || 0);
 
         var fill = Math.max(0, Math.min(100, Number(g.fillPercent) || 0));
-        document.getElementById('capacity-bar').style.width = fill + '%';
-        document.getElementById('capacity-label').textContent =
-          toFa(g.active || 0) + ' مهمان از ' + toFa(g.capacity || 0) +
-          ' ظرفیت (' + toFa(fill) + '٪)';
+        var capBar = document.getElementById('capacity-bar');
+        if (capBar) capBar.style.width = fill + '%';
+        if (capLabelEl) capLabelEl.textContent = toFa(g.active || 0) + ' مهمان از ' + toFa(g.capacity || 0) + ' ظرفیت (' + toFa(fill) + '٪)';
+
+        [evTitleEl, kpiGuestsEl, kpiRevEl, kpiOrdersEl, kpiMemEl, kpiSupEl, kpiGrpEl, capLabelEl].forEach(function (el) {
+          if (el) {
+            el.classList.remove('wwh-skeleton-fade');
+            void el.offsetWidth;
+            el.classList.add('wwh-skeleton-fade');
+          }
+        });
 
         document.getElementById('mem-legend').innerHTML =
           '<div>در انتظار: <span>' + toFa(m.pending || 0) + '</span></div>' +
@@ -1452,6 +1646,13 @@
     function showAdmin() {
       document.documentElement.classList.add('wwh-authenticated');
       loginView.hidden = true; adminView.hidden = false;
+      renderDashboardSkeleton();
+      renderTicketsSkeleton();
+      renderOrdersSkeleton();
+      renderSupportSkeleton();
+      renderMemoriesSkeleton();
+      renderMediaSkeleton();
+      renderStorageSkeleton();
       loadEvents().then(function () {
         loadTickets(); loadMedia(); loadMemories(); loadOrders(); loadSupport();
         showPanel(panelFromHash(), { replace: true, skipHash: false });
@@ -1972,6 +2173,7 @@
     });
 
     function loadSupport() {
+      renderSupportSkeleton();
       api('/api/admin/support/tickets?status=active').then(function (res) {
         var list = document.getElementById('support-list');
         var tickets = res.tickets || [];
@@ -1985,6 +2187,9 @@
             '<div class="order-card__actions"><button type="button" class="btn btn--primary btn--sm" data-support-reply="' + t.id + '">پاسخ</button>' +
             '<button type="button" class="btn btn--ghost btn--sm" data-support-close="' + t.id + '">بستن</button></div></div>';
         }).join('');
+        list.classList.remove('wwh-skeleton-fade');
+        void list.offsetWidth;
+        list.classList.add('wwh-skeleton-fade');
         tickets.forEach(function (t) {
           api('/api/admin/support/tickets/' + t.id).then(function (detail) {
             var card = document.querySelector('[data-support-id="' + t.id + '"]');
@@ -2066,6 +2271,7 @@
     }
 
     function loadTickets() {
+      renderTicketsSkeleton();
       api('/api/admin/tickets' + ticketListQuery()).then(function (res) {
         cachedTickets = res.tickets;
         var body = document.getElementById('tickets-body');
@@ -2100,6 +2306,9 @@
             '<td>' + actions + '</td>' +
             '</tr>';
         }).join('');
+        body.classList.remove('wwh-skeleton-fade');
+        void body.offsetWidth;
+        body.classList.add('wwh-skeleton-fade');
       }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
     }
 
@@ -2348,6 +2557,7 @@
 
     function loadOrders() {
       revokeReceiptObjectUrls();
+      renderOrdersSkeleton();
       api('/api/admin/orders?status=' + encodeURIComponent(ordersFilter) + (currentEventId ? '&eventId=' + currentEventId : '')).then(function (res) {
         var list = document.getElementById('orders-list');
         if (!res.orders.length) {
@@ -2407,6 +2617,9 @@
             '<div class="order-card__actions">' + actions + '</div>' +
           '</div>';
         }).join('');
+        list.classList.remove('wwh-skeleton-fade');
+        void list.offsetWidth;
+        list.classList.add('wwh-skeleton-fade');
         hydrateReceiptImages(list);
       }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
     }
@@ -2644,6 +2857,7 @@
     function loadMemories() {
       updateMemoriesLink();
       loadMemoryAudit();
+      renderMemoriesSkeleton();
       var q = '?status=' + encodeURIComponent(memStatusFilter);
       if (currentEventId) q += '&eventId=' + encodeURIComponent(currentEventId);
       api('/api/admin/memories' + q).then(function (res) {
@@ -2840,6 +3054,7 @@
     }
 
     function loadMedia() {
+      renderMediaSkeleton();
       api('/api/admin/media' + eventQuery()).then(function (res) {
         var list = document.getElementById('media-list');
         var countEl = document.getElementById('media-count');
@@ -3024,6 +3239,7 @@
     }
 
     function loadStorageOverview() {
+      renderStorageSkeleton();
       var listEl = document.getElementById('storage-providers-list');
       if (listEl) listEl.innerHTML = '<p class="muted">در حال دریافت وضعیت ارائه‌دهندگان…</p>';
 
@@ -3050,6 +3266,14 @@
       if (usedEl) usedEl.textContent = formatBytes(g.totalUsedBytes);
       if (availEl) availEl.textContent = formatBytes(g.totalAvailableBytes);
       if (resEl) resEl.textContent = toFa(g.activeReservationsCount || 0) + ' فایل';
+
+      [capEl, usedEl, availEl, resEl, meterText].forEach(function(el) {
+        if (el) {
+          el.classList.remove('wwh-skeleton-fade');
+          void el.offsetWidth;
+          el.classList.add('wwh-skeleton-fade');
+        }
+      });
 
       var pct = g.percentUsed || 0;
       if (meterEl) {

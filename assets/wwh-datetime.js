@@ -122,10 +122,18 @@
     if (!ev || !ev.eventAt) return null;
     var sched = formatHeroSchedule(ev.eventAt);
     var tagEl = document.getElementById('hero-jalali-tagline');
-    if (tagEl && sched.tagline) tagEl.textContent = sched.tagline;
+    if (tagEl && sched.tagline) {
+      tagEl.textContent = sched.tagline;
+      tagEl.classList.remove('wwh-skeleton-fade');
+      void tagEl.offsetWidth;
+      tagEl.classList.add('wwh-skeleton-fade');
+    }
     var dateEl = document.getElementById('hero-date');
     if (dateEl) {
       dateEl.textContent = buildHeroSubline(sched, ev);
+      dateEl.classList.remove('wwh-skeleton-fade');
+      void dateEl.offsetWidth;
+      dateEl.classList.add('wwh-skeleton-fade');
     }
     var titleEl = document.getElementById('hero-event-title');
     if (titleEl) {
@@ -134,6 +142,9 @@
           'اپیزود ' +
           (typeof global.toPersian === 'function' ? global.toPersian(ev.episodeNumber) : ev.episodeNumber);
         titleEl.hidden = false;
+        titleEl.classList.remove('wwh-skeleton-fade');
+        void titleEl.offsetWidth;
+        titleEl.classList.add('wwh-skeleton-fade');
       } else {
         titleEl.hidden = true;
         titleEl.textContent = '';

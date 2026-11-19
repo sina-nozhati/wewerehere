@@ -114,17 +114,29 @@
 
     if (countEl) {
       countEl.textContent = '· ' + (typeof toPersian === 'function' ? toPersian(list.length) : list.length) + ' قطعه';
+      countEl.classList.remove('wwh-skeleton-fade');
+      void countEl.offsetWidth;
+      countEl.classList.add('wwh-skeleton-fade');
     }
     if (timeEl && totalSec > 0) {
       var m = Math.floor(totalSec / 60);
       var s = totalSec % 60;
       timeEl.textContent = pad2(m) + ':' + pad2(s);
+      timeEl.classList.remove('wwh-skeleton-fade');
+      void timeEl.offsetWidth;
+      timeEl.classList.add('wwh-skeleton-fade');
     }
     if (subtitle) {
       subtitle.textContent =
         (typeof toPersian === 'function' ? toPersian(list.length) : list.length) +
         ' قطعه — همان ترتیبی که در اجرا پخش می‌شود.';
+      subtitle.classList.remove('wwh-skeleton-fade');
+      void subtitle.offsetWidth;
+      subtitle.classList.add('wwh-skeleton-fade');
     }
+    ol.classList.remove('wwh-skeleton-fade');
+    void ol.offsetWidth;
+    ol.classList.add('wwh-skeleton-fade');
   }
 
   function applySalesState(open) {
@@ -185,7 +197,9 @@
 
     var badge = document.getElementById('capacity-badge');
     if (badge) {
-      badge.classList.remove('sold-out', 'is-low', 'pending-holding');
+      badge.classList.remove('sold-out', 'is-low', 'pending-holding', 'wwh-skeleton-fade');
+      void badge.offsetWidth;
+      badge.classList.add('wwh-skeleton-fade');
       if (trulySoldOut) {
         badge.textContent = 'ظرفیت تکمیل شد';
         badge.classList.add('sold-out');
@@ -390,6 +404,13 @@
       priceRial.textContent = 'معادل ' + (typeof fmtNum === 'function' ? fmtNum(total * 10) : total * 10) + ' ریال';
       unitPrice.textContent = (typeof fmtNum === 'function' ? fmtNum(info.price) : info.price) + ' تومان';
     }
+    [num, holder, bank, price, priceRial, unitPrice].forEach(function (el) {
+      if (el) {
+        el.classList.remove('wwh-skeleton-fade');
+        void el.offsetWidth;
+        el.classList.add('wwh-skeleton-fade');
+      }
+    });
     return true;
   };
 })();
