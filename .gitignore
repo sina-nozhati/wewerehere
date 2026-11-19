@@ -1,8 +1,7 @@
 # runtime data — keep on the server, back it up, do not commit
-data.sqlite
-uploads/
-storage/
-data.sqlite.bak
+data.sqlite*
+/uploads/
+/storage/
 
 # local env / secrets
 .env
@@ -16,16 +15,20 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
-# local debug / scratch images
+# local debug / scratch images and files
 debug*.log
 admin-test*
 admin-big.png
+_*
+backend/_*
+~$*
+*.docx
+*.pdf
 
 # scratch scripts (not Python __init__.py)
 backend/scripts/_*
 
-# dot dirs (keep .cursor skills)
+# dot dirs
 .*
 !.gitignore
-!.cursor/
-!.cursor/skills/**
+!.env.example
