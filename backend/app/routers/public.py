@@ -572,14 +572,15 @@ def archive_access(body: ArchiveAccessBody, db: Session = Depends(get_db)):
 
 
 @router.get("/api/archive/media/{media_id}")
-def archive_media_file(media_id: int, session: str = Query(""), db: Session = Depends(get_db)):
+async def archive_media_file(media_id: int, session: str = Query(""), db: Session = Depends(get_db)):
     sess = _archive_sessions.get(session)
     if not sess or sess["exp"] < datetime.now(timezone.utc).timestamp():
         raise HTTPException(403, "forbidden")
     m = db.get(Media, media_id)
     if not m or m.event_id != sess["event_id"] or m.access_level != "archive_private":
         raise HTTPException(404, "not found")
-    return _file_response(m)
+    from app.services.storage.download_manager import DownloadManager
+    return await DownloadManager.resolve_archive_media_response(db, m)
 
 
 def _file_response(m: Media):

@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from app.auth import hash_admin_password
 from app.config import ROOT, settings
 from app.db import Base, engine
-from app.routers import admin, memories, public, support
+from app.routers import admin, memories, public, storage_admin, support
 
 
 def _ensure_dirs():
@@ -142,9 +142,11 @@ def _migrate_sqlite_columns():
         "memory_items": [
             ("title", "VARCHAR(200) NOT NULL DEFAULT ''"),
             ("source", "VARCHAR(32) NOT NULL DEFAULT 'guest'"),
+            ("media_asset_id", "INTEGER"),
         ],
         "media": [
             ("published_memory_id", "INTEGER"),
+            ("media_asset_id", "INTEGER"),
         ],
     }
     with engine.connect() as conn:
@@ -265,6 +267,17 @@ def _migrate_sqlite_columns():
         conn.commit()
 
 
+def _seed_storage():
+    from app.db import SessionLocal
+    from app.services.storage.provider_manager import ProviderManager
+
+    db = SessionLocal()
+    try:
+        ProviderManager.seed_default_providers(db)
+    finally:
+        db.close()
+
+
 def _seed_if_empty():
     from app.db import SessionLocal
     from app.models import Event, SiteSetting
@@ -324,6 +337,7 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     _migrate_sqlite_columns()
     _seed_if_empty()
+    _seed_storage()
     yield
 
 
@@ -350,6 +364,7 @@ app.include_router(public.router)
 app.include_router(admin.router)
 app.include_router(support.router)
 app.include_router(memories.router)
+app.include_router(storage_admin.router)
 
 if settings.public_media_dir.exists():
     app.mount("/storage/public", StaticFiles(directory=str(settings.public_media_dir)), name="public-storage")

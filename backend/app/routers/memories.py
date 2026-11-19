@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import secrets
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Any
+import logging
+log = logging.getLogger('wwh.memories')
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
@@ -46,6 +48,30 @@ _bearer = HTTPBearer(auto_error=False)
 class GateBody(BaseModel):
     serial: str = ""
     publicCode: str = ""
+
+
+class DirectUploadInitBody(BaseModel):
+    filename: str
+    sizeBytes: int
+    mime: str = ""
+    mediaKind: str = "image"
+    consentPublish: bool = True
+
+
+class DirectUploadSignPartBody(BaseModel):
+    sessionId: str
+    partNumber: int
+
+
+class DirectUploadCompleteBody(BaseModel):
+    sessionId: str
+    parts: list[dict[str, Any]] | None = None
+    uploadKey: str | None = None
+    consentPublish: bool = True
+
+
+class DirectUploadCancelBody(BaseModel):
+    sessionId: str
 
 
 class CommentBody(BaseModel):
@@ -360,6 +386,169 @@ async def memories_upload(
     }
 
 
+
+@router.post("/api/events/{slug}/memories/upload/init")
+async def memories_upload_init(
+    slug: str,
+    body: DirectUploadInitBody,
+    db: Session = Depends(get_db),
+    creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
+    authorization: Annotated[str | None, Header()] = None,
+):
+    """Direct-to-cloud upload negotiation."""
+    ev = resolve_event_by_slug(db, slug)
+    token = _bearer_token(creds)
+    if not token and authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+    sess = require_memory_session(db, token, ev)
+
+    if not body.consentPublish:
+        raise HTTPException(400, {"error": "consent_required", "message": "تأیید رضایت برای انتشار الزامی است."})
+
+    already = count_ticket_uploads(db, sess.ticket_id)
+    room = int(settings.memory_max_files_per_ticket) - already
+    if room <= 0:
+        raise HTTPException(403, {"error": "ticket_quota_exceeded", "message": "سقف آپلود این بلیت تکمیل شده است."})
+
+    limit = max_bytes_for_kind(body.mediaKind)
+    if body.sizeBytes > limit:
+        max_mb = limit // (1024 * 1024)
+        raise HTTPException(400, {"error": "file_too_large", "message": f"حجم فایل بیشتر از حد مجاز ({max_mb} مگابایت) است."})
+
+    from app.services.storage.base_adapter import StorageError, StorageQuotaError
+    from app.services.storage.upload_manager import UploadManager
+
+    category = "memories_video" if body.mediaKind == "video" else "memories_photo"
+    try:
+        session_info = await UploadManager.init_direct_upload(
+            db,
+            event_id=ev.id,
+            filename=body.filename,
+            file_size=body.sizeBytes,
+            mime=body.mime or ("image/jpeg" if body.mediaKind == "image" else "video/mp4"),
+            media_kind=body.mediaKind,
+            category=category,
+            ticket_id=sess.ticket_id,
+        )
+        return session_info
+    except StorageQuotaError as e:
+        raise HTTPException(400, {"error": "storage_full", "message": "ظرفیت فضای ذخیره‌سازی تکمیل شده است."}) from e
+    except Exception as e:
+        log.error("Direct upload init failed: %s", e)
+        raise HTTPException(502, {"error": "storage_unavailable", "message": "سرویس ذخیره‌سازی موقتاً در دسترس نیست."}) from e
+
+
+@router.post("/api/events/{slug}/memories/upload/parts/sign")
+async def memories_upload_sign_part(
+    slug: str,
+    body: DirectUploadSignPartBody,
+    db: Session = Depends(get_db),
+    creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
+):
+    ev = resolve_event_by_slug(db, slug)
+    sess = require_memory_session(db, _bearer_token(creds), ev)
+    from app.services.storage.base_adapter import StorageError, StorageQuotaError
+    from app.services.storage.upload_manager import UploadManager
+
+    try:
+        res = await UploadManager.sign_part(db, session_id=body.sessionId, part_number=body.partNumber)
+        return res
+    except Exception as e:
+        raise HTTPException(400, {"error": "sign_failed", "message": str(e)})
+
+
+@router.post("/api/events/{slug}/memories/upload/complete")
+async def memories_upload_complete(
+    slug: str,
+    body: DirectUploadCompleteBody,
+    db: Session = Depends(get_db),
+    creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
+    authorization: Annotated[str | None, Header()] = None,
+):
+    ev = resolve_event_by_slug(db, slug)
+    token = _bearer_token(creds)
+    if not token and authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+    sess = require_memory_session(db, token, ev)
+
+    if not body.consentPublish:
+        raise HTTPException(400, {"error": "consent_required", "message": "تأیید رضایت الزامی است."})
+
+    from app.models import UploadReservation
+    from app.services.storage.base_adapter import StorageError, StorageQuotaError
+    from app.services.storage.upload_manager import UploadManager
+
+    res = db.get(UploadReservation, body.sessionId)
+    if not res:
+        raise HTTPException(404, {"error": "session_not_found", "message": "جلسه آپلود یافت نشد."})
+
+    try:
+        asset = await UploadManager.complete_direct_upload(
+            db,
+            session_id=body.sessionId,
+            parts=body.parts,
+            upload_key=body.uploadKey,
+        )
+    except Exception as e:
+        log.error("Direct upload complete failed: %s", e)
+        raise HTTPException(400, {"error": "complete_failed", "message": "تکمیل آپلود با خطا مواجه شد."}) from e
+
+    # Create memory item linked to asset
+    item = MemoryItem(
+        event_id=ev.id,
+        ticket_id=sess.ticket_id,
+        status="pending",
+        source="guest",
+        media_kind=res.media_kind,
+        stored_name=asset.stored_name,
+        mime=asset.mime,
+        size_bytes=asset.size_bytes,
+        consent_publish=True,
+    )
+    db.add(item)
+    db.flush()
+    asset.memory_item_id = item.id
+
+    write_audit(
+        db,
+        event_id=ev.id,
+        item_id=item.id,
+        ticket_id=sess.ticket_id,
+        actor="ticket",
+        action="upload_direct",
+        meta={"mediaKind": res.media_kind, "sizeBytes": asset.size_bytes, "assetId": asset.id},
+    )
+    db.commit()
+    db.refresh(item)
+
+    remaining = max(0, int(settings.memory_max_files_per_ticket) - count_ticket_uploads(db, sess.ticket_id))
+    return {
+        "ok": True,
+        "id": item.id,
+        "status": item.status,
+        "mediaKind": item.media_kind,
+        "sizeBytes": item.size_bytes,
+        "uploadsRemaining": remaining,
+        "message": "فایل‌ها برای بررسی ثبت شد؛ تا تأیید ادمین خصوصی می‌مونن.",
+    }
+
+
+@router.post("/api/events/{slug}/memories/upload/cancel")
+async def memories_upload_cancel(
+    slug: str,
+    body: DirectUploadCancelBody,
+    db: Session = Depends(get_db),
+    creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
+):
+    ev = resolve_event_by_slug(db, slug)
+    sess = require_memory_session(db, _bearer_token(creds), ev)
+    from app.services.storage.base_adapter import StorageError, StorageQuotaError
+    from app.services.storage.upload_manager import UploadManager
+
+    await UploadManager.cancel_upload_session(db, body.sessionId)
+    return {"ok": True}
+
+
 @router.get("/api/events/{slug}/memories/gallery")
 def memories_gallery(
     slug: str,
@@ -592,7 +781,7 @@ def memories_comments_create(
 
 
 @router.get("/api/memories/file/{item_id}")
-def memories_file(
+async def memories_file(
     item_id: int,
     db: Session = Depends(get_db),
     creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
@@ -619,7 +808,5 @@ def memories_file(
     if not allowed:
         raise HTTPException(404, {"error": "not_found"})
 
-    path = absolute_memory_path(item.stored_name)
-    if not path:
-        raise HTTPException(404, {"error": "missing_file"})
-    return FileResponse(path, media_type=item.mime, filename=f"memory-{item.id}{path.suffix}")
+    from app.services.storage.download_manager import DownloadManager
+    return await DownloadManager.resolve_memory_item_response(db, item)

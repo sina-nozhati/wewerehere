@@ -477,6 +477,10 @@
     if (this.state !== 'uploading') return;
     this.gen++;
     this.state = 'paused';
+    if (this._abortActive) {
+      try { this._abortActive(); } catch (e) { /* ignore */ }
+      this._abortActive = null;
+    }
     if (this.xhr) {
       try { this.xhr.abort(); } catch (e) { /* ignore */ }
       this.xhr = null;
@@ -511,6 +515,10 @@
 
   WwhUploader.prototype.cancelAll = function () {
     this.gen++;
+    if (this._abortActive) {
+      try { this._abortActive(); } catch (e) { /* ignore */ }
+      this._abortActive = null;
+    }
     if (this.xhr) {
       try { this.xhr.abort(); } catch (e) { /* ignore */ }
       this.xhr = null;
@@ -595,6 +603,56 @@
     this._lastTs = 0;
     this._renderList();
     this._updateChrome();
+
+    if (typeof this.opts.sendItem === 'function') {
+      this.opts.sendItem({
+        item: item,
+        file: item.file,
+        gen: gen,
+        index: this.index,
+        total: this.queue.length,
+        caption: this.getCaption(),
+        onProgress: function (loaded, total) {
+          if (gen !== self.gen) return;
+          var now = Date.now();
+          if (self._lastTs && now > self._lastTs) {
+            var inst = ((loaded - self._lastLoaded) * 1000) / (now - self._lastTs);
+            self._speed = self._speed ? self._speed * 0.7 + inst * 0.3 : inst;
+          }
+          self._lastLoaded = loaded;
+          self._lastTs = now;
+          item.loaded = loaded;
+          self._renderItem(self.index);
+          self._updateSummary();
+        },
+        onSuccess: function (resultJson) {
+          if (gen !== self.gen) return;
+          self.xhr = null;
+          self._abortActive = null;
+          item.status = 'done';
+          item.loaded = item.size;
+          self._renderItem(self.index);
+          if (typeof self.opts.onItemSuccess === 'function') {
+            try { self.opts.onItemSuccess(item, resultJson); } catch (e2) {}
+          }
+          self.index++;
+          self._pump();
+        },
+        onError: function (msg, isUnauthorized) {
+          if (gen !== self.gen) return;
+          self.xhr = null;
+          self._abortActive = null;
+          if (isUnauthorized && typeof self.opts.onUnauthorized === 'function') {
+            self.opts.onUnauthorized();
+          }
+          self._failItem(msg);
+        },
+        registerAbort: function (abortFn) {
+          self._abortActive = abortFn;
+        }
+      });
+      return;
+    }
 
     var fd;
     try {

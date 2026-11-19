@@ -26,6 +26,25 @@ class Settings(BaseSettings):
     sms_ir_timeout: float = 10.0
     sms_ir_admin_presets: str = ""
 
+    # Media Storage Manager (Files.ir, S3, Local)
+    files_ir_api_endpoint: str = "https://my.files.ir/api/v1"
+    files_ir_api_key: str = ""
+    files_ir_workspace_id: int = 0
+    files_ir_total_capacity_bytes: int = 10 * 1024 * 1024 * 1024
+    files_ir_file_count_limit: int = 3000
+    files_ir_max_file_size_bytes: int = 500 * 1024 * 1024
+
+    s3_endpoint: str = ""
+    s3_bucket: str = ""
+    s3_access_key: str = ""
+    s3_secret_key: str = ""
+    s3_region: str = "us-east-1"
+    s3_force_path_style: bool = True
+
+    storage_warning_threshold: float = 0.80
+    storage_critical_threshold: float = 0.90
+    storage_reservation_ttl_sec: int = 1800
+
     # Disposable camera / memories («شبی که اینجا بودیم»)
     memory_photo_max_mb: int = 8
     memory_video_max_mb: int = 25

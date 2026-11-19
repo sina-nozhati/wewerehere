@@ -1555,6 +1555,308 @@
       root: '#mem-uploader',
       toFa: toFa,
       showCaption: false,
+      sendItem: function (ctx) {
+        var file = ctx.file;
+        var isVid = (file.type || '').indexOf('video/') === 0 || /\.(mp4|webm|mov|m4v)$/i.test(file.name);
+        var mediaKind = isVid ? 'video' : 'image';
+        var currentXhr = null;
+        var currentSessionId = null;
+
+        function mapPersianMsg(codeOrMsg, httpStatus) {
+          if (httpStatus === 401) return 'کد بلیت نامعتبر است یا منقضی شده.';
+          if (codeOrMsg === 'ticket_quota_exceeded') return 'سقف آپلود این بلیت تکمیل شده است.';
+          if (codeOrMsg === 'file_too_large') return 'حجم فایل بیشتر از حد مجاز است.';
+          if (codeOrMsg === 'video_too_long') return 'ویدیو باید حداکثر ' + toFa(videoMaxSec()) + ' ثانیه باشد.';
+          if (codeOrMsg === 'unsupported_format' || codeOrMsg === 'invalid_format' || codeOrMsg === 'mime_mismatch') {
+            return 'فرمت فایل پشتیبانی نمی‌شود.';
+          }
+          if (codeOrMsg === 'storage_full' || codeOrMsg === 'quota_exceeded') {
+            return 'ظرفیت فضای ذخیره‌سازی تکمیل شده است.';
+          }
+          if (codeOrMsg === 'storage_unavailable' || httpStatus === 502 || httpStatus === 503 || httpStatus === 504) {
+            return 'سرویس ذخیره‌سازی موقتاً در دسترس نیست.';
+          }
+          if (codeOrMsg === 'consent_required') return 'تأیید رضایت برای انتشار الزامی است.';
+          return codeOrMsg || 'آپلود متوقف شد؛ لطفاً دوباره تلاش کنید.';
+        }
+
+        function cancelActiveSession() {
+          if (currentSessionId) {
+            try {
+              fetch('/api/events/' + encodeURIComponent(slug) + '/memories/upload/cancel', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(sessionToken ? { Authorization: 'Bearer ' + sessionToken } : {})
+                },
+                body: JSON.stringify({ sessionId: currentSessionId })
+              });
+            } catch (e) {}
+          }
+        }
+
+        ctx.registerAbort(function () {
+          if (currentXhr) {
+            try { currentXhr.abort(); } catch (e) {}
+          }
+          cancelActiveSession();
+        });
+
+        function fallbackServerUpload() {
+          var fd = new FormData();
+          fd.append('consentPublish', 'true');
+          fd.append('files', file, file.name || 'upload.bin');
+
+          var xhr = new XMLHttpRequest();
+          currentXhr = xhr;
+          xhr.open('POST', '/api/events/' + encodeURIComponent(slug) + '/memories/upload');
+          if (sessionToken) xhr.setRequestHeader('Authorization', 'Bearer ' + sessionToken);
+
+          xhr.upload.onprogress = function (e) {
+            if (e.lengthComputable) ctx.onProgress(e.loaded, e.total);
+          };
+
+          xhr.onload = function () {
+            currentXhr = null;
+            var json = null;
+            try { json = JSON.parse(xhr.responseText || '{}'); } catch (e) { json = null; }
+            if (xhr.status >= 200 && xhr.status < 300) {
+              if (json && json.accepted === 0) {
+                var r0 = json.results && json.results[0];
+                var errKey = (r0 && r0.error) || 'unknown';
+                ctx.onError(mapPersianMsg(errKey, xhr.status), false);
+                return;
+              }
+              ctx.onSuccess(json);
+            } else {
+              var errKey = (json && (json.error || (json.detail && json.detail.error) || json.message)) || '';
+              ctx.onError(mapPersianMsg(errKey, xhr.status), xhr.status === 401);
+            }
+          };
+
+          xhr.onerror = function () {
+            currentXhr = null;
+            ctx.onError('آپلود متوقف شد؛ لطفاً دوباره تلاش کنید.', false);
+          };
+
+          xhr.send(fd);
+        }
+
+        // Direct-to-Cloud Upload Negotiation
+        fetch('/api/events/' + encodeURIComponent(slug) + '/memories/upload/init', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(sessionToken ? { Authorization: 'Bearer ' + sessionToken } : {})
+          },
+          body: JSON.stringify({
+            filename: file.name,
+            sizeBytes: file.size,
+            mime: file.type || '',
+            mediaKind: mediaKind,
+            consentPublish: true
+          })
+        }).then(function (res) {
+          if (!res.ok) {
+            return res.json().then(function (errJson) {
+              var errKey = errJson.error || (errJson.detail && errJson.detail.error) || errJson.message || '';
+              throw { status: res.status, error: errKey };
+            }).catch(function (e) {
+              if (e && e.error) throw e;
+              throw { status: res.status, error: 'storage_unavailable' };
+            });
+          }
+          return res.json();
+        }).then(function (initData) {
+          currentSessionId = initData.sessionId;
+
+          if (initData.uploadMode === 'server-proxy' || initData.providerType === 'local') {
+            fallbackServerUpload();
+            return;
+          }
+
+          if (initData.uploadMode === 's3-single' && initData.next && initData.next.url) {
+            var putXhr = new XMLHttpRequest();
+            currentXhr = putXhr;
+            putXhr.open(initData.next.method || 'PUT', initData.next.url);
+            var headers = initData.next.headers || {};
+            Object.keys(headers).forEach(function (k) {
+              if (headers[k]) putXhr.setRequestHeader(k, headers[k]);
+            });
+
+            putXhr.upload.onprogress = function (e) {
+              if (e.lengthComputable) ctx.onProgress(e.loaded, e.total);
+            };
+
+            putXhr.onload = function () {
+              currentXhr = null;
+              if (putXhr.status >= 200 && putXhr.status < 300) {
+                fetch('/api/events/' + encodeURIComponent(slug) + '/memories/upload/complete', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(sessionToken ? { Authorization: 'Bearer ' + sessionToken } : {})
+                  },
+                  body: JSON.stringify({
+                    sessionId: initData.sessionId,
+                    consentPublish: true,
+                    uploadKey: initData.storedName
+                  })
+                }).then(function (cRes) {
+                  return cRes.json().then(function (cJson) {
+                    if (!cRes.ok) throw { status: cRes.status, error: cJson.error || cJson.message };
+                    return cJson;
+                  });
+                }).then(function (completeJson) {
+                  currentSessionId = null;
+                  ctx.onSuccess(completeJson);
+                }).catch(function (cErr) {
+                  currentSessionId = null;
+                  ctx.onError(mapPersianMsg(cErr.error, cErr.status), cErr.status === 401);
+                });
+              } else {
+                console.warn('Direct PUT failed (' + putXhr.status + '); falling back to server.');
+                cancelActiveSession();
+                currentSessionId = null;
+                fallbackServerUpload();
+              }
+            };
+
+            putXhr.onerror = function () {
+              currentXhr = null;
+              console.warn('Direct PUT network/CORS error; falling back to server.');
+              cancelActiveSession();
+              currentSessionId = null;
+              fallbackServerUpload();
+            };
+
+            putXhr.send(file);
+            return;
+          }
+
+          if (initData.uploadMode === 's3-multipart' && initData.partSize) {
+            var partSize = initData.partSize;
+            var totalParts = Math.ceil(file.size / partSize);
+            var completedParts = [];
+            var currentPartIdx = 0;
+            var partsProgress = new Array(totalParts).fill(0);
+
+            function updateOverallProgress() {
+              var loadedSum = partsProgress.reduce(function (a, b) { return a + b; }, 0);
+              ctx.onProgress(loadedSum, file.size);
+            }
+
+            function uploadNextPart() {
+              if (currentPartIdx >= totalParts) {
+                fetch('/api/events/' + encodeURIComponent(slug) + '/memories/upload/complete', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(sessionToken ? { Authorization: 'Bearer ' + sessionToken } : {})
+                  },
+                  body: JSON.stringify({
+                    sessionId: initData.sessionId,
+                    consentPublish: true,
+                    parts: completedParts
+                  })
+                }).then(function (cRes) {
+                  return cRes.json().then(function (cJson) {
+                    if (!cRes.ok) throw { status: cRes.status, error: cJson.error || cJson.message };
+                    return cJson;
+                  });
+                }).then(function (completeJson) {
+                  currentSessionId = null;
+                  ctx.onSuccess(completeJson);
+                }).catch(function (cErr) {
+                  currentSessionId = null;
+                  ctx.onError(mapPersianMsg(cErr.error, cErr.status), cErr.status === 401);
+                });
+                return;
+              }
+
+              var partNum = currentPartIdx + 1;
+              var startByte = currentPartIdx * partSize;
+              var endByte = Math.min(file.size, startByte + partSize);
+              var chunk = file.slice(startByte, endByte);
+
+              fetch('/api/events/' + encodeURIComponent(slug) + '/memories/upload/parts/sign', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(sessionToken ? { Authorization: 'Bearer ' + sessionToken } : {})
+                },
+                body: JSON.stringify({
+                  sessionId: initData.sessionId,
+                  partNumber: partNum
+                })
+              }).then(function (sRes) {
+                if (!sRes.ok) throw new Error('Sign part failed');
+                return sRes.json();
+              }).then(function (signData) {
+                var pXhr = new XMLHttpRequest();
+                currentXhr = pXhr;
+                pXhr.open('PUT', signData.url);
+                if (signData.headers) {
+                  Object.keys(signData.headers).forEach(function (hk) {
+                    pXhr.setRequestHeader(hk, signData.headers[hk]);
+                  });
+                }
+
+                pXhr.upload.onprogress = function (pe) {
+                  if (pe.lengthComputable) {
+                    partsProgress[partNum - 1] = pe.loaded;
+                    updateOverallProgress();
+                  }
+                };
+
+                pXhr.onload = function () {
+                  currentXhr = null;
+                  if (pXhr.status >= 200 && pXhr.status < 300) {
+                    var etag = pXhr.getResponseHeader('ETag') || pXhr.getResponseHeader('etag') || '';
+                    etag = etag.replace(/["']/g, '').trim();
+                    completedParts.push({ partNumber: partNum, etag: etag });
+                    partsProgress[partNum - 1] = chunk.size;
+                    updateOverallProgress();
+                    currentPartIdx++;
+                    uploadNextPart();
+                  } else {
+                    console.warn('Multipart part failed; falling back to server.');
+                    cancelActiveSession();
+                    currentSessionId = null;
+                    fallbackServerUpload();
+                  }
+                };
+
+                pXhr.onerror = function () {
+                  currentXhr = null;
+                  console.warn('Multipart part error; falling back to server.');
+                  cancelActiveSession();
+                  currentSessionId = null;
+                  fallbackServerUpload();
+                };
+
+                pXhr.send(chunk);
+              }).catch(function (sErr) {
+                console.warn('Multipart sign part error; falling back to server.', sErr);
+                cancelActiveSession();
+                currentSessionId = null;
+                fallbackServerUpload();
+              });
+            }
+
+            uploadNextPart();
+            return;
+          }
+
+          fallbackServerUpload();
+        }).catch(function (err) {
+          if (err && err.status) {
+            ctx.onError(mapPersianMsg(err.error, err.status), err.status === 401);
+          } else {
+            fallbackServerUpload();
+          }
+        });
+      },
       accept: 'image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif,video/mp4,video/webm,video/quicktime,.jpg,.jpeg,.png,.webp,.heic,.heif,.avif,.mp4,.webm,.mov,.m4v',
       getUrl: function () {
         return '/api/events/' + encodeURIComponent(slug) + '/memories/upload';

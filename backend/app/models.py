@@ -231,3 +231,140 @@ class SupportMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     ticket: Mapped["SupportTicket"] = relationship(back_populates="messages")
+
+
+# ---------------------------------------------------------------------------
+# Media Storage Manager Models
+# ---------------------------------------------------------------------------
+
+class StorageProvider(Base):
+    """Configuration and health state for an external or local storage provider."""
+
+    __tablename__ = "storage_providers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    provider_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)  # files_ir | s3 | local
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    priority: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    config_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    max_file_size_bytes: Mapped[int] = mapped_column(Integer, default=500 * 1024 * 1024, nullable=False)
+    file_count_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_capacity_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_health_check_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    health_status: Mapped[str] = mapped_column(String(32), default="unknown", nullable=False)  # healthy | degraded | unreachable | full | unknown
+    health_error: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class EventStorageConfig(Base):
+    """Event-level primary and ordered fallback storage provider assignments."""
+
+    __tablename__ = "event_storage_configs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), unique=True, nullable=False, index=True)
+    primary_provider_id: Mapped[int] = mapped_column(ForeignKey("storage_providers.id"), nullable=False)
+    fallback_provider_ids_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    routing_status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)  # active | degraded | failed
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class EventStorageFolder(Base):
+    """Folder mappings per event and per provider."""
+
+    __tablename__ = "event_storage_folders"
+    __table_args__ = (UniqueConstraint("event_id", "provider_id", "folder_purpose", name="uq_event_provider_folder"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), nullable=False, index=True)
+    provider_id: Mapped[int] = mapped_column(ForeignKey("storage_providers.id"), nullable=False, index=True)
+    folder_purpose: Mapped[str] = mapped_column(String(64), nullable=False, index=True)  # memories_photos | memories_videos | memories_other | official_photos | official_videos | exports | root
+    provider_folder_id: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+    provider_folder_path: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class MediaAsset(Base):
+    """Provider-agnostic registry tracking all stored media assets."""
+
+    __tablename__ = "media_assets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), nullable=False, index=True)
+    memory_item_id: Mapped[int | None] = mapped_column(ForeignKey("memory_items.id"), nullable=True, index=True)
+    legacy_media_id: Mapped[int | None] = mapped_column(ForeignKey("media.id"), nullable=True, index=True)
+    ticket_id: Mapped[int | None] = mapped_column(ForeignKey("tickets.id"), nullable=True, index=True)
+    provider_id: Mapped[int] = mapped_column(ForeignKey("storage_providers.id"), nullable=False, index=True)
+    provider_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)  # files_ir | s3 | local
+    provider_workspace_id: Mapped[str] = mapped_column(String(64), default="", nullable=False)
+    provider_file_id: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    provider_folder_id: Mapped[str] = mapped_column(String(200), default="", nullable=False)
+    provider_path: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    original_name: Mapped[str] = mapped_column(String(300), default="", nullable=False)
+    stored_name: Mapped[str] = mapped_column(String(300), unique=True, nullable=False, index=True)
+    mime: Mapped[str] = mapped_column(String(120), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    media_category: Mapped[str] = mapped_column(String(64), default="memories_photo", nullable=False, index=True)  # memories_photo | memories_video | official | export | receipt
+    upload_status: Mapped[str] = mapped_column(String(32), default="completed", nullable=False, index=True)  # reserved | uploading | completed | failed | cancelled
+    upload_session_ref: Mapped[str] = mapped_column(String(128), default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class UploadReservation(Base):
+    """Tracks active upload sessions, capacity reservations, and direct-to-cloud metadata."""
+
+    __tablename__ = "upload_reservations"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # UUID session id
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), nullable=False, index=True)
+    ticket_id: Mapped[int | None] = mapped_column(ForeignKey("tickets.id"), nullable=True, index=True)
+    provider_id: Mapped[int] = mapped_column(ForeignKey("storage_providers.id"), nullable=False, index=True)
+    upload_mode: Mapped[str] = mapped_column(String(32), default="s3-single", nullable=False)  # s3-single | s3-multipart | single | tus | local
+    filename: Mapped[str] = mapped_column(String(300), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    mime: Mapped[str] = mapped_column(String(120), nullable=False)
+    media_kind: Mapped[str] = mapped_column(String(16), default="image", nullable=False)
+    category: Mapped[str] = mapped_column(String(64), default="memories_photo", nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="reserved", nullable=False, index=True)  # reserved | completed | expired | cancelled
+    provider_session_id: Mapped[str] = mapped_column(String(128), default="", nullable=False)
+    part_size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    upload_data_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class StorageUsageSnapshot(Base):
+    """Historical/cached snapshots of provider usage."""
+
+    __tablename__ = "storage_usage_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    provider_id: Mapped[int] = mapped_column(ForeignKey("storage_providers.id"), nullable=False, index=True)
+    total_bytes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    used_bytes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    available_bytes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    file_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    max_files: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="ok", nullable=False)
+    error_message: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class StorageRoutingLog(Base):
+    """Audit trail for upload routing and fallback decisions."""
+
+    __tablename__ = "storage_routing_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), nullable=False, index=True)
+    provider_id: Mapped[int | None] = mapped_column(ForeignKey("storage_providers.id"), nullable=True)
+    file_size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    decision: Mapped[str] = mapped_column(String(32), nullable=False)  # selected | skipped_full | skipped_unreachable | rejected_all
+    reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
