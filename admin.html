@@ -974,6 +974,10 @@
             <option value="png">PNG (تصویر)</option>
             <option value="svg">SVG (برق)</option>
           </select>
+          <label class="muted" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:0.8rem;white-space:nowrap;" title="فقط خروجی گرفتن از بلیت‌های کسانی که کارت فیزیکی خواسته‌اند">
+            <input type="checkbox" id="export-physical-only" checked>
+            <span>فقط کارت‌های فیزیکی</span>
+          </label>
           <button type="button" class="btn btn--ghost" id="export-tickets-zip">خروجی ZIP</button>
         </div>
         <button type="button" class="btn btn--ghost" id="sample-ticket-btn">دانلود رزرو نمونه</button>
@@ -1021,7 +1025,7 @@
       <div style="overflow-x:auto;">
         <table id="tickets-table">
           <thead>
-            <tr><th>سریال</th><th>نام</th><th>تلفن</th><th>گروه</th><th>وضعیت</th><th>زمان ثبت</th><th>عملیات</th></tr>
+            <tr><th>سریال</th><th>نام</th><th>تلفن</th><th>گروه</th><th>وضعیت</th><th>نوع کارت</th><th>زمان ثبت</th><th>عملیات</th></tr>
           </thead>
           <tbody id="tickets-body">
             <tr class="skeleton-row" aria-hidden="true">
@@ -2296,12 +2300,16 @@
               '<button type="button" class="btn btn--ghost btn--sm" data-export="' + t.id + '">چاپ/خروجی</button>' +
               '<button type="button" class="btn btn--danger btn--sm" data-del="' + t.id + '">حذف</button>' +
             '</div>';
+          var cardType = t.wantsPhysicalCard
+            ? '<span class="badge" style="background:rgba(212,175,55,0.18);color:#d4af37;border:1px solid rgba(212,175,55,0.35);font-size:0.7rem;">کارت فیزیکی</span>'
+            : '<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--muted);font-size:0.7rem;">فقط دیجیتال</span>';
           return '<tr>' +
             '<td class="serial">' + t.serial + '</td>' +
             '<td>' + escapeHtml(t.name) + '</td>' +
             '<td class="serial">' + escapeHtml(t.phone) + '</td>' +
             '<td><span class="group-badge">' + t.group_name + '</span></td>' +
             '<td>' + st + '</td>' +
+            '<td>' + cardType + '</td>' +
             '<td class="muted">' + time + '</td>' +
             '<td>' + actions + '</td>' +
             '</tr>';
@@ -2399,8 +2407,10 @@
       var btn = this;
       var formatSelect = document.getElementById('export-format');
       var format = formatSelect ? formatSelect.value : 'png';
+      var physCheck = document.getElementById('export-physical-only');
+      var physicalOnly = physCheck ? physCheck.checked : true;
       var q = currentEventId ? ('?eventId=' + currentEventId) : '';
-      var exportUrl = '/api/admin/tickets/export' + q + (q.includes('?') ? '&' : '?') + 'format=' + format;
+      var exportUrl = '/api/admin/tickets/export' + q + (q.includes('?') ? '&' : '?') + 'format=' + format + '&physicalOnly=' + (physicalOnly ? 'true' : 'false');
 
       // Create inline status bar above the button
       var statusBar = document.createElement('div');
@@ -2483,8 +2493,20 @@
         alert('رزروی برای خروجی نیست.');
         return;
       }
-      var rows = [['serial', 'name', 'phone', 'group', 'created_at']];
-      cachedTickets.forEach(function (t) { rows.push([t.serial, t.name, t.phone, t.group_name, t.created_at]); });
+      var physCheck = document.getElementById('export-physical-only');
+      var physicalOnly = physCheck ? physCheck.checked : false;
+      var ticketsToExport = cachedTickets;
+      if (physicalOnly) {
+        ticketsToExport = cachedTickets.filter(function (t) { return t.wantsPhysicalCard; });
+        if (!ticketsToExport.length) {
+          alert('هیچ بلیتی با درخواست کارت فیزیکی برای خروجی یافت نشد.');
+          return;
+        }
+      }
+      var rows = [['serial', 'name', 'phone', 'group', 'physical_card', 'created_at']];
+      ticketsToExport.forEach(function (t) {
+        rows.push([t.serial, t.name, t.phone, t.group_name, t.wantsPhysicalCard ? 'بله' : 'خیر', t.created_at]);
+      });
       var csv = '\uFEFF' + rows.map(function (r) {
         return r.map(function (cell) {
           var v = String(cell == null ? '' : cell);
@@ -2581,6 +2603,9 @@
           var capBadge = n <= 1
             ? '<span class="badge badge--capacity">تک‌نفره</span>'
             : '<span class="badge badge--capacity">' + toFa(n) + ' نفره</span>';
+          var cardBadge = o.wantsPhysicalCard
+            ? '<span class="badge" style="background:rgba(212,175,55,0.18);color:#d4af37;border:1px solid rgba(212,175,55,0.35);font-size:0.75rem;margin-right:4px;">کارت فیزیکی</span>'
+            : '<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--muted);font-size:0.75rem;margin-right:4px;">فقط دیجیتال</span>';
           var capLine = '<div class="order-card__meta">' + toFa(n) + ' نفر — ' + o.names.map(escapeHtml).join('، ') + '</div>';
           var issued = '';
           if (o.status === 'approved' && o.issuedTicketCount != null) {
@@ -2603,7 +2628,7 @@
           return '<div class="order-card ' + (o.status === 'pending' ? 'is-pending' : '') + '" data-id="' + o.id + '">' +
             '<div class="order-card__head">' +
               '<div>' +
-                '<div class="order-card__names">' + capBadge + ' ' + o.names.map(escapeHtml).join('، ') + '</div>' +
+                '<div class="order-card__names">' + capBadge + ' ' + cardBadge + ' ' + o.names.map(escapeHtml).join('، ') + '</div>' +
                 capLine +
                 '<div class="order-card__meta">' +
                   '<span class="serial">' + escapeHtml(o.phone) + '</span> · ثبت: ' + fmtDate(o.createdAt) +

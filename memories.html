@@ -788,10 +788,10 @@
 
     <section id="view-gate">
       <div class="panel" id="gate-panel">
-        <label for="serial-input">سریال ۴رقمی رزرو ورود</label>
+        <label for="serial-input">کد ۴رقمی رزرو ورود برای مشاهده خاطرات</label>
         <input type="tel" id="serial-input" inputmode="numeric" maxlength="4" autocomplete="one-time-code" enterkeyhint="done" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••" aria-describedby="gate-hint">
-        <p class="muted" id="gate-hint" style="margin-top:10px;text-align:center;">فقط برای همین رویداد — کد رویداد دیگر کار نمی‌کند.</p>
-        <button type="button" class="mem-btn" id="gate-btn">ورود</button>
+        <p class="muted" id="gate-hint" style="margin-top:10px;text-align:center;">عکس‌ها و فیلم‌های این شب محافظت‌شده هستند. برای ورود به گالری و مشاهده رسانه‌ها، کد ۴ رقمی رزرو خود را وارد کنید.</p>
+        <button type="button" class="mem-btn" id="gate-btn">ورود و مشاهده گالری</button>
         <p class="err" id="gate-err" role="alert" hidden></p>
       </div>
     </section>
@@ -1292,7 +1292,9 @@
     var box = document.getElementById('leaderboard');
     var row = document.getElementById('leaderboard-row');
     if (!box || !row) return;
-    apiJson('/api/events/' + encodeURIComponent(slug) + '/memories/leaderboard')
+    apiJson('/api/events/' + encodeURIComponent(slug) + '/memories/leaderboard', {
+      headers: authHeaders()
+    })
       .then(function (data) {
         var items = data.items || [];
         if (!items.length) {
@@ -2186,8 +2188,7 @@
       data && typeof data.uploadsRemaining === 'number' ? data.uploadsRemaining : null
     );
     showProfileShell(true);
-    // After gate / QR: land on upload so guest can send memories immediately
-    switchTab('upload');
+    switchTab('gallery');
     showErr(gateErr, '');
   }
 
@@ -2198,8 +2199,10 @@
     ticketInfo = null;
     if (memUploader) memUploader.cancelAll();
     closeComments();
+    var grid = document.getElementById('gallery-grid');
+    if (grid) grid.innerHTML = '';
     showProfileShell(false);
-    activeTab = 'upload';
+    activeTab = 'gallery';
   }
 
   function stripSerialFromUrl() {
@@ -2425,14 +2428,18 @@
   tryRestoreSession().then(function (ok) {
     if (ok) {
       stripSerialFromUrl();
+      switchTab('gallery');
       return;
     }
     if (incoming.length === 4) {
-      doGate(incoming).catch(function () {});
+      doGate(incoming).then(function () {
+        switchTab('gallery');
+      }).catch(function () {
+        showProfileShell(false);
+      });
     } else {
-      // Public gallery peek without session
-      document.getElementById('view-gallery').hidden = false;
-      loadGallery();
+      // Media is protected: user must enter 4-digit code first
+      showProfileShell(false);
     }
   });
 })();

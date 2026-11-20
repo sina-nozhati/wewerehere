@@ -62,6 +62,7 @@ class Order(Base):
     names_json: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="payment_submitted", nullable=False)
     admin_note: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    wants_physical_card: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -96,6 +97,7 @@ class Ticket(Base):
     group_name: Mapped[str] = mapped_column(String(1), nullable=False)
     access_token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)
+    wants_physical_card: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

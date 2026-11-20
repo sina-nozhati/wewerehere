@@ -65,6 +65,8 @@ class TicketBody(BaseModel):
     serial: str = ""
     group: str = ""
     eventId: int | None = None
+    wantsPhysicalCard: bool = False
+    wants_physical_card: bool = False
 
 
 class TicketUpdateBody(TicketBody):
@@ -523,6 +525,7 @@ def admin_tickets(
                 "displayNumber": public_number(t, ranks) if t.status == "active" else None,
                 "issuanceNumber": t.display_number,
                 "status": t.status,
+                "wantsPhysicalCard": bool(getattr(t, "wants_physical_card", False)),
             }
             for t in rows
         ]
@@ -557,6 +560,7 @@ def admin_ticket_create(body: TicketBody, db: Session = Depends(get_db), _: str 
         phone=phone,
         public_code=serial,
         group_name=group,
+        wants_physical_card=bool(body.wantsPhysicalCard or body.wants_physical_card),
     )
     db.commit()
     return {
@@ -734,6 +738,8 @@ html,body{{margin:0;padding:0;background:#0b0a0e;}}
 def admin_tickets_export_zip(
     eventId: int | None = Query(None),
     format: str = Query("png", pattern="^(png|svg)$"),
+    physicalOnly: bool = Query(False),
+    physical_only: bool = Query(False),
     accept: str = Header(""),
     db: Session = Depends(get_db),
     _: str = Depends(require_admin_token),
@@ -741,7 +747,8 @@ def admin_tickets_export_zip(
     """Export tickets as ZIP.
     - Accept: text/event-stream → SSE with real-time progress
     - Otherwise → regular ZIP download (backward compatible)
-    - format: png or svg"""
+    - format: png or svg
+    - physicalOnly: if true, exports only tickets that requested physical card"""
     import io
     import zipfile
     import json
@@ -749,11 +756,14 @@ def admin_tickets_export_zip(
     from fastapi.responses import StreamingResponse, Response
 
     eid = eventId or _default_event_id(db)
-    rows = db.scalars(
-        select(Ticket).where(Ticket.event_id == eid, Ticket.status == "active").order_by(Ticket.id.asc())
-    ).all()
+    filter_physical = physicalOnly or physical_only
+    q = select(Ticket).where(Ticket.event_id == eid, Ticket.status == "active")
+    if filter_physical:
+        q = q.where(Ticket.wants_physical_card == True)
+    rows = db.scalars(q.order_by(Ticket.id.asc())).all()
     if not rows:
-        raise HTTPException(404, {"error": "no printable tickets", "message": "رزروی برای خروجی نیست"})
+        msg = "هیچ بلیتی با درخواست کارت فیزیکی برای این رویداد یافت نشد" if filter_physical else "رزروی برای خروجی نیست"
+        raise HTTPException(404, {"error": "no printable tickets", "message": msg})
     ev = db.get(Event, eid)
     ranks = active_rank_map(db, eid)
     total = len(rows)
@@ -899,6 +909,7 @@ def admin_orders(
                 "createdAt": _iso_utc(o.created_at) or "",
                 "reviewedAt": _iso_utc(o.reviewed_at),
                 "eventId": o.event_id,
+                "wantsPhysicalCard": bool(getattr(o, "wants_physical_card", False)),
             }
         )
     return {"orders": orders}

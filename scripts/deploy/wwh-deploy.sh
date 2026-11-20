@@ -17,6 +17,9 @@ NO_BACKUP=0
 NO_GIT=0
 DRY_RUN=0
 CMD=""
+PREV_COMMIT="${PREV_COMMIT:-}"
+LATEST_BACKUP="${LATEST_BACKUP:-}"
+ROLLBACK_TARGET="${ROLLBACK_TARGET:-}"
 
 log() { printf '[%s] %s\n' "$SCRIPT_NAME" "$*"; }
 die() { log "ERROR: $*"; exit 1; }
@@ -61,12 +64,16 @@ parse_args() {
       --no-backup) NO_BACKUP=1; shift ;;
       --no-git) NO_GIT=1; shift ;;
       --dry-run) DRY_RUN=1; shift ;;
-      install|update|migrate|smoke|status)
+      install|update|migrate|smoke|status|rollback)
         if [[ -n "$CMD" ]]; then
           die "only one subcommand allowed (got '$CMD' and '$1')"
         fi
         CMD="$1"
         shift
+        if [[ "$CMD" == "rollback" && $# -gt 0 && ! "$1" =~ ^- ]]; then
+          ROLLBACK_TARGET="$1"
+          shift
+        fi
         ;;
       -h|--help)
         usage
@@ -82,10 +89,11 @@ parse_args() {
 
 usage() {
   cat <<EOF
-Usage: $SCRIPT_NAME [options] <install|update|migrate|smoke|status>
+Usage: $SCRIPT_NAME [options] <install|update|migrate|smoke|status|rollback>
 
   install   First-time venv, pip, dirs, permissions
-  update    Backup, git pull, pip, migrate, restart, smoke (default)
+  update    Backup, git pull, pip, migrate, restart, smoke (with auto-rollback on failure)
+  rollback  Revert to previous git commit and/or restore database backup
   migrate   Run backend/scripts/migrate_legacy.py
   smoke     HTTP health and static asset checks
   status    systemd, git HEAD, data.sqlite size
@@ -255,6 +263,8 @@ do_backup() {
   else
     tar -czf "$stamp" -C "$APP_DIR" "${items[@]}"
   fi
+  LATEST_BACKUP="$stamp"
+  export LATEST_BACKUP
 }
 
 do_git_pull() {
@@ -263,6 +273,8 @@ do_git_pull() {
     return 0
   fi
   [[ -d "$APP_DIR/.git" ]] || die "not a git repo: $APP_DIR"
+  PREV_COMMIT="$(git -C "$APP_DIR" rev-parse HEAD 2>/dev/null || echo "")"
+  export PREV_COMMIT
   local deploy_script="scripts/deploy/wwh-deploy.sh"
   if ! git -C "$APP_DIR" diff --quiet HEAD -- "$deploy_script" 2>/dev/null; then
     log "discarding local edits to $deploy_script (use /etc/wewerehere/deploy.conf for overrides)"
@@ -427,6 +439,113 @@ smoke_failure_hint() {
   journalctl -u "$SERVICE" -n 40 --no-pager 2>/dev/null || true
 }
 
+rollback_deployment() {
+  local reason="${1:-Deployment failure}"
+  log "================================================================="
+  log "DEPLOY FAILED: $reason"
+  log "Starting automatic rollback to protect deployment state..."
+  log "================================================================="
+
+  local rolled_back=0
+
+  # 1. Revert git commit if we pulled a new commit
+  if [[ -n "${PREV_COMMIT:-}" && "$PREV_COMMIT" != "n/a" && -d "$APP_DIR/.git" ]]; then
+    local current_commit
+    current_commit="$(git -C "$APP_DIR" rev-parse HEAD 2>/dev/null || echo "")"
+    if [[ -n "$current_commit" && "$current_commit" != "$PREV_COMMIT" ]]; then
+      log "[rollback] Reverting git repository to previous working commit: $PREV_COMMIT (from $current_commit)"
+      if [[ "$DRY_RUN" -eq 1 ]]; then
+        run git -C "$APP_DIR" checkout -f "$PREV_COMMIT"
+      else
+        git -C "$APP_DIR" checkout -f "$PREV_COMMIT" 2>/dev/null || true
+      fi
+      rolled_back=1
+    fi
+  fi
+
+  # 2. Restore database if backup is available
+  if [[ -n "${LATEST_BACKUP:-}" && -f "$LATEST_BACKUP" ]]; then
+    log "[rollback] Restoring data.sqlite from backup: $LATEST_BACKUP"
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      run tar -xzf "$LATEST_BACKUP" -C "$APP_DIR" data.sqlite
+    else
+      tar -xzf "$LATEST_BACKUP" -C "$APP_DIR" data.sqlite 2>/dev/null || log "WARN: DB extraction from $LATEST_BACKUP failed"
+    fi
+    rolled_back=1
+  fi
+
+  if [[ "$rolled_back" -eq 1 ]]; then
+    log "[rollback] Re-installing dependencies and fixing permissions..."
+    pip_install 2>/dev/null || true
+    fix_permissions 2>/dev/null || true
+
+    log "[rollback] Restarting $SERVICE..."
+    restart_service 2>/dev/null || true
+
+    log "[rollback] Verifying service health after rollback..."
+    if wait_for_health; then
+      log "[rollback] SUCCESS: Service has been restored to previous working state and is healthy."
+    else
+      log "[rollback] CRITICAL: Service health check failed after rollback. Check journalctl -u $SERVICE"
+      smoke_failure_hint
+    fi
+  else
+    log "[rollback] No previous commit or backup available for rollback."
+  fi
+
+  ensure_wwh_deploy_cli
+  exit 1
+}
+
+cmd_rollback() {
+  need_root_for rollback
+  local target="${ROLLBACK_TARGET:-}"
+  log "manual rollback requested (target: ${target:-auto})"
+
+  # If target is a backup tar.gz file
+  if [[ -n "$target" && -f "$target" && "$target" == *.tar.gz ]]; then
+    log "restoring from archive: $target"
+    run tar -xzf "$target" -C "$APP_DIR"
+    fix_permissions
+    restart_service
+    run_smoke_checks
+    log "restored from $target"
+    return 0
+  fi
+
+  # If target is a git commit hash
+  if [[ -n "$target" && -d "$APP_DIR/.git" ]] && git -C "$APP_DIR" cat-file -e "$target^{commit}" 2>/dev/null; then
+    log "checking out git commit: $target"
+    run git -C "$APP_DIR" checkout -f "$target"
+    pip_install
+    fix_permissions
+    restart_service
+    run_smoke_checks
+    log "rolled back to commit $target"
+    return 0
+  fi
+
+  # Default: find latest backup file in BACKUP_DIR
+  local latest_tar
+  latest_tar="$(ls -1t "${BACKUP_DIR}"/wewerehere-*.tar.gz 2>/dev/null | head -1 || true)"
+  if [[ -f "$latest_tar" ]]; then
+    log "restoring from latest backup: $latest_tar"
+    run tar -xzf "$latest_tar" -C "$APP_DIR"
+  fi
+
+  # If git repo, checkout HEAD~1 if no specific commit
+  if [[ -d "$APP_DIR/.git" ]]; then
+    log "reverting git HEAD to HEAD~1"
+    run git -C "$APP_DIR" checkout -f HEAD~1 || true
+  fi
+
+  pip_install
+  fix_permissions
+  restart_service
+  run_smoke_checks
+  log "manual rollback completed"
+}
+
 cmd_update() {
   need_root_for update
   ensure_wwh_deploy_cli
@@ -440,21 +559,29 @@ cmd_update() {
     if [[ -f "$fresh" ]]; then
       log "re-exec update with pulled script (no-git, no-backup)"
       export WW_DEPLOY_REEXEC=1
-      exec bash "$fresh" update --no-git --no-backup
+      export PREV_COMMIT="$PREV_COMMIT"
+      export LATEST_BACKUP="$LATEST_BACKUP"
+      local reexec_args=()
+      [[ "$DRY_RUN" -eq 1 ]] && reexec_args+=("--dry-run")
+      reexec_args+=(update --no-git --no-backup)
+      exec bash "$fresh" "${reexec_args[@]}"
     fi
   fi
   check_python
   install_apt_runtime_deps
-  pip_install
+  if ! pip_install; then
+    rollback_deployment "pip install failed"
+  fi
   ensure_data_dirs
   install_ticket_font
   do_migrate || true
   fix_permissions
-  restart_service
+  if ! restart_service; then
+    rollback_deployment "systemctl restart $SERVICE failed"
+  fi
   if ! run_smoke_checks; then
     smoke_failure_hint
-    ensure_wwh_deploy_cli
-    exit 1
+    rollback_deployment "smoke checks failed (service unhealthy or endpoints returned error)"
   fi
   ensure_wwh_deploy_cli
   log "update finished"
@@ -534,6 +661,7 @@ main() {
   case "$CMD" in
     install) cmd_install ;;
     update) cmd_update ;;
+    rollback) cmd_rollback ;;
     migrate) cmd_migrate ;;
     smoke) cmd_smoke ;;
     status) cmd_status ;;

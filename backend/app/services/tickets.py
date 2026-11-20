@@ -86,6 +86,7 @@ def issue_ticket(
     phone: str,
     public_code: str | None = None,
     group_name: str | None = None,
+    wants_physical_card: bool = False,
 ) -> tuple[Ticket, str]:
     code = public_code or unique_public_code(db, event_id)
     group = group_name if group_name in ("A", "B") else pick_balanced_group(db, event_id)
@@ -100,6 +101,7 @@ def issue_ticket(
         group_name=group,
         access_token_hash=hash_access_token(token),
         status="active",
+        wants_physical_card=wants_physical_card,
     )
     db.add(ticket)
     db.flush()

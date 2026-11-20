@@ -564,10 +564,29 @@ async def memories_upload_cancel(
 @router.get("/api/events/{slug}/memories/gallery")
 def memories_gallery(
     slug: str,
+    token: str | None = Query(None),
+    code: str | None = Query(None),
+    serial: str | None = Query(None),
     db: Session = Depends(get_db),
     creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
 ):
     ev = resolve_event_by_slug(db, slug)
+    session_token = _bearer_token(creds) or token
+    ticket_serial = code or serial
+
+    ticket_id = None
+    if session_token:
+        sess = get_valid_session(db, session_token)
+        if sess and sess.event_id == ev.id:
+            ticket_id = sess.ticket_id
+    if not ticket_id and ticket_serial:
+        clean_code = re.sub(r"\D", "", ticket_serial).zfill(4)[-4:]
+        t = db.scalar(
+            select(Ticket).where(Ticket.event_id == ev.id, Ticket.public_code == clean_code, Ticket.status == "active")
+        )
+        if t:
+            ticket_id = t.id
+
     rows = db.scalars(
         select(MemoryItem)
         .where(MemoryItem.event_id == ev.id, MemoryItem.status == "approved")
@@ -575,12 +594,6 @@ def memories_gallery(
         .limit(200)
     ).all()
     ids = [m.id for m in rows]
-    ticket_id = None
-    token = _bearer_token(creds)
-    if token:
-        sess = get_valid_session(db, token)
-        if sess and sess.event_id == ev.id:
-            ticket_id = sess.ticket_id
     likes = _like_counts(db, ids)
     liked = _liked_set(db, ids, ticket_id)
     comments = _comment_counts(db, ids)

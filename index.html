@@ -1656,6 +1656,16 @@
             <p class="form__error" id="error-receipt">لطفاً رسید را به صورت متن یا تصویر وارد کن</p>
           </div>
 
+          <div class="physical-card-option" style="margin: 16px 0 20px 0; padding: 14px 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--color-border, rgba(255,255,255,0.1)); border-radius: 8px;">
+            <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="wants-physical-card" name="wantsPhysicalCard" style="margin-top: 3px; width: 18px; height: 18px; accent-color: #d4af37; cursor: pointer;">
+              <div>
+                <span style="font-weight: 600; font-size: 0.95rem; color: #fff; display: block;">کارت رزرو فیزیکی (چاپی) می‌خواهم</span>
+                <span style="font-size: 0.8rem; color: var(--color-muted, #8a8a93); display: block; margin-top: 4px; line-height: 1.5;">در صورت انتخاب، کارت فیزیکی اختصاصی در شب اجرا به شما تحویل داده می‌شود (بلیت دیجیتال شما در هر صورت صادر خواهد شد).</span>
+              </div>
+            </label>
+          </div>
+
           <button type="submit" class="btn btn--accent btn--shine form__submit" id="pay-submit">
             <span id="pay-submit-text">ثبت رسید و ارسال درخواست رزرو</span>
             <span class="spinner" id="pay-submit-spinner" style="display: none;"></span>
@@ -2161,7 +2171,14 @@
         }
         errorReceipt.classList.remove('visible');
 
-        var payload = { phone: collected.phone, names: collected.names, receiptText: text, eventId: window.__wwhEventId };
+        var wantsPhysicalEl = document.getElementById('wants-physical-card');
+        var payload = {
+          phone: collected.phone,
+          names: collected.names,
+          receiptText: text,
+          eventId: window.__wwhEventId,
+          wantsPhysicalCard: !!(wantsPhysicalEl && wantsPhysicalEl.checked)
+        };
         var chain = Promise.resolve();
         if (file) {
           if (!isValidReceiptImage(file)) {

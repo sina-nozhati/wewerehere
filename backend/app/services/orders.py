@@ -37,6 +37,7 @@ def create_order(
     names: list[str],
     receipt_text: str,
     receipt_image: dict | None,
+    wants_physical_card: bool = False,
 ) -> Order:
     phone = normalize_phone(phone)
     if not valid_phone(phone):
@@ -57,6 +58,7 @@ def create_order(
             phone=phone,
             names_json=json.dumps(names, ensure_ascii=False),
             status="payment_submitted",
+            wants_physical_card=wants_physical_card,
         )
         db.add(order)
         db.flush()
@@ -148,6 +150,7 @@ def approve_order(db: Session, order_id: int) -> tuple[Order, list[dict], bool]:
                 order_id=order.id,
                 holder_name=name,
                 phone=order.phone,
+                wants_physical_card=bool(getattr(order, "wants_physical_card", False)),
             )
             issued.append(
                 {

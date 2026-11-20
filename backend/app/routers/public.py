@@ -40,6 +40,8 @@ class OrderCreateBody(BaseModel):
     receiptText: str = ""
     receiptImage: dict | None = None
     eventId: int | None = None
+    wantsPhysicalCard: bool = False
+    wants_physical_card: bool = False
 
 
 class ArchiveAccessBody(BaseModel):
@@ -157,6 +159,7 @@ def orders_legacy(body: OrderCreateBody, db: Session = Depends(get_db)):
             names=body.names,
             receipt_text=body.receiptText,
             receipt_image=body.receiptImage,
+            wants_physical_card=bool(body.wantsPhysicalCard or body.wants_physical_card),
         )
     except ValueError as e:
         msg = str(e)
@@ -179,6 +182,7 @@ def orders_for_event(event_id: int, body: OrderCreateBody, db: Session = Depends
             names=body.names,
             receipt_text=body.receiptText,
             receipt_image=body.receiptImage,
+            wants_physical_card=bool(body.wantsPhysicalCard or body.wants_physical_card),
         )
     except ValueError as e:
         msg = str(e)

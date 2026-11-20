@@ -148,6 +148,12 @@ def _migrate_sqlite_columns():
             ("published_memory_id", "INTEGER"),
             ("media_asset_id", "INTEGER"),
         ],
+        "orders": [
+            ("wants_physical_card", "BOOLEAN NOT NULL DEFAULT 0"),
+        ],
+        "tickets": [
+            ("wants_physical_card", "BOOLEAN NOT NULL DEFAULT 0"),
+        ],
     }
     with engine.connect() as conn:
         tables = {r[0] for r in conn.execute(sa.text("SELECT name FROM sqlite_master WHERE type='table'"))}
