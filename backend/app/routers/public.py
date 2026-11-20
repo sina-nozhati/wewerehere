@@ -312,11 +312,13 @@ def download_ticket_png(
         raise HTTPException(404, "not found")
     phone_n = normalize_phone(phone) if phone else ""
     raw = normalize_serial(serial)
-    if valid_phone(phone_n) and t.phone == phone_n:
-        pass
-    elif raw == t.public_code:
-        pass
-    else:
+    is_authorized = False
+    if raw and (raw == t.public_code or raw.zfill(4)[-4:] == t.public_code):
+        is_authorized = True
+    elif valid_phone(phone_n) and (t.phone == phone_n or (t.order and t.order.phone == phone_n)):
+        is_authorized = True
+
+    if not is_authorized:
         raise HTTPException(403, "forbidden")
     ev = db.get(Event, t.event_id)
     ranks = active_rank_map(db, t.event_id)

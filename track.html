@@ -885,10 +885,18 @@
 
     function ticketInlineApiUrl(dl, serial) {
       var phone = resolveTrackPhone();
-      var q = WwhPhone.isCompleteIranMobile(phone)
-        ? ('phone=' + encodeURIComponent(phone))
-        : ('serial=' + encodeURIComponent(serial));
-      return dl + '?' + q + '&inline=true&format=png';
+      var base = dl || '';
+      var params = [];
+      if (serial) {
+        params.push('serial=' + encodeURIComponent(serial));
+      }
+      if (phone && WwhPhone.isCompleteIranMobile(phone)) {
+        params.push('phone=' + encodeURIComponent(phone));
+      }
+      params.push('inline=true');
+      params.push('format=png');
+      var sep = base.indexOf('?') > -1 ? '&' : '?';
+      return base + sep + params.join('&');
     }
 
     function fetchTicketInlineBlob(dl, serial) {
@@ -1158,10 +1166,16 @@
         ? ticketInlineApiUrl(dl, serial)
         : (function () {
           var phone = resolveTrackPhone();
-          var q = WwhPhone.isCompleteIranMobile(phone)
-            ? ('phone=' + encodeURIComponent(phone))
-            : ('serial=' + encodeURIComponent(serial));
-          return dl + '?' + q;
+          var base = dl || '';
+          var params = [];
+          if (serial) {
+            params.push('serial=' + encodeURIComponent(serial));
+          }
+          if (phone && WwhPhone.isCompleteIranMobile(phone)) {
+            params.push('phone=' + encodeURIComponent(phone));
+          }
+          var sep = base.indexOf('?') > -1 ? '&' : '?';
+          return params.length ? (base + sep + params.join('&')) : base;
         })();
       return fetch(url).then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);

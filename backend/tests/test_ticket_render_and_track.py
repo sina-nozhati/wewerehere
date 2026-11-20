@@ -332,6 +332,21 @@ def test_ticket_can_open_inline_with_current_template(client: TestClient):
     assert r.headers["content-type"].startswith("image/png")
 
 
+@pytest.mark.skipif(not _cairo_png_export_available(), reason="Cairo library not available")
+def test_ticket_download_with_valid_serial_and_stale_phone(client: TestClient):
+    ticket = client.get("/api/orders/track?serial=4242").json()["tickets"][0]
+    # Phone does not match ticket, but serial is correct: must be allowed (200), not 403 forbidden
+    r = client.get(f'{ticket["printUrl"]}?serial=4242&phone=09129999999&inline=true')
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("image/png")
+
+
+def test_ticket_download_forbidden_when_both_invalid(client: TestClient):
+    ticket = client.get("/api/orders/track?serial=4242").json()["tickets"][0]
+    r = client.get(f'{ticket["printUrl"]}?serial=9999&phone=09129999999&inline=true')
+    assert r.status_code == 403
+
+
 def test_host_on_admin_events(client: TestClient):
     login = client.post("/api/admin/login", json={"password": "test-admin-pass"})
     headers = {"Authorization": f"Bearer {login.json()['token']}"}
