@@ -20,6 +20,13 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 
 def _extract_db_from_archive(archive_path: str, temp_dir: str) -> str:
     """Extract data.sqlite (and WAL if present) from a .tar.gz archive into temp_dir."""
@@ -128,8 +135,8 @@ def format_report(diff: dict, source_name: str, target_name: str, target_data: d
         ev_id = diff["event_id_filter"]
         ev_title = ""
         if target_data and ev_id in target_data.get("events", {}):
-            ev_title = f" — {target_data['events'][ev_id].get('title')}"
-        lines.append(f"🔒 FILTERED STRICTLY TO EVENT ID: {ev_id}{ev_title}")
+            ev_title = f" - {target_data['events'][ev_id].get('title')}"
+        lines.append(f"[FILTERED] STRICTLY RESTRICTED TO EVENT ID: {ev_id}{ev_title}")
     lines.append("=" * 70)
     lines.append(f"Missing Tickets: {len(diff['missing_tickets'])}")
     lines.append(f"Missing Orders:  {len(diff['missing_orders'])}")
@@ -140,8 +147,8 @@ def format_report(diff: dict, source_name: str, target_name: str, target_data: d
         lines.append("MISSING TICKETS DETAILS:")
         for t in diff["missing_tickets"]:
             lines.append(
-                f"  • [Event {t['event_id']}] Serial: {t['public_code']} | "
-                f"No: {t.get('display_number', '—')} | Group: {t.get('group_name')} | "
+                f"  * [Event {t['event_id']}] Serial: {t['public_code']} | "
+                f"No: {t.get('display_number', '-')} | Group: {t.get('group_name')} | "
                 f"Name: {t.get('holder_name')} | Phone: {t.get('phone')} | Status: {t.get('status')}"
             )
         lines.append("-" * 70)
@@ -150,7 +157,7 @@ def format_report(diff: dict, source_name: str, target_name: str, target_data: d
         lines.append("MISSING ORDERS DETAILS:")
         for o in diff["missing_orders"]:
             lines.append(
-                f"  • [Event {o['event_id']}] Order ID {o['id']} | Phone: {o.get('phone')} | "
+                f"  * [Event {o['event_id']}] Order ID {o['id']} | Phone: {o.get('phone')} | "
                 f"Names: {o.get('names_json')} | Status: {o.get('status')} | Date: {o.get('created_at')}"
             )
         lines.append("-" * 70)
@@ -363,10 +370,10 @@ def print_events_summary(target_data: dict) -> None:
     if not events:
         print("  (No events found in target database)")
     for eid, ev in sorted(events.items()):
-        feat_tag = " ⭐ [CURRENT FEATURED EVENT]" if (featured_id and eid == featured_id) else ""
+        feat_tag = " [CURRENT FEATURED EVENT]" if (featured_id and eid == featured_id) else ""
         t_count = sum(1 for t in target_data["tickets"].values() if t["event_id"] == eid)
         o_count = sum(1 for o in target_data["orders"].values() if o["event_id"] == eid)
-        print(f"  • Event ID {eid}: {ev.get('title')} (Ep. {ev.get('episode_number')}) — Tickets: {t_count}, Orders: {o_count}{feat_tag}")
+        print(f"  * Event ID {eid}: {ev.get('title')} (Ep. {ev.get('episode_number')}) - Tickets: {t_count}, Orders: {o_count}{feat_tag}")
     print("=" * 70)
 
 
@@ -379,7 +386,7 @@ def cmd_scan_backups(backup_dir: str, target_db: str, event_id: int | None = Non
     print_events_summary(target_data)
     if event_id is not None:
         ev_title = target_data.get("events", {}).get(event_id, {}).get("title", "Unknown")
-        print(f"🔒 SCAN FILTER APPLIED: ONLY EVENT ID {event_id} ({ev_title})")
+        print(f"[FILTERED] SCAN FILTER APPLIED: ONLY EVENT ID {event_id} ({ev_title})")
         print("-" * 70)
 
     archives = sorted(glob.glob(os.path.join(backup_dir, "*.tar.gz")), reverse=True)
@@ -398,7 +405,7 @@ def cmd_scan_backups(backup_dir: str, target_db: str, event_id: int | None = Non
                 diff = find_differences(source_data, target_data, event_id=event_id)
                 missing_t_count = len(diff["missing_tickets"])
                 missing_o_count = len(diff["missing_orders"])
-                status_icon = "⚠️  MISSING DATA FOUND" if (missing_t_count or missing_o_count) else "✅ ALL SYNCED"
+                status_icon = "[!] MISSING DATA FOUND" if (missing_t_count or missing_o_count) else "[OK] ALL SYNCED"
 
                 src_ev_tickets = sum(1 for t in source_data["tickets"].values() if event_id is None or t["event_id"] == event_id)
                 src_ev_orders = sum(1 for o in source_data["orders"].values() if event_id is None or o["event_id"] == event_id)
