@@ -104,3 +104,44 @@ def test_self_hosted_fonts_and_inapp_performance():
     assert "250" in loader_js  # FONT_WAIT_MS <= 250ms
 
 
+def test_song_features_frontend_assets():
+    """Verify memories.html and wwh-theme.css contain song feature components."""
+    mem_html = (ROOT / "memories.html").read_text(encoding="utf-8")
+
+    # 1. Public winner song banner
+    assert "winner-song-banner" in mem_html
+    assert "winner-banner-heading" in mem_html
+    assert "winner-banner-badge" in mem_html
+    assert "اجرای قطعی در این رویداد" in mem_html
+    assert "wwh-winner-song-banner--pending" in mem_html
+
+    # 2. Exclusive winner song selection form
+    assert "winner-form-card" in mem_html
+    assert "winner-song-form" in mem_html
+    assert "winner-song-title-input" in mem_html
+    assert "winner-song-artist-input" in mem_html
+    assert "winner-song-submit-btn" in mem_html
+    assert "isWinnerEligible" in mem_html
+
+    # 3. Band rehearsal song suggestions & voting
+    assert "suggestions-toggle" in mem_html
+    assert "suggestions-panel" in mem_html
+    assert "suggest-song-form" in mem_html
+    assert "suggestions-list" in mem_html
+    assert "wwh-song-vote-btn" in mem_html
+
+    # 4. API endpoints referenced in JS
+    assert "/songs/winner-pick" in mem_html
+    assert "/songs/status" in mem_html
+    assert "/songs/suggestions" in mem_html
+    assert "/songs/suggest" in mem_html
+
+    # 5. Gothic dark & gold CSS styles in theme
+    theme_css = (ROOT / "assets" / "wwh-theme.css").read_text(encoding="utf-8")
+    assert ".wwh-winner-song-banner" in theme_css
+    assert ".wwh-winner-form-card" in theme_css
+    assert ".wwh-suggestions-panel" in theme_css
+    assert ".wwh-song-vote-btn" in theme_css
+
+
+

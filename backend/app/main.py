@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from app.auth import hash_admin_password
 from app.config import ROOT, settings
 from app.db import Base, engine
-from app.routers import admin, memories, public, storage_admin, support
+from app.routers import admin, memories, public, songs, storage_admin, support
 
 
 def _ensure_dirs():
@@ -370,6 +370,7 @@ app.include_router(public.router)
 app.include_router(admin.router)
 app.include_router(support.router)
 app.include_router(memories.router)
+app.include_router(songs.router)
 app.include_router(storage_admin.router)
 
 if settings.public_media_dir.exists():

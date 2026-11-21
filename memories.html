@@ -799,6 +799,100 @@
 
     <section class="view" id="view-gallery" hidden>
       <p class="gate-banner" id="gallery-gate-banner">برای لایک و نظر، سریال رزرو ورود را وارد کن.</p>
+
+      <!-- Exclusive Winner Song Selection Form (Visible ONLY to the winner of previous event) -->
+      <div class="wwh-winner-form-card" id="winner-form-card" hidden>
+        <div class="wwh-winner-form-title">
+          <span aria-hidden="true">🎉</span>
+          <span>تبریک! شما برنده برترین خاطره رویداد قبل شدید.</span>
+        </div>
+        <p class="wwh-winner-form-desc">قطعه موسیقی مورد علاقه خود را انتخاب کنید تا حتماً در اجرای این شب نواخته شود:</p>
+        <form id="winner-song-form" class="wwh-winner-form-fields">
+          <div>
+            <label for="winner-song-title-input">نام آهنگ *</label>
+            <input type="text" id="winner-song-title-input" required placeholder="مثلاً: Wish You Were Here" autocomplete="off">
+          </div>
+          <div>
+            <label for="winner-song-artist-input">نام خواننده یا بند *</label>
+            <input type="text" id="winner-song-artist-input" required placeholder="مثلاً: Pink Floyd" autocomplete="off">
+          </div>
+          <div>
+            <label for="winner-song-note-input">یادداشت یا تقدیم به... (اختیاری)</label>
+            <input type="text" id="winner-song-note-input" placeholder="مثلاً: به یاد شبی که خاطره‌اش ماندگار شد..." maxlength="300" autocomplete="off">
+          </div>
+          <button type="submit" class="mem-btn wwh-winner-form-btn" id="winner-song-submit-btn">ثبت قطعه انتخابی برای اجرا</button>
+          <p class="err" id="winner-form-err" role="alert" hidden></p>
+          <p class="ok" id="winner-form-ok" role="status" hidden></p>
+        </form>
+      </div>
+
+      <!-- Winner's Chosen Song Banner (Public, for EVERYONE) -->
+      <div class="wwh-winner-song-banner" id="winner-song-banner" hidden>
+        <div class="wwh-winner-song-header">
+          <div class="wwh-winner-song-title-group">
+            <span class="wwh-winner-song-icon" aria-hidden="true">🎷</span>
+            <h3 class="wwh-winner-song-heading" id="winner-banner-heading">قطعه منتخب برنده خاطرات</h3>
+          </div>
+          <span class="wwh-winner-song-badge" id="winner-banner-badge">اجرای قطعی در این رویداد</span>
+        </div>
+        <div class="wwh-winner-song-card-body" id="winner-banner-body">
+          <div class="wwh-winner-song-name" id="winner-banner-title"></div>
+          <div class="wwh-winner-song-artist" id="winner-banner-artist"></div>
+          <div class="wwh-winner-song-meta" id="winner-banner-meta"></div>
+          <div class="wwh-winner-song-note" id="winner-banner-note" hidden></div>
+        </div>
+      </div>
+
+      <!-- General Song Suggestions & Practice List (Expandable Panel) -->
+      <button type="button" class="wwh-suggestions-toggle" id="suggestions-toggle" aria-expanded="false">
+        <span style="display:inline-flex;align-items:center;gap:8px;">
+          <span>🎵</span>
+          <span>پیشنهاد آهنگ برای لیست تمرین گروه</span>
+        </span>
+        <span class="wwh-suggestions-toggle__chevron" aria-hidden="true">▼</span>
+      </button>
+
+      <div class="wwh-suggestions-panel" id="suggestions-panel" hidden>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <h3 class="wwh-suggestions-heading">
+            <span aria-hidden="true">🎸</span>
+            <span>لیست قطعات پیشنهادی مخاطبان</span>
+          </h3>
+          <span class="chip" id="suggestions-count">۰ پیشنهاد</span>
+        </div>
+        <p class="muted" style="font-size:0.82rem;margin-top:2px;">آهنگ مورد علاقه‌ات را برای تمرین و اجرای گروه پیشنهاد بده یا به قطعات دیگران رأی بده:</p>
+
+        <form id="suggest-song-form" class="wwh-suggestions-form">
+          <div class="wwh-suggestions-form-row">
+            <div>
+              <label for="suggest-title-input">نام قطعه / آهنگ *</label>
+              <input type="text" id="suggest-title-input" required placeholder="مثلاً: Bohemian Rhapsody" autocomplete="off">
+            </div>
+            <div>
+              <label for="suggest-artist-input">نام خواننده یا بند *</label>
+              <input type="text" id="suggest-artist-input" required placeholder="مثلاً: Queen" autocomplete="off">
+            </div>
+          </div>
+          <div class="wwh-suggestions-form-row">
+            <div>
+              <label for="suggest-name-input">نام شما (پیشنهاد دهنده) *</label>
+              <input type="text" id="suggest-name-input" required placeholder="مثلاً: علی" autocomplete="off">
+            </div>
+            <div>
+              <label for="suggest-note-input">توضیح کوتاه (اختیاری)</label>
+              <input type="text" id="suggest-note-input" placeholder="مثلاً: انرژی خیلی خوبی داره" maxlength="200" autocomplete="off">
+            </div>
+          </div>
+          <button type="submit" class="mem-btn mem-btn--soft" id="suggest-submit-btn" style="margin-top:4px;">ثبت پیشنهاد آهنگ</button>
+          <p class="err" id="suggest-form-err" role="alert" hidden></p>
+          <p class="ok" id="suggest-form-ok" role="status" hidden></p>
+        </form>
+
+        <div class="wwh-suggestions-list" id="suggestions-list">
+          <p class="empty-state" id="suggestions-empty"><strong>هنوز آهنگی پیشنهاد نشده.</strong><br>اولین نفری باش که قطعه مورد علاقه‌اش را پیشنهاد می‌دهد!</p>
+        </div>
+      </div>
+
       <div class="leaderboard" id="leaderboard" hidden>
         <p class="leaderboard__title">رتبه لایک این شب</p>
         <p class="muted" style="text-align:center;font-size:0.78rem;margin-bottom:10px;">سه نفر اول می‌تونن برای اجرای بعد آهنگ انتخاب کنن.</p>
@@ -1330,6 +1424,361 @@
       });
   }
 
+  /* ==========================================================================
+     Song Features: Winner Pick & Band Rehearsal Suggestions
+     ========================================================================== */
+
+  function getVoterId() {
+    var key = 'wwh_voter_id';
+    var vid = '';
+    try { vid = localStorage.getItem(key) || ''; } catch (e) {}
+    if (!vid) {
+      vid = 'voter_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+      try { localStorage.setItem(key, vid); } catch (e) {}
+    }
+    return vid;
+  }
+
+  var winnerSongCache = null;
+
+  function renderWinnerSongBanner(song) {
+    var banner = document.getElementById('winner-song-banner');
+    if (!banner) return;
+    winnerSongCache = song || null;
+
+    var headingEl = document.getElementById('winner-banner-heading');
+    var badgeEl = document.getElementById('winner-banner-badge');
+    var titleEl = document.getElementById('winner-banner-title');
+    var artistEl = document.getElementById('winner-banner-artist');
+    var metaEl = document.getElementById('winner-banner-meta');
+    var noteEl = document.getElementById('winner-banner-note');
+    var bodyEl = document.getElementById('winner-banner-body');
+
+    if (song && (song.title || song.artist)) {
+      banner.classList.remove('wwh-winner-song-banner--pending');
+      banner.hidden = false;
+      if (bodyEl) bodyEl.hidden = false;
+      if (headingEl) {
+        var prevEvent = song.winnerEventTitle || (song.previousEvent && song.previousEvent.title) || '';
+        headingEl.textContent = prevEvent ? ('قطعه منتخب برنده خاطرات ' + prevEvent) : 'قطعه منتخب برنده خاطرات رویداد قبل';
+      }
+      if (badgeEl) {
+        badgeEl.hidden = false;
+        badgeEl.textContent = 'اجرای قطعی در این رویداد';
+      }
+      if (titleEl) titleEl.textContent = '🎷 ' + (song.title || 'قطعه منتخب');
+      if (artistEl) artistEl.textContent = song.artist ? ('اثر ' + song.artist) : '';
+
+      var winnerWho = song.suggestedByName || song.suggested_by_name || song.winnerName || 'برنده برتر مسابقه';
+      var codeStr = song.ticketPublicCode || song.ticket_code || song.winnerCode || '';
+      if (metaEl) {
+        metaEl.textContent = 'انتخاب‌شده توسط ' + winnerWho + (codeStr ? (' (کد ' + toFa(codeStr) + ')') : '');
+      }
+
+      if (noteEl) {
+        if (song.note) {
+          noteEl.hidden = false;
+          noteEl.textContent = '«' + song.note + '»';
+        } else {
+          noteEl.hidden = true;
+          noteEl.textContent = '';
+        }
+      }
+    } else {
+      // Pending state: No song picked yet
+      banner.classList.add('wwh-winner-song-banner--pending');
+      banner.hidden = false;
+      if (headingEl) headingEl.textContent = 'در انتظار انتخاب قطعه توسط برنده';
+      if (badgeEl) {
+        badgeEl.hidden = false;
+        badgeEl.textContent = 'اجرای قطعی در این رویداد';
+      }
+      if (titleEl) titleEl.textContent = 'در انتظار انتخاب آهنگ توسط برنده مسابقه خاطرات رویداد قبل';
+      if (artistEl) artistEl.textContent = '';
+      if (metaEl) metaEl.textContent = 'به محض ثبت انتخاب توسط برنده مسابقه خاطرات، نام قطعه در اینجا نمایش داده می‌شود.';
+      if (noteEl) {
+        noteEl.hidden = true;
+        noteEl.textContent = '';
+      }
+    }
+  }
+
+  function fetchWinnerSong() {
+    return apiJson('/api/events/' + encodeURIComponent(slug) + '/songs/winner-pick')
+      .then(function (res) {
+        renderWinnerSongBanner(res.winnerSong);
+        return res.winnerSong;
+      })
+      .catch(function () {
+        renderWinnerSongBanner(null);
+      });
+  }
+
+  function checkWinnerStatus() {
+    var winnerCard = document.getElementById('winner-form-card');
+    if (!winnerCard) return;
+
+    var curCode = (ticketInfo && (ticketInfo.serial || ticketInfo.public_code)) || serialInput.value || '';
+    var qs = [];
+    if (curCode) qs.push('code=' + encodeURIComponent(curCode));
+    var url = '/api/events/' + encodeURIComponent(slug) + '/songs/status' + (qs.length ? '?' + qs.join('&') : '');
+
+    apiJson(url, { headers: authHeaders() })
+      .then(function (res) {
+        if (res && res.isWinnerEligible) {
+          winnerCard.hidden = false;
+          var titleIn = document.getElementById('winner-song-title-input');
+          var artistIn = document.getElementById('winner-song-artist-input');
+          var noteIn = document.getElementById('winner-song-note-input');
+          var submitBtn = document.getElementById('winner-song-submit-btn');
+
+          var pick = res.currentPick || res.winnerSong;
+          if (pick && (pick.title || pick.artist)) {
+            if (titleIn && !titleIn.value) titleIn.value = pick.title || '';
+            if (artistIn && !artistIn.value) artistIn.value = pick.artist || '';
+            if (noteIn && !noteIn.value) noteIn.value = pick.note || '';
+            if (submitBtn) submitBtn.textContent = 'به‌روزرسانی قطعه انتخابی برای اجرا';
+          }
+        } else {
+          winnerCard.hidden = true;
+        }
+
+        if (res && res.winnerSong) {
+          renderWinnerSongBanner(res.winnerSong);
+        }
+      })
+      .catch(function () {
+        winnerCard.hidden = true;
+      });
+  }
+
+  // Handle Winner Pick Submission
+  var winnerForm = document.getElementById('winner-song-form');
+  if (winnerForm) {
+    winnerForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var titleIn = document.getElementById('winner-song-title-input');
+      var artistIn = document.getElementById('winner-song-artist-input');
+      var noteIn = document.getElementById('winner-song-note-input');
+      var errEl = document.getElementById('winner-form-err');
+      var okEl = document.getElementById('winner-form-ok');
+      var submitBtn = document.getElementById('winner-song-submit-btn');
+
+      showErr(errEl, '');
+      showErr(okEl, '');
+
+      var title = (titleIn && titleIn.value || '').trim();
+      var artist = (artistIn && artistIn.value || '').trim();
+      var note = (noteIn && noteIn.value || '').trim();
+      var curCode = (ticketInfo && (ticketInfo.serial || ticketInfo.public_code)) || serialInput.value || '';
+
+      if (!title || !artist) {
+        showErr(errEl, 'نام آهنگ و خواننده الزامی است.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      apiJson('/api/events/' + encodeURIComponent(slug) + '/songs/winner-pick', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          title: title,
+          artist: artist,
+          note: note,
+          code: curCode
+        })
+      }).then(function (res) {
+        showErr(okEl, res.message || 'قطعه انتخابی شما با موفقیت ثبت شد!');
+        showToast('قطعه انتخابی شما ثبت شد و در این رویداد نواخته خواهد شد.');
+        if (submitBtn) submitBtn.textContent = 'به‌روزرسانی قطعه انتخابی برای اجرا';
+        if (res.winnerSong) {
+          renderWinnerSongBanner(res.winnerSong);
+        } else {
+          fetchWinnerSong();
+        }
+      }).catch(function (err) {
+        var msg = (err && err.body && err.body.detail && err.body.detail.message) ||
+                  (err && err.message) ||
+                  'ثبت قطعه با خطا مواجه شد.';
+        if (msg === 'not_winner') msg = 'تنها برنده مسابقه خاطرات رویداد قبل مجاز به انتخاب قطعه است.';
+        showErr(errEl, msg);
+      }).finally(function () {
+        submitBtn.disabled = false;
+      });
+    });
+  }
+
+  // Handle Song Suggestions & Practice List
+  var suggestionsToggle = document.getElementById('suggestions-toggle');
+  var suggestionsPanel = document.getElementById('suggestions-panel');
+
+  if (suggestionsToggle && suggestionsPanel) {
+    suggestionsToggle.addEventListener('click', function () {
+      var isOpen = !suggestionsPanel.hidden;
+      suggestionsPanel.hidden = isOpen;
+      suggestionsToggle.classList.toggle('is-open', !isOpen);
+      suggestionsToggle.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
+      if (!isOpen) {
+        loadSongSuggestions();
+      }
+    });
+  }
+
+  function renderSongSuggestions(items) {
+    var list = document.getElementById('suggestions-list');
+    var countEl = document.getElementById('suggestions-count');
+    if (!list) return;
+
+    items = items || [];
+    if (countEl) countEl.textContent = toFa(items.length) + ' پیشنهاد';
+
+    if (!items.length) {
+      list.innerHTML = '<p class="empty-state" id="suggestions-empty"><strong>هنوز آهنگی پیشنهاد نشده.</strong><br>اولین نفری باش که قطعه مورد علاقه‌اش را پیشنهاد می‌دهد!</p>';
+      return;
+    }
+
+    list.innerHTML = '';
+    items.forEach(function (item) {
+      var card = document.createElement('div');
+      card.className = 'wwh-song-card';
+
+      var info = document.createElement('div');
+      info.className = 'wwh-song-card__info';
+
+      var titleEl = document.createElement('div');
+      titleEl.className = 'wwh-song-card__title';
+      titleEl.textContent = item.title;
+
+      var artistEl = document.createElement('div');
+      artistEl.className = 'wwh-song-card__artist';
+      artistEl.textContent = item.artist;
+
+      var metaEl = document.createElement('div');
+      metaEl.className = 'wwh-song-card__meta';
+      metaEl.textContent = 'پیشنهاد: ' + (item.suggestedByName || 'مهمان رویداد');
+
+      info.appendChild(titleEl);
+      info.appendChild(artistEl);
+      info.appendChild(metaEl);
+
+      if (item.note) {
+        var noteEl = document.createElement('div');
+        noteEl.className = 'wwh-song-card__note';
+        noteEl.textContent = '«' + item.note + '»';
+        info.appendChild(noteEl);
+      }
+
+      var voteBtn = document.createElement('button');
+      voteBtn.type = 'button';
+      voteBtn.className = 'wwh-song-vote-btn' + (item.votedByMe ? ' is-voted' : '');
+      voteBtn.setAttribute('aria-pressed', item.votedByMe ? 'true' : 'false');
+      voteBtn.innerHTML = '<span>♥</span> <span class="vote-num">' + toFa(item.voteCount || 0) + '</span>';
+
+      voteBtn.addEventListener('click', function () {
+        voteBtn.disabled = true;
+        var curCode = (ticketInfo && (ticketInfo.serial || ticketInfo.public_code)) || serialInput.value || '';
+        apiJson('/api/events/' + encodeURIComponent(slug) + '/songs/suggestions/' + item.id + '/vote', {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            voterId: getVoterId(),
+            code: curCode
+          })
+        }).then(function (res) {
+          item.votedByMe = !!res.voted;
+          item.voteCount = typeof res.voteCount === 'number' ? res.voteCount : (item.votedByMe ? (item.voteCount + 1) : Math.max(0, item.voteCount - 1));
+          voteBtn.classList.toggle('is-voted', item.votedByMe);
+          voteBtn.setAttribute('aria-pressed', item.votedByMe ? 'true' : 'false');
+          var numEl = voteBtn.querySelector('.vote-num');
+          if (numEl) numEl.textContent = toFa(item.voteCount);
+        }).catch(function (err) {
+          showToast('رأی ثبت نشد؛ دوباره تلاش کن.');
+        }).finally(function () {
+          voteBtn.disabled = false;
+        });
+      });
+
+      card.appendChild(info);
+      card.appendChild(voteBtn);
+      list.appendChild(card);
+    });
+  }
+
+  function loadSongSuggestions() {
+    var curCode = (ticketInfo && (ticketInfo.serial || ticketInfo.public_code)) || serialInput.value || '';
+    var qs = ['voterId=' + encodeURIComponent(getVoterId())];
+    if (curCode) qs.push('code=' + encodeURIComponent(curCode));
+    var url = '/api/events/' + encodeURIComponent(slug) + '/songs/suggestions?' + qs.join('&');
+
+    apiJson(url, { headers: authHeaders() })
+      .then(function (data) {
+        renderSongSuggestions(data.items || []);
+      })
+      .catch(function () {
+        // silent fallback
+      });
+  }
+
+  // Handle Suggest Song Form Submit
+  var suggestForm = document.getElementById('suggest-song-form');
+  if (suggestForm) {
+    suggestForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var titleIn = document.getElementById('suggest-title-input');
+      var artistIn = document.getElementById('suggest-artist-input');
+      var nameIn = document.getElementById('suggest-name-input');
+      var noteIn = document.getElementById('suggest-note-input');
+      var errEl = document.getElementById('suggest-form-err');
+      var okEl = document.getElementById('suggest-form-ok');
+      var submitBtn = document.getElementById('suggest-submit-btn');
+
+      showErr(errEl, '');
+      showErr(okEl, '');
+
+      var title = (titleIn && titleIn.value || '').trim();
+      var artist = (artistIn && artistIn.value || '').trim();
+      var name = (nameIn && nameIn.value || '').trim();
+      var note = (noteIn && noteIn.value || '').trim();
+      var curCode = (ticketInfo && (ticketInfo.serial || ticketInfo.public_code)) || serialInput.value || '';
+
+      if (!title || !artist) {
+        showErr(errEl, 'نام قطعه و نام خواننده الزامی است.');
+        return;
+      }
+      if (!name) {
+        showErr(errEl, 'نام پیشنهاد دهنده الزامی است.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      apiJson('/api/events/' + encodeURIComponent(slug) + '/songs/suggest', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          title: title,
+          artist: artist,
+          suggestedByName: name,
+          note: note,
+          code: curCode
+        })
+      }).then(function (res) {
+        showErr(okEl, res.message || 'پیشنهاد شما با موفقیت برای تمرین گروه ثبت شد.');
+        showToast('پیشنهاد آهنگ ثبت شد.');
+        if (titleIn) titleIn.value = '';
+        if (artistIn) artistIn.value = '';
+        if (noteIn) noteIn.value = '';
+        loadSongSuggestions();
+      }).catch(function (err) {
+        var msg = (err && err.body && err.body.detail && err.body.detail.message) ||
+                  (err && err.message) ||
+                  'ثبت پیشنهاد با خطا مواجه شد.';
+        showErr(errEl, msg);
+      }).finally(function () {
+        submitBtn.disabled = false;
+      });
+    });
+  }
+
   function loadGallery() {
     var grid = document.getElementById('gallery-grid');
     var empty = document.getElementById('gallery-empty');
@@ -1346,6 +1795,15 @@
       if (data.event && data.event.title) {
         document.getElementById('event-sub').textContent = data.event.title;
       }
+
+      if (data.winnerSong) {
+        renderWinnerSongBanner(data.winnerSong);
+      } else {
+        fetchWinnerSong();
+      }
+      checkWinnerStatus();
+      loadSongSuggestions();
+
       if (!data.items || !data.items.length) {
         galleryItemsCache = [];
         empty.hidden = false;
@@ -2183,7 +2641,13 @@
       var uet = document.getElementById('upload-event-title');
       if (uet) uet.textContent = data.event.title || '';
     }
-    if (data && data.ticket) setTicketChip(data.ticket);
+    if (data && data.ticket) {
+      setTicketChip(data.ticket);
+      var nameIn = document.getElementById('suggest-name-input');
+      if (nameIn && !nameIn.value && data.ticket.name) {
+        nameIn.value = data.ticket.name;
+      }
+    }
     archiveMedia = (data && data.archiveMedia) || [];
     setUploadsRemaining(
       data && typeof data.uploadsRemaining === 'number' ? data.uploadsRemaining : null
@@ -2191,6 +2655,7 @@
     showProfileShell(true);
     switchTab('gallery');
     showErr(gateErr, '');
+    checkWinnerStatus();
   }
 
   function clearSession() {
@@ -2202,6 +2667,8 @@
     closeComments();
     var grid = document.getElementById('gallery-grid');
     if (grid) grid.innerHTML = '';
+    var winnerCard = document.getElementById('winner-form-card');
+    if (winnerCard) winnerCard.hidden = true;
     showProfileShell(false);
     activeTab = 'gallery';
   }

@@ -45,6 +45,7 @@ from app.services.memory_media import (
     video_max_sec,
 )
 from app.services.tickets import active_rank_map, public_number
+from app.services.song_service import get_event_winner_song
 
 router = APIRouter(tags=["memories"])
 _bearer = HTTPBearer(auto_error=False)
@@ -600,6 +601,7 @@ def memories_gallery(
     return {
         "event": event_public_card(ev),
         "count": len(rows),
+        "winnerSong": get_event_winner_song(db, ev.id),
         "items": [
             {
                 "id": m.id,

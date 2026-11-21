@@ -370,3 +370,46 @@ class StorageRoutingLog(Base):
     decision: Mapped[str] = mapped_column(String(32), nullable=False)  # selected | skipped_full | skipped_unreachable | rejected_all
     reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Song Suggestions & Winner Song Selection Models
+# ---------------------------------------------------------------------------
+
+class SongSuggestion(Base):
+    """Attendee song suggestions for band practice & winner definitive song pick."""
+
+    __tablename__ = "song_suggestions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"), nullable=False, index=True)
+    ticket_id: Mapped[int | None] = mapped_column(ForeignKey("tickets.id"), nullable=True, index=True)
+    suggested_by_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    artist: Mapped[str] = mapped_column(String(200), nullable=False)
+    note: Mapped[str] = mapped_column(String(500), default="", nullable=False)
+    is_winner_pick: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    winner_event_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)  # active | in_practice | archived
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    event: Mapped["Event"] = relationship()
+    ticket: Mapped["Ticket | None"] = relationship()
+    votes: Mapped[list["SongVote"]] = relationship(back_populates="suggestion", cascade="all, delete-orphan")
+
+
+class SongVote(Base):
+    """One vote per voter_identifier per song suggestion."""
+
+    __tablename__ = "song_votes"
+    __table_args__ = (UniqueConstraint("suggestion_id", "voter_identifier", name="uq_song_vote_suggestion_voter"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    suggestion_id: Mapped[int] = mapped_column(ForeignKey("song_suggestions.id"), nullable=False, index=True)
+    ticket_id: Mapped[int | None] = mapped_column(ForeignKey("tickets.id"), nullable=True)
+    voter_identifier: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    suggestion: Mapped["SongSuggestion"] = relationship(back_populates="votes")
+

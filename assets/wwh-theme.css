@@ -564,4 +564,377 @@ a.btn,
   transform: scale(0.97);
 }
 
+/* ==========================================================================
+   Song Features: Winner Pick & Band Rehearsal Suggestions
+   Gothic Dark & Gold Aesthetics
+   ========================================================================== */
+
+/* --- Winner's Chosen Song Banner (Public, Above Gallery) --- */
+.wwh-winner-song-banner {
+  position: relative;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border-radius: var(--radius-lg, 16px);
+  border: 1px solid rgba(224, 180, 90, 0.45);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(224, 180, 90, 0.12) 0%, transparent 70%),
+    linear-gradient(180deg, #181514 0%, #111012 100%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 20px rgba(224, 180, 90, 0.12);
+  overflow: hidden;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.wwh-winner-song-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #E0B45A, transparent);
+  opacity: 0.8;
+}
+
+.wwh-winner-song-banner[hidden] {
+  display: none !important;
+}
+
+.wwh-winner-song-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.wwh-winner-song-title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wwh-winner-song-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(224, 180, 90, 0.6));
+}
+
+.wwh-winner-song-heading {
+  font-family: var(--font, 'Vazirmatn', sans-serif);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #F5E8C8;
+  letter-spacing: -0.01em;
+}
+
+.wwh-winner-song-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(224, 180, 90, 0.18);
+  border: 1px solid rgba(224, 180, 90, 0.5);
+  color: #F8D98C;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 10px rgba(224, 180, 90, 0.2);
+}
+
+.wwh-winner-song-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md, 8px);
+  background: rgba(10, 10, 12, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.wwh-winner-song-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1.35;
+}
+
+.wwh-winner-song-artist {
+  font-size: 0.92rem;
+  color: #E0B45A;
+  font-weight: 600;
+}
+
+.wwh-winner-song-meta {
+  font-size: 0.8rem;
+  color: var(--color-muted, #7A7A85);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.wwh-winner-song-note {
+  margin-top: 6px;
+  padding: 8px 12px;
+  border-right: 3px solid #E0B45A;
+  border-radius: 0 var(--radius-md, 8px) var(--radius-md, 8px) 0;
+  background: rgba(224, 180, 90, 0.07);
+  font-size: 0.82rem;
+  color: #E2DFD8;
+  font-style: italic;
+  line-height: 1.55;
+}
+
+/* Pending banner state (waiting for winner to pick) */
+.wwh-winner-song-banner--pending {
+  border: 1px dashed rgba(224, 180, 90, 0.35);
+  background: rgba(20, 18, 16, 0.6);
+  text-align: center;
+  box-shadow: none;
+}
+
+.wwh-winner-song-banner--pending .wwh-winner-song-meta {
+  font-size: 0.86rem;
+  color: #C8BFAC;
+}
+
+/* --- Exclusive Winner Song Selection Form --- */
+.wwh-winner-form-card {
+  position: relative;
+  margin: 0 0 20px;
+  padding: 20px 18px;
+  border-radius: var(--radius-lg, 16px);
+  border: 1.5px solid #E0B45A;
+  background:
+    radial-gradient(ellipse 130% 90% at 50% -25%, rgba(224, 180, 90, 0.22) 0%, transparent 65%),
+    linear-gradient(180deg, #1c1815 0%, #121012 100%);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.6), 0 0 28px rgba(224, 180, 90, 0.25);
+  animation: wwh-gold-pulse 3s infinite alternate ease-in-out;
+}
+
+.wwh-winner-form-card[hidden] {
+  display: none !important;
+}
+
+@keyframes wwh-gold-pulse {
+  0% { box-shadow: 0 10px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(224, 180, 90, 0.2); }
+  100% { box-shadow: 0 12px 38px rgba(0, 0, 0, 0.7), 0 0 32px rgba(224, 180, 90, 0.4); }
+}
+
+.wwh-winner-form-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #FFE699;
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+
+.wwh-winner-form-desc {
+  font-size: 0.86rem;
+  color: #D6CFBC;
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.wwh-winner-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wwh-winner-form-btn {
+  background: linear-gradient(135deg, #E0B45A 0%, #C99634 100%);
+  color: #0C0A06;
+  border: 1px solid #FFE494;
+  font-weight: 800;
+  box-shadow: 0 4px 18px rgba(224, 180, 90, 0.4);
+}
+
+.wwh-winner-form-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #F0C46A 0%, #D9A644 100%);
+  box-shadow: 0 6px 24px rgba(224, 180, 90, 0.55);
+}
+
+/* --- General Song Suggestions & Practice List --- */
+.wwh-suggestions-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 16px 0 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-border, #2A2A2E);
+  background: rgba(20, 20, 22, 0.85);
+  color: var(--color-text, #FAFAFA);
+  font-family: var(--font, 'Vazirmatn', sans-serif);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.wwh-suggestions-toggle:hover {
+  border-color: var(--color-accent-soft, #E86B82);
+  background: rgba(28, 28, 32, 0.95);
+}
+
+.wwh-suggestions-toggle__chevron {
+  transition: transform 200ms ease;
+  font-size: 0.8rem;
+  color: var(--color-muted, #7A7A85);
+}
+
+.wwh-suggestions-toggle.is-open .wwh-suggestions-toggle__chevron {
+  transform: rotate(180deg);
+}
+
+.wwh-suggestions-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0 0 20px;
+  padding: 16px;
+  border-radius: var(--radius-lg, 16px);
+  border: 1px solid var(--color-border, #2A2A2E);
+  background: rgba(16, 16, 18, 0.9);
+  animation: wwh-skeleton-fade-in 0.24s var(--ease-out, ease) forwards;
+}
+
+.wwh-suggestions-panel[hidden] {
+  display: none !important;
+}
+
+.wwh-suggestions-heading {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wwh-suggestions-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-md, 8px);
+  background: rgba(10, 10, 12, 0.6);
+  border: 1px solid var(--color-border, #2A2A2E);
+}
+
+.wwh-suggestions-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 440px) {
+  .wwh-suggestions-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wwh-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.wwh-song-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-border, #2A2A2E);
+  background: rgba(18, 18, 20, 0.7);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.wwh-song-card:hover {
+  border-color: var(--color-border-light, #3A3A3F);
+  background: rgba(24, 24, 28, 0.85);
+}
+
+.wwh-song-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.wwh-song-card__title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wwh-song-card__artist {
+  font-size: 0.82rem;
+  color: var(--color-secondary, #B8B8C0);
+}
+
+.wwh-song-card__meta {
+  font-size: 0.74rem;
+  color: var(--color-muted, #7A7A85);
+  margin-top: 2px;
+}
+
+.wwh-song-card__note {
+  font-size: 0.76rem;
+  color: var(--color-accent-soft, #E86B82);
+  margin-top: 2px;
+  font-style: italic;
+}
+
+.wwh-song-vote-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 54px;
+  min-height: 38px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--color-border, #2A2A2E);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-secondary, #B8B8C0);
+  font-family: var(--font, 'Vazirmatn', sans-serif);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 120ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
+  flex-shrink: 0;
+}
+
+.wwh-song-vote-btn:active {
+  transform: scale(0.95);
+}
+
+.wwh-song-vote-btn.is-voted {
+  border-color: var(--color-accent, #D43F5A);
+  background: rgba(212, 63, 90, 0.2);
+  color: #FFFFFF;
+  box-shadow: 0 0 12px rgba(212, 63, 90, 0.3);
+}
+
+
 
