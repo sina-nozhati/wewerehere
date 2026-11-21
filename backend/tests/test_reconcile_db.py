@@ -258,3 +258,95 @@ def test_reconcile_event_isolation():
         assert len(ev2_tickets) == 2
         assert {t["public_code"] for t in ev2_tickets} == {"2001", "2002"}
 
+
+def test_reconcile_duplicate_protection_and_order_linking():
+    """Verify duplicate protection: no duplicate tickets inserted, and orders linked correctly."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        backup_db = os.path.join(tmp_dir, "backup.sqlite")
+        target_db = os.path.join(tmp_dir, "target.sqlite")
+
+        _create_sample_db(backup_db)
+        _create_sample_db(target_db)
+
+        # In backup:
+        # Order 1 (Ali & Babak) -> Tickets 1001 & 1002
+        # Order 2 (Hassan) -> Ticket 1003
+        b_con = sqlite3.connect(backup_db)
+        b_con.execute(
+            "INSERT INTO orders (id, event_id, phone, names_json, status, created_at) "
+            "VALUES (1, 1, '09121111111', '[\"Ali\", \"Babak\"]', 'approved', '2026-11-20 10:00:00')"
+        )
+        b_con.execute(
+            "INSERT INTO tickets (id, event_id, order_id, holder_name, phone, public_code, display_number, group_name, access_token_hash, status) "
+            "VALUES (1, 1, 1, 'Ali', '09121111111', '1001', 1, 'A', 'hash1', 'active')"
+        )
+        b_con.execute(
+            "INSERT INTO tickets (id, event_id, order_id, holder_name, phone, public_code, display_number, group_name, access_token_hash, status) "
+            "VALUES (2, 1, 1, 'Babak', '09121111111', '1002', 2, 'A', 'hash2', 'active')"
+        )
+        b_con.execute(
+            "INSERT INTO orders (id, event_id, phone, names_json, status, created_at) "
+            "VALUES (2, 1, '09122222222', '[\"Hassan\"]', 'approved', '2026-11-20 11:00:00')"
+        )
+        b_con.execute(
+            "INSERT INTO tickets (id, event_id, order_id, holder_name, phone, public_code, display_number, group_name, access_token_hash, status) "
+            "VALUES (3, 1, 2, 'Hassan', '09122222222', '1003', 3, 'B', 'hash3', 'active')"
+        )
+        b_con.commit()
+        b_con.close()
+
+        # In target:
+        # Order 1 belongs to SOMEONE ELSE (phone: 09129999999)
+        # Order 10 was created today for Ali & Babak (phone: 09121111111)
+        # Ticket 1001 (Ali) was already issued today/retained
+        t_con = sqlite3.connect(target_db)
+        t_con.execute(
+            "INSERT INTO orders (id, event_id, phone, names_json, status, created_at) "
+            "VALUES (1, 1, '09129999999', '[\"Stranger\"]', 'approved', '2026-11-21 07:00:00')"
+        )
+        t_con.execute(
+            "INSERT INTO orders (id, event_id, phone, names_json, status, created_at) "
+            "VALUES (10, 1, '09121111111', '[\"Ali\", \"Babak\"]', 'approved', '2026-11-21 08:00:00')"
+        )
+        t_con.execute(
+            "INSERT INTO tickets (id, event_id, order_id, holder_name, phone, public_code, display_number, group_name, access_token_hash, status) "
+            "VALUES (101, 1, 10, 'Ali', '09121111111', '1001', 1, 'A', 'hash1', 'active')"
+        )
+        t_con.commit()
+        t_con.close()
+
+        src_data = inspect_db(backup_db)
+        tgt_data = inspect_db(target_db)
+
+        diff = find_differences(src_data, tgt_data, event_id=1)
+        # Ticket 1001 is already in target -> NOT missing!
+        # Missing tickets: 1002 (Babak) and 1003 (Hassan)
+        assert len(diff["missing_tickets"]) == 2
+        assert {t["public_code"] for t in diff["missing_tickets"]} == {"1002", "1003"}
+
+        # Order for Ali & Babak is already in target (as Order 10) -> NOT missing!
+        # Only Hassan's order is missing
+        assert len(diff["missing_orders"]) == 1
+        assert diff["missing_orders"][0]["phone"] == "09122222222"
+
+        # Apply merge
+        res = merge_missing_records(backup_db, target_db, diff, dry_run=False, event_id=1)
+        assert res["status"] == "success"
+        assert res["inserted_tickets"] == 2
+        assert res["inserted_orders"] == 1
+
+        final_tgt = inspect_db(target_db)
+        # Total tickets: exactly 3 (1001, 1002, 1003) - no duplicates!
+        assert len(final_tgt["tickets"]) == 3
+        codes = [t["public_code"] for t in final_tgt["tickets"].values()]
+        assert sorted(codes) == ["1001", "1002", "1003"]
+
+        # Babak's ticket (1002) should link to Order 10 (matching Ali/Babak's phone), NEVER to Order 1 (Stranger)!
+        t_1002 = next(t for t in final_tgt["tickets"].values() if t["public_code"] == "1002")
+        assert t_1002["order_id"] == 10
+
+        # Stranger's order (1) was NEVER modified or given extra tickets
+        stranger_tickets = [t for t in final_tgt["tickets"].values() if t["order_id"] == 1]
+        assert len(stranger_tickets) == 0
+
+

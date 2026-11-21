@@ -201,6 +201,10 @@ def merge_missing_records(
 
         order_id_map: dict[int, int] = {}
         existing_order_ids = {row["id"] for row in cursor.execute("SELECT id FROM orders").fetchall()}
+        existing_orders_info = {
+            row["id"]: (row["event_id"], row["phone"])
+            for row in cursor.execute("SELECT id, event_id, phone FROM orders").fetchall()
+        }
         next_order_id = max_order_id + 1
 
         for o in diff["missing_orders"]:
@@ -213,6 +217,7 @@ def merge_missing_records(
                 new_id = next_order_id
                 next_order_id += 1
             existing_order_ids.add(new_id)
+            existing_orders_info[new_id] = (o["event_id"], o["phone"])
             order_id_map[old_id] = new_id
 
             cursor.execute(
@@ -281,10 +286,21 @@ def merge_missing_records(
             old_oid = t.get("order_id")
             new_oid = order_id_map.get(old_oid) if old_oid else None
             if old_oid and not new_oid:
-                if old_oid in existing_order_ids:
+                if (
+                    old_oid in existing_orders_info
+                    and existing_orders_info[old_oid] == (t["event_id"], t["phone"])
+                ):
                     new_oid = old_oid
                 else:
-                    new_oid = None
+                    matching_oid = next(
+                        (
+                            oid
+                            for oid, (ev, ph) in existing_orders_info.items()
+                            if ev == t["event_id"] and ph == t["phone"]
+                        ),
+                        None,
+                    )
+                    new_oid = matching_oid
 
             if t["id"] not in existing_ticket_ids:
                 new_tid = t["id"]
