@@ -13,7 +13,8 @@
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.jpg?v=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Vazirmatn:wght@100..900&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Vazirmatn:wght@100..900&display=swap"></noscript>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
   <script src="/assets/wwh-map.js" defer></script>
@@ -3259,7 +3260,7 @@
         evTitle.textContent = currentEv ? currentEv.title : 'رویداد جاری';
       }
       loadStorageOverview();
-      loadEventStorageConfig();
+      loadEventStorageConfig(true);
       loadEventMediaOverview();
     }
 
@@ -3378,12 +3379,36 @@
       listEl.innerHTML = html;
     }
 
-    function loadEventStorageConfig() {
+    function syncEventStorageFolders() {
+      if (!currentEventId) return;
+      var btn = document.getElementById('btn-sync-folders');
+      if (btn) btn.disabled = true;
+      toast('در حال همگام‌سازی پوشه‌ها با ارائه‌دهنده…');
+      api('/api/admin/storage/events/' + currentEventId + '/sync-folders', { method: 'POST' })
+        .then(function(res) {
+          toast('پوشه‌های استاندارد با موفقیت بررسی و همگام‌سازی شدند (' + toFa(res.folderCount || 0) + ' پوشه).');
+          loadEventStorageConfig();
+        })
+        .catch(function(err) {
+          toast('خطا در همگام‌سازی پوشه‌ها: ' + err.message, 'err');
+        })
+        .finally(function() {
+          if (btn) btn.disabled = false;
+        });
+    }
+
+    function loadEventStorageConfig(forceSync) {
       if (!currentEventId) return;
       var container = document.getElementById('event-storage-config-body');
       if (container) container.innerHTML = '<p class="muted">در حال بارگذاری تنظیمات رویداد…</p>';
 
-      api('/api/admin/storage/events/' + currentEventId).then(function(cfg) {
+      var p = forceSync
+        ? api('/api/admin/storage/events/' + currentEventId + '/sync-folders', { method: 'POST' })
+            .catch(function(err) { console.warn('Sync folders failed:', err); })
+            .then(function() { return api('/api/admin/storage/events/' + currentEventId); })
+        : api('/api/admin/storage/events/' + currentEventId);
+
+      p.then(function(cfg) {
         renderEventStorageConfig(cfg);
       }).catch(function(err) {
         if (container) container.innerHTML = '<p class="err">خطا: ' + escapeHtml(err.message) + '</p>';
@@ -3435,16 +3460,21 @@
       html += '</div>';
 
       // Mapped standard folders
+      html += '<div style="margin-top:18px;">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">';
+      html += '<strong style="font-size:0.85rem;">پوشه‌های استاندارد نگاشت‌شده در فضای ابری:</strong>';
+      html += '<button type="button" class="btn btn--ghost btn--sm" id="btn-sync-folders" onclick="syncEventStorageFolders()">همگام‌سازی و ایجاد پوشه‌ها</button>';
+      html += '</div>';
       if (cfg.folders && cfg.folders.length) {
-        html += '<div style="margin-top:18px;">';
-        html += '<strong style="font-size:0.85rem;">پوشه‌های استاندارد نگاشت‌شده در فضای ابری:</strong>';
-        html += '<ul style="margin:8px 0 0 0;padding-right:20px;font-size:0.8rem;" class="muted">';
+        html += '<ul style="margin:0;padding-right:20px;font-size:0.8rem;" class="muted">';
         cfg.folders.forEach(function(f) {
           html += '<li><code>' + escapeHtml(f.path) + '</code> (شناسه: ' + escapeHtml(f.folderId) + ')</li>';
         });
         html += '</ul>';
-        html += '</div>';
+      } else {
+        html += '<p class="muted" style="font-size:0.8rem;margin:4px 0 0 0;">هنوز پوشه‌ای نگاشت نشده است. با زدن دکمه «همگام‌سازی» پوشه‌ها ایجاد می‌شوند.</p>';
       }
+      html += '</div>';
 
       container.innerHTML = html;
     }

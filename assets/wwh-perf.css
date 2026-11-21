@@ -173,3 +173,40 @@ html.wwh-touch .atmosphere-exempt .atmosphere-dust {
 html.wwh-touch .fish__inner {
   animation-duration: calc(var(--wobble-dur, 2s) * 1.35);
 }
+
+/* ==========================================================================
+   In-App / Mobile / Lite Performance:
+   Disable complex backdrop-filters and heavy canvas / particles
+   ========================================================================== */
+html.wwh-inapp body::before,
+html.wwh-inapp .wwh-loader__mist,
+html.wwh-inapp .wwh-loader__mist--2,
+html.wwh-inapp .wwh-loader__embers,
+html.wwh-inapp .atmosphere-layer,
+html.wwh-perf-lite .atmosphere-layer,
+html.wwh-touch .atmosphere-layer {
+  display: none !important;
+}
+
+html.wwh-inapp canvas,
+html.wwh-perf-lite canvas,
+html.wwh-touch canvas,
+html.wwh-inapp #canvas,
+html.wwh-perf-lite #canvas,
+html.wwh-touch #canvas {
+  display: none !important;
+}
+
+html.wwh-inapp *,
+html.wwh-perf-lite .topbar,
+html.wwh-perf-lite .session-bar,
+html.wwh-perf-lite .hero-spotlight,
+html.wwh-perf-lite .wwh-lb,
+html.wwh-touch .topbar,
+html.wwh-touch .session-bar,
+html.wwh-touch .hero-spotlight,
+html.wwh-touch .wwh-lb {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+

@@ -198,7 +198,7 @@ async def test_provider_connection(
 
 
 @router.get("/events/{event_id}")
-def get_event_storage_config(
+async def get_event_storage_config(
     event_id: int,
     db: Session = Depends(get_db),
     _: str = Depends(require_admin),
@@ -225,6 +225,20 @@ def get_event_storage_config(
         db.commit()
         db.refresh(cfg)
 
+    # Auto-ensure event folders if not yet created for the primary provider
+    if cfg.primary_provider_id:
+        try:
+            folder_count = db.scalar(
+                select(func.count(EventStorageFolder.id)).where(
+                    EventStorageFolder.event_id == event_id,
+                    EventStorageFolder.provider_id == cfg.primary_provider_id,
+                )
+            ) or 0
+            if folder_count == 0:
+                await FolderManager.ensure_event_folders(db, event_id, cfg.primary_provider_id)
+        except Exception as e:
+            log.warning("Auto-ensuring folders for event %s failed: %s", event_id, e)
+
     try:
         fallbacks = json.loads(cfg.fallback_provider_ids_json or "[]")
     except Exception:
@@ -242,6 +256,48 @@ def get_event_storage_config(
         "primaryProviderId": cfg.primary_provider_id,
         "fallbackProviderIds": fallbacks,
         "routingStatus": cfg.routing_status,
+        "folders": [
+            {
+                "providerId": f.provider_id,
+                "purpose": f.folder_purpose,
+                "folderId": f.provider_folder_id,
+                "path": f.provider_folder_path,
+            }
+            for f in folders
+        ],
+    }
+
+
+@router.post("/events/{event_id}/sync-folders")
+async def sync_event_storage_folders(
+    event_id: int,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    """Explicitly provision and synchronize standardized event folders for configured providers."""
+    ev = db.get(Event, event_id)
+    if not ev:
+        raise HTTPException(404, {"error": "رویداد یافت نشد."})
+
+    cfg = db.scalar(select(EventStorageConfig).where(EventStorageConfig.event_id == event_id))
+    if not cfg or not cfg.primary_provider_id:
+        raise HTTPException(400, {"error": "پیکربندی ذخیره‌سازی برای این رویداد وجود ندارد."})
+
+    try:
+        await FolderManager.ensure_event_folders(db, event_id, cfg.primary_provider_id)
+    except Exception as e:
+        log.error("Sync folders failed for event %d on provider %d: %s", event_id, cfg.primary_provider_id, e)
+        raise HTTPException(502, {"error": f"همگام‌سازی پوشه‌ها با ارائه‌دهنده با خطا مواجه شد: {str(e)}"}) from e
+
+    folders = db.scalars(
+        select(EventStorageFolder).where(EventStorageFolder.event_id == event_id)
+    ).all()
+
+    return {
+        "ok": True,
+        "eventId": event_id,
+        "primaryProviderId": cfg.primary_provider_id,
+        "folderCount": len(folders),
         "folders": [
             {
                 "providerId": f.provider_id,

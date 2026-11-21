@@ -31,7 +31,8 @@ from datetime import datetime, timezone
 
 
 def _cairo_png_export_available() -> bool:
-    return ticket_png_export_available()
+    from app.services.ticket_render import _cairo_png_available
+    return _cairo_png_available()
 
 
 @pytest.fixture()

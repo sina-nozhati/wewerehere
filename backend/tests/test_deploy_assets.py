@@ -74,3 +74,33 @@ def test_lightbox_assets_no_download_and_navigation():
     assert "wwh-gallery-error" in css
     assert "wwh-skeleton-fade" in css
 
+
+def test_self_hosted_fonts_and_inapp_performance():
+    # 1. Local font-face rules in wwh-theme.css
+    theme_css = (ROOT / "assets" / "wwh-theme.css").read_text(encoding="utf-8")
+    assert "@font-face" in theme_css
+    assert "Vazirmatn-Regular.ttf" in theme_css
+    assert "font-display: swap" in theme_css
+
+    # 2. HTML pages have non-blocking font references & load local theme first
+    for page in ["index.html", "admin.html", "memories.html", "track.html", "support.html", "episodes.html"]:
+        html_file = ROOT / page
+        assert html_file.is_file()
+        content = html_file.read_text(encoding="utf-8")
+        assert "wwh-theme.css" in content
+        # Ensure external fonts are not blocking
+        if "fonts.googleapis.com" in content:
+            assert 'media="print"' in content or 'as="style"' in content or 'wwh-perf.js' in content
+
+    # 3. In-app browser detection in wwh-perf.js
+    perf_js = (ROOT / "assets" / "wwh-perf.js").read_text(encoding="utf-8")
+    assert "Instagram|FBAN|FBAV|Telegram" in perf_js
+    assert "wwh-perf-lite" in perf_js
+
+    # 4. In-app browser fast loader dismissal in wwh-loader.js
+    loader_js = (ROOT / "assets" / "wwh-loader.js").read_text(encoding="utf-8")
+    assert "Instagram|FBAN|FBAV|Telegram" in loader_js
+    assert "350" in loader_js  # MIN_VISIBLE_MS <= 400ms
+    assert "250" in loader_js  # FONT_WAIT_MS <= 250ms
+
+

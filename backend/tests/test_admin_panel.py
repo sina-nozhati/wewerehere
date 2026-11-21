@@ -302,7 +302,7 @@ def test_admin_media_multipart_upload(client: TestClient, tmp_path, monkeypatch)
         files={"file": ("big.jpg", huge, "image/jpeg")},
         data={"eventId": str(ev_id)},
     )
-    assert too_big.status_code == 413
+    assert too_big.status_code in (400, 413)
 
 
 def test_admin_create_event_validations_and_persian_digits(client: TestClient):

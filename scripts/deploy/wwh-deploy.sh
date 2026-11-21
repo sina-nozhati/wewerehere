@@ -318,12 +318,20 @@ wait_for_health() {
   local url="$HEALTH_URL"
   local attempt=1
   local max=60
-  local health=""
+  local last_status=""
+  local last_body=""
   log "waiting for health (up to ${max}s) $url"
   while [[ "$attempt" -le "$max" ]]; do
-    health="$(curl -fsS "$url" 2>/dev/null || true)"
-    if [[ "$health" == *'"ok"'* && "$health" == *'true'* ]]; then
-      if [[ "$health" != *'"backend":"fastapi"'* && "$health" != *'"backend": "fastapi"'* ]]; then
+    local response
+    response="$(curl -sS -w "\n%{http_code}" "$url" 2>&1 || true)"
+    local http_code
+    http_code="$(echo "$response" | tail -n1)"
+    local body
+    body="$(echo "$response" | sed '$d')"
+    last_status="$http_code"
+    last_body="$body"
+    if [[ "$http_code" == "200" && "$body" == *'"ok"'* && "$body" == *'true'* ]]; then
+      if [[ "$body" != *'"backend":"fastapi"'* && "$body" != *'"backend": "fastapi"'* ]]; then
         log "WARN: health OK but backend is not FastAPI (legacy Node?)"
       fi
       return 0
@@ -331,7 +339,7 @@ wait_for_health() {
     sleep 1
     attempt=$((attempt + 1))
   done
-  log "health never became ready; last response: ${health:-<empty>}"
+  log "health never became ready; last HTTP status: ${last_status:-<unknown>}, body: ${last_body:-<empty>}"
   return 1
 }
 
@@ -447,7 +455,7 @@ smoke_failure_hint() {
     return 0
   fi
   log "recent logs:"
-  journalctl -u "$SERVICE" -n 40 --no-pager 2>/dev/null || true
+  journalctl -u "$SERVICE" -n 100 --no-pager 2>/dev/null || true
 }
 
 rollback_deployment() {

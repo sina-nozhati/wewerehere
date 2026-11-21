@@ -70,7 +70,7 @@ class FolderManager:
         event_id: int,
         provider_id: int,
     ) -> dict[str, EventStorageFolder]:
-        """Ensure all standardized folders exist on the provider and are recorded in the DB."""
+        """Ensure all standardized folders exist on the provider in clean hierarchy and are recorded in DB."""
         event = db.get(Event, event_id)
         if not event:
             return {}
@@ -81,6 +81,7 @@ class FolderManager:
 
         adapter = ProviderManager.get_adapter_for_provider(provider)
         paths = cls.get_standard_paths(event)
+        base = paths["root"]
 
         # Check existing folder mappings in DB
         existing = {
@@ -93,56 +94,122 @@ class FolderManager:
             ).all()
         }
 
-        # Root folder
+        # 1. Root folder: "WE WERE HERE/Events/{year}/{slug}"
         root_mapping = existing.get("root")
-        root_folder_id = root_mapping.provider_folder_id if root_mapping else None
-        if not root_mapping:
+        root_folder_id = root_mapping.provider_folder_id if (root_mapping and root_mapping.provider_folder_id and root_mapping.provider_folder_id != "None") else None
+        if not root_folder_id:
             try:
-                root_info = await adapter.create_or_get_folder(paths["root"])
-                root_mapping = EventStorageFolder(
-                    event_id=event_id,
-                    provider_id=provider_id,
-                    folder_purpose="root",
-                    provider_folder_id=str(root_info.folder_id),
-                    provider_folder_path=root_info.path,
-                    created_at=utcnow(),
-                )
-                db.add(root_mapping)
+                root_info = await adapter.create_or_get_folder(base)
+                root_folder_id = str(root_info.folder_id)
+                if not root_mapping:
+                    root_mapping = EventStorageFolder(
+                        event_id=event_id,
+                        provider_id=provider_id,
+                        folder_purpose="root",
+                        provider_folder_id=root_folder_id,
+                        provider_folder_path=base,
+                        created_at=utcnow(),
+                    )
+                    db.add(root_mapping)
+                else:
+                    root_mapping.provider_folder_id = root_folder_id
+                    root_mapping.provider_folder_path = base
                 db.flush()
                 existing["root"] = root_mapping
-                root_folder_id = str(root_info.folder_id)
             except Exception as e:
                 log.warning("Could not create root folder on provider %s: %s", provider_id, e)
 
-        # Child folders
-        root_path = paths.get("root", "")
-        for purpose, path in paths.items():
-            if purpose == "root" or purpose in existing:
-                continue
-
-            # Pass relative path under root when parent_folder_id is supplied
-            # e.g. "Memories/Photos", "Official-Media/Photos", etc.
-            child_rel_path = path
-            if root_folder_id and root_path and path.startswith(root_path):
-                child_rel_path = path[len(root_path):].lstrip("/")
-
-            try:
-                folder_info = await adapter.create_or_get_folder(
-                    child_rel_path if root_folder_id else path,
-                    parent_folder_id=root_folder_id,
-                )
+        # Helper to record or update mapping
+        def _record_mapping(purpose: str, folder_id: str, canonical_path: str):
+            mapping = existing.get(purpose)
+            if not mapping:
                 mapping = EventStorageFolder(
                     event_id=event_id,
                     provider_id=provider_id,
                     folder_purpose=purpose,
-                    provider_folder_id=str(folder_info.folder_id),
-                    provider_folder_path=path,
+                    provider_folder_id=str(folder_id),
+                    provider_folder_path=canonical_path,
                     created_at=utcnow(),
                 )
                 db.add(mapping)
-                existing[purpose] = mapping
+            else:
+                mapping.provider_folder_id = str(folder_id)
+                mapping.provider_folder_path = canonical_path
+            db.flush()
+            existing[purpose] = mapping
+
+        # 2. Branch folders and single-segment relative child folders under root
+        # A. Memories branch: "Memories"
+        mem_children = [
+            ("memories_photos", "Photos", paths["memories_photos"]),
+            ("memories_videos", "Videos", paths["memories_videos"]),
+            ("memories_other", "Other", paths["memories_other"]),
+        ]
+        mem_needed = any(
+            not (existing.get(p) and existing.get(p).provider_folder_id and existing.get(p).provider_folder_id != "None")
+            for p, _, _ in mem_children
+        )
+        mem_branch_id = None
+        if root_folder_id and mem_needed:
+            try:
+                mem_branch = await adapter.create_or_get_folder("Memories", parent_folder_id=root_folder_id)
+                mem_branch_id = str(mem_branch.folder_id)
             except Exception as e:
-                log.warning("Could not create folder for purpose %s: %s", purpose, e)
+                log.warning("Could not create Memories branch folder: %s", e)
+
+        for purpose, child_name, canonical_path in mem_children:
+            curr = existing.get(purpose)
+            if curr and curr.provider_folder_id and curr.provider_folder_id != "None":
+                # Ensure canonical path is clean in DB
+                curr.provider_folder_path = canonical_path
+                continue
+            if mem_branch_id:
+                try:
+                    f_info = await adapter.create_or_get_folder(child_name, parent_folder_id=mem_branch_id)
+                    _record_mapping(purpose, str(f_info.folder_id), canonical_path)
+                except Exception as e:
+                    log.warning("Could not create child folder %s: %s", purpose, e)
+
+        # B. Official-Media branch: "Official-Media"
+        off_children = [
+            ("official_photos", "Photos", paths["official_photos"]),
+            ("official_videos", "Videos", paths["official_videos"]),
+        ]
+        off_needed = any(
+            not (existing.get(p) and existing.get(p).provider_folder_id and existing.get(p).provider_folder_id != "None")
+            for p, _, _ in off_children
+        )
+        off_branch_id = None
+        if root_folder_id and off_needed:
+            try:
+                off_branch = await adapter.create_or_get_folder("Official-Media", parent_folder_id=root_folder_id)
+                off_branch_id = str(off_branch.folder_id)
+            except Exception as e:
+                log.warning("Could not create Official-Media branch folder: %s", e)
+
+        for purpose, child_name, canonical_path in off_children:
+            curr = existing.get(purpose)
+            if curr and curr.provider_folder_id and curr.provider_folder_id != "None":
+                curr.provider_folder_path = canonical_path
+                continue
+            if off_branch_id:
+                try:
+                    f_info = await adapter.create_or_get_folder(child_name, parent_folder_id=off_branch_id)
+                    _record_mapping(purpose, str(f_info.folder_id), canonical_path)
+                except Exception as e:
+                    log.warning("Could not create child folder %s: %s", purpose, e)
+
+        # C. Exports branch: "Exports" directly under root
+        exp_curr = existing.get("exports")
+        if not (exp_curr and exp_curr.provider_folder_id and exp_curr.provider_folder_id != "None"):
+            if root_folder_id:
+                try:
+                    exp_info = await adapter.create_or_get_folder("Exports", parent_folder_id=root_folder_id)
+                    _record_mapping("exports", str(exp_info.folder_id), paths["exports"])
+                except Exception as e:
+                    log.warning("Could not create Exports folder: %s", e)
+        elif exp_curr:
+            exp_curr.provider_folder_path = paths["exports"]
 
         db.commit()
         return existing
@@ -172,7 +239,7 @@ class FolderManager:
                 EventStorageFolder.folder_purpose == purpose,
             )
         )
-        if folder:
+        if folder and folder.provider_folder_id and folder.provider_folder_id != "None":
             return folder
 
         # Ensure folders on demand

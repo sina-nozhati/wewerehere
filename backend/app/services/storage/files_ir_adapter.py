@@ -52,6 +52,7 @@ class FilesIrAdapter(StorageProviderAdapter):
             or settings.files_ir_total_capacity_bytes
             or 10 * 1024 * 1024 * 1024
         )
+        self._folder_cache: dict[tuple[str, str], str] = {}
 
     @property
     def provider_type(self) -> str:
@@ -185,29 +186,60 @@ class FilesIrAdapter(StorageProviderAdapter):
                 refreshed_at=datetime.now(timezone.utc),
             )
 
+    @staticmethod
+    def _norm_pid(pid: Any) -> str:
+        """Normalize parent folder ID treating 0, '0', None, '' equivalently as root."""
+        if pid is None or pid == 0:
+            return ""
+        s = str(pid).strip()
+        return "" if s in ("", "0", "None") else s
+
     async def _find_folder(
         self,
         name: str,
         parent_id: str | None,
         workspace_id: int | None,
     ) -> str | None:
+        clean_name = name.strip()
+        norm_pid = self._norm_pid(parent_id)
+        cache_key = (clean_name.lower(), norm_pid)
+        if cache_key in self._folder_cache:
+            return self._folder_cache[cache_key]
+
         params: dict[str, Any] = {
             "type": "folder",
-            "query": name,
+            "query": clean_name,
             "workspaceId": workspace_id or 0,
         }
-        if parent_id:
-            params["parentIds[]"] = str(parent_id)
+        if norm_pid:
+            params["parentId"] = norm_pid
+            params["parentIds[]"] = norm_pid
+
         try:
             data = await self._request("GET", "/drive/file-entries", params=params, timeout=15.0)
-            entries = data.get("data") if isinstance(data, dict) and "data" in data else data
+            raw_data = data.get("data") if isinstance(data, dict) and "data" in data else data
+            if isinstance(raw_data, dict) and "data" in raw_data:
+                entries = raw_data.get("data")
+            elif isinstance(raw_data, list):
+                entries = raw_data
+            elif isinstance(data, list):
+                entries = data
+            else:
+                entries = []
+
             if isinstance(entries, list):
+                name_lower = clean_name.lower()
                 for item in entries:
-                    if item.get("name") == name and item.get("type") == "folder":
-                        item_pid = str(item.get("parent_id") or "")
-                        check_pid = str(parent_id or "")
-                        if item_pid == check_pid or (not item_pid and not check_pid):
-                            return str(item.get("id"))
+                    if not isinstance(item, dict):
+                        continue
+                    item_name = str(item.get("name") or "").strip().lower()
+                    item_type = str(item.get("type") or "").strip().lower()
+                    if item_name == name_lower and (item_type == "folder" or item.get("is_dir")):
+                        item_pid = self._norm_pid(item.get("parent_id"))
+                        if item_pid == norm_pid:
+                            fid = str(item.get("id"))
+                            self._folder_cache[cache_key] = fid
+                            return fid
         except Exception as e:
             log.debug("Files.ir _find_folder search error: %s", e)
         return None
@@ -222,32 +254,40 @@ class FilesIrAdapter(StorageProviderAdapter):
         if not parts:
             return FolderInfo(folder_id=parent_folder_id or "0", name="root", path="")
 
-        # Guard against path repetition if a path starts with the parent folder's name or prefix
-        if parent_folder_id and parent_folder_id != "0":
+        norm_parent = self._norm_pid(parent_folder_id)
+
+        # Defensive guard: strip any root prefixes if parent_folder_id is already supplied
+        if norm_parent:
+            lower_parts = [p.lower() for p in parts]
+            if parts and lower_parts[0] in ("we were here", "wewerehere"):
+                for marker in ("memories", "official-media", "exports", "photos", "videos", "other"):
+                    if marker in lower_parts:
+                        idx = lower_parts.index(marker)
+                        parts = parts[idx:]
+                        lower_parts = [p.lower() for p in parts]
+                        break
+
+            # Check if parent folder name matches any part or prefix
             parent_name = None
             try:
-                parent_meta = await self._request("GET", f"/file-entries/{parent_folder_id}", timeout=10.0)
+                parent_meta = await self._request("GET", f"/file-entries/{norm_parent}", timeout=10.0)
                 parent_entry = parent_meta.get("file_entry") or parent_meta.get("entry") or parent_meta
                 if isinstance(parent_entry, dict):
-                    parent_name = parent_entry.get("name")
+                    parent_name = str(parent_entry.get("name") or "").strip()
             except Exception:
                 pass
 
-            if parent_name and parent_name in parts:
-                idx = parts.index(parent_name)
-                parts = parts[idx + 1:]
-            elif parent_name and parts and parts[0].lower() == str(parent_name).lower():
-                parts = parts[1:]
-            elif parts and parts[0] == "WE WERE HERE":
-                for marker in ("Memories", "Official-Media", "Exports"):
-                    if marker in parts:
-                        idx = parts.index(marker)
-                        parts = parts[idx:]
-                        break
+            if parent_name:
+                p_lower = parent_name.lower()
+                if p_lower in lower_parts:
+                    idx = lower_parts.index(p_lower)
+                    parts = parts[idx + 1:]
+                elif parts and parts[0].strip().lower() == p_lower:
+                    parts = parts[1:]
 
             if not parts:
                 return FolderInfo(
-                    folder_id=str(parent_folder_id),
+                    folder_id=str(norm_parent),
                     name=parent_name or "folder",
                     path=folder_path,
                     parent_id=None,
@@ -255,8 +295,18 @@ class FilesIrAdapter(StorageProviderAdapter):
                 )
 
         wid = int(workspace_id) if workspace_id and str(workspace_id).isdigit() else int(self.workspace_id or 0)
-        curr_parent = parent_folder_id
+        curr_parent = norm_parent
         current_path_parts: list[str] = []
+
+        def _extract_id(obj: Any) -> str | None:
+            if isinstance(obj, dict):
+                for k in ("id", "folder_id", "file_id", "folderId", "fileEntryId"):
+                    v = obj.get(k)
+                    if v is not None and str(v).strip() not in ("", "None"):
+                        return str(v).strip()
+            elif obj is not None and str(obj).strip() not in ("", "None"):
+                return str(obj).strip()
+            return None
 
         for part in parts:
             current_path_parts.append(part)
@@ -271,15 +321,29 @@ class FilesIrAdapter(StorageProviderAdapter):
                 "parentId": int(curr_parent) if curr_parent and curr_parent != "0" else None,
                 "targetWorkspaceId": wid if wid > 0 else None,
             }
+            parent_before = curr_parent
             try:
                 res = await self._request("POST", "/folders", json_data=body, timeout=15.0)
-                folder_obj = res.get("folder") or {}
-                curr_parent = str(folder_obj.get("id"))
+                folder_obj = (
+                    res.get("folder")
+                    or res.get("fileEntry")
+                    or res.get("entry")
+                    or res.get("data")
+                    or res
+                )
+                new_id = _extract_id(folder_obj) or _extract_id(res)
+                if not new_id or new_id == "None":
+                    new_id = await self._find_folder(part, parent_before, wid)
+                if not new_id or new_id == "None":
+                    raise StorageError(f"Files.ir POST /folders returned no valid folder ID: {res}")
+                curr_parent = str(new_id)
+                self._folder_cache[(part.strip().lower(), self._norm_pid(parent_before))] = curr_parent
             except Exception as e:
-                # If duplicate creation error, retry finding
-                found = await self._find_folder(part, curr_parent, wid)
-                if found:
+                # If duplicate creation error or conflict, retry finding
+                found = await self._find_folder(part, parent_before, wid)
+                if found and found != "None":
                     curr_parent = found
+                    self._folder_cache[(part.strip().lower(), self._norm_pid(parent_before))] = curr_parent
                 else:
                     raise StorageError(f"Could not create folder '{part}' on Files.ir: {e}") from e
 

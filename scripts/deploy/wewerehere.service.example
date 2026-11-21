@@ -12,6 +12,7 @@ ExecStartPre=+/opt/wewerehere/scripts/deploy/ensure-wwh-deploy-cli.sh
 ExecStart=/opt/wewerehere/.venv/bin/python -m uvicorn app.main:app --app-dir /opt/wewerehere/backend --host 127.0.0.1 --port 5173
 Restart=on-failure
 RestartSec=2
+Environment=PYTHONUNBUFFERED=1
 Environment=NODE_ENV=production
 Environment=HOST=127.0.0.1
 Environment=PORT=5173
