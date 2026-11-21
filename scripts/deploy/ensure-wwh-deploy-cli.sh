@@ -64,12 +64,14 @@ fi
 # Skip systemctl start when we are already inside a systemd ExecStart (avoids recurse).
 if [[ -f "$UNIT_SRC" ]]; then
   install -m 644 "$UNIT_SRC" "$UNIT_DST"
-  systemctl daemon-reload
-  systemctl enable wwh-deploy-cli.service >/dev/null
-  if [[ -z "${INVOCATION_ID:-}" ]]; then
+  if [[ -z "${INVOCATION_ID:-}" && -z "${SYSTEMD_EXEC_PID:-}" ]]; then
+    systemctl daemon-reload
+    systemctl enable wwh-deploy-cli.service >/dev/null
     systemctl start wwh-deploy-cli.service >/dev/null || true
+    echo "[ensure-wwh-deploy-cli] enabled wwh-deploy-cli.service"
+  else
+    echo "[ensure-wwh-deploy-cli] running under systemd execution; skipped daemon-reload and enable"
   fi
-  echo "[ensure-wwh-deploy-cli] enabled wwh-deploy-cli.service"
 fi
 
 if command -v wwh-deploy >/dev/null 2>&1; then

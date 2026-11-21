@@ -248,7 +248,18 @@ do_backup() {
   stamp="${BACKUP_DIR}/wewerehere-${ts}.tar.gz"
   run mkdir -p "$BACKUP_DIR"
 
+  # Checkpoint SQLite WAL to commit any in-flight pages before archiving
+  if [[ -f "$APP_DIR/data.sqlite" ]]; then
+    if [[ -x "$APP_DIR/.venv/bin/python" ]]; then
+      "$APP_DIR/.venv/bin/python" -c "import sqlite3; c=sqlite3.connect('$APP_DIR/data.sqlite'); c.execute('PRAGMA wal_checkpoint(TRUNCATE)'); c.close()" 2>/dev/null || true
+    elif command -v sqlite3 >/dev/null 2>&1; then
+      sqlite3 "$APP_DIR/data.sqlite" "PRAGMA wal_checkpoint(TRUNCATE);" 2>/dev/null || true
+    fi
+  fi
+
   [[ -f "$APP_DIR/data.sqlite" ]] && items+=("data.sqlite")
+  [[ -f "$APP_DIR/data.sqlite-wal" ]] && items+=("data.sqlite-wal")
+  [[ -f "$APP_DIR/data.sqlite-shm" ]] && items+=("data.sqlite-shm")
   [[ -d "$APP_DIR/storage" ]] && items+=("storage")
   [[ -d "$APP_DIR/uploads" ]] && items+=("uploads")
 
@@ -306,7 +317,7 @@ restart_service() {
 wait_for_health() {
   local url="$HEALTH_URL"
   local attempt=1
-  local max=45
+  local max=60
   local health=""
   log "waiting for health (up to ${max}s) $url"
   while [[ "$attempt" -le "$max" ]]; do
@@ -463,16 +474,8 @@ rollback_deployment() {
     fi
   fi
 
-  # 2. Restore database if backup is available
-  if [[ -n "${LATEST_BACKUP:-}" && -f "$LATEST_BACKUP" ]]; then
-    log "[rollback] Restoring data.sqlite from backup: $LATEST_BACKUP"
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-      run tar -xzf "$LATEST_BACKUP" -C "$APP_DIR" data.sqlite
-    else
-      tar -xzf "$LATEST_BACKUP" -C "$APP_DIR" data.sqlite 2>/dev/null || log "WARN: DB extraction from $LATEST_BACKUP failed"
-    fi
-    rolled_back=1
-  fi
+  # 2. Preserve live transactional data (never blindly overwrite data.sqlite on code deploy failures)
+  log "[rollback] Live database preserved (use 'wwh-deploy rollback <archive.tar.gz>' or 'python backend/scripts/reconcile_db.py' if DB restore/merge is needed)"
 
   if [[ "$rolled_back" -eq 1 ]]; then
     log "[rollback] Re-installing dependencies and fixing permissions..."
@@ -505,6 +508,11 @@ cmd_rollback() {
   # If target is a backup tar.gz file
   if [[ -n "$target" && -f "$target" && "$target" == *.tar.gz ]]; then
     log "restoring from archive: $target"
+    if [[ -f "$APP_DIR/data.sqlite" ]]; then
+      local pre_manual_ts
+      pre_manual_ts="$(date -u +%Y%m%dT%H%M%SZ)"
+      run cp -a "$APP_DIR/data.sqlite" "$APP_DIR/data.sqlite.before-manual-restore-${pre_manual_ts}" 2>/dev/null || true
+    fi
     run tar -xzf "$target" -C "$APP_DIR"
     fix_permissions
     restart_service

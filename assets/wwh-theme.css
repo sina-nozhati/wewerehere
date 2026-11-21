@@ -1,5 +1,73 @@
 /* WE WERE HERE — shared theme (design-system/third-shahrivar) + mobile-native baseline */
 
+/* ==========================================================================
+   Self-Hosted Local Fonts — Vazirmatn
+   Reliable font delivery in Iran / behind VPN with zero render blocking
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: local('Vazirmatn'), local('Vazirmatn Regular'),
+       url('/assets/fonts/Vazirmatn-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: local('Vazirmatn Medium'), local('Vazirmatn'),
+       url('/assets/fonts/Vazirmatn-Regular.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: local('Vazirmatn SemiBold'), local('Vazirmatn Bold'), local('Vazirmatn'),
+       url('/assets/fonts/Vazirmatn-Regular.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: local('Vazirmatn Bold'), local('Vazirmatn'),
+       url('/assets/fonts/Vazirmatn-Regular.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: local('Vazirmatn ExtraBold'), local('Vazirmatn Black'), local('Vazirmatn Bold'), local('Vazirmatn'),
+       url('/assets/fonts/Vazirmatn-Regular.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: local('Vazirmatn Black'), local('Vazirmatn Bold'), local('Vazirmatn'),
+       url('/assets/fonts/Vazirmatn-Regular.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: local('Vazirmatn'),
+       url('/assets/fonts/Vazirmatn-Regular.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --color-primary: #FFFFFF;
   --color-secondary: #B8B8C0;

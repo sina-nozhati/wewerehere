@@ -115,13 +115,20 @@ class FolderManager:
                 log.warning("Could not create root folder on provider %s: %s", provider_id, e)
 
         # Child folders
+        root_path = paths.get("root", "")
         for purpose, path in paths.items():
             if purpose == "root" or purpose in existing:
                 continue
 
+            # Pass relative path under root when parent_folder_id is supplied
+            # e.g. "Memories/Photos", "Official-Media/Photos", etc.
+            child_rel_path = path
+            if root_folder_id and root_path and path.startswith(root_path):
+                child_rel_path = path[len(root_path):].lstrip("/")
+
             try:
                 folder_info = await adapter.create_or_get_folder(
-                    path,
+                    child_rel_path if root_folder_id else path,
                     parent_folder_id=root_folder_id,
                 )
                 mapping = EventStorageFolder(
@@ -129,7 +136,7 @@ class FolderManager:
                     provider_id=provider_id,
                     folder_purpose=purpose,
                     provider_folder_id=str(folder_info.folder_id),
-                    provider_folder_path=folder_info.path,
+                    provider_folder_path=path,
                     created_at=utcnow(),
                 )
                 db.add(mapping)

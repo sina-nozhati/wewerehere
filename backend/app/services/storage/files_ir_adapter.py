@@ -222,6 +222,38 @@ class FilesIrAdapter(StorageProviderAdapter):
         if not parts:
             return FolderInfo(folder_id=parent_folder_id or "0", name="root", path="")
 
+        # Guard against path repetition if a path starts with the parent folder's name or prefix
+        if parent_folder_id and parent_folder_id != "0":
+            parent_name = None
+            try:
+                parent_meta = await self._request("GET", f"/file-entries/{parent_folder_id}", timeout=10.0)
+                parent_entry = parent_meta.get("file_entry") or parent_meta.get("entry") or parent_meta
+                if isinstance(parent_entry, dict):
+                    parent_name = parent_entry.get("name")
+            except Exception:
+                pass
+
+            if parent_name and parent_name in parts:
+                idx = parts.index(parent_name)
+                parts = parts[idx + 1:]
+            elif parent_name and parts and parts[0].lower() == str(parent_name).lower():
+                parts = parts[1:]
+            elif parts and parts[0] == "WE WERE HERE":
+                for marker in ("Memories", "Official-Media", "Exports"):
+                    if marker in parts:
+                        idx = parts.index(marker)
+                        parts = parts[idx:]
+                        break
+
+            if not parts:
+                return FolderInfo(
+                    folder_id=str(parent_folder_id),
+                    name=parent_name or "folder",
+                    path=folder_path,
+                    parent_id=None,
+                    workspace_id=str(workspace_id or self.workspace_id or "0"),
+                )
+
         wid = int(workspace_id) if workspace_id and str(workspace_id).isdigit() else int(self.workspace_id or 0)
         curr_parent = parent_folder_id
         current_path_parts: list[str] = []
