@@ -3,7 +3,7 @@
 
 Inspects SQLite backups (.tar.gz or .sqlite files) vs the active database,
 identifies missing orders and tickets, and safely merges them back without
-overwriting new tickets or conflicting on primary keys.
+overwriting new tickets, conflicting on primary keys, or mixing events.
 """
 
 from __future__ import annotations
@@ -28,7 +28,6 @@ def _extract_db_from_archive(archive_path: str, temp_dir: str) -> str:
         if not members:
             raise ValueError(f"No data.sqlite found inside {archive_path}")
         tar.extractall(path=temp_dir, members=members)
-        # Find where data.sqlite was placed
         for root, _, files in os.walk(temp_dir):
             if "data.sqlite" in files:
                 return os.path.join(root, "data.sqlite")
@@ -42,7 +41,6 @@ def _dict_factory(cursor, row):
 def _open_sqlite(db_path: str) -> sqlite3.Connection:
     con = sqlite3.connect(db_path)
     con.row_factory = _dict_factory
-    # Ensure WAL checkpoint is flushed so all data is visible
     try:
         con.execute("PRAGMA wal_checkpoint(PASSIVE);")
     except sqlite3.Error:
@@ -57,32 +55,44 @@ def inspect_db(db_path: str) -> dict:
         orders = con.execute("SELECT * FROM orders").fetchall()
         tickets = con.execute("SELECT * FROM tickets").fetchall()
         receipts = con.execute("SELECT * FROM payment_receipts").fetchall()
+        featured_id = None
+        try:
+            row = con.execute("SELECT value FROM site_settings WHERE key = 'featured_event_id'").fetchone()
+            if row and row["value"] and str(row["value"]).isdigit():
+                featured_id = int(row["value"])
+        except sqlite3.Error:
+            pass
         return {
             "events": {e["id"]: e for e in events},
             "orders": {o["id"]: o for o in orders},
             "tickets": {t["id"]: t for t in tickets},
             "receipts": {r["id"]: r for r in receipts},
+            "featured_event_id": featured_id,
         }
     finally:
         con.close()
 
 
-def find_differences(source_data: dict, target_data: dict) -> dict:
+def find_differences(source_data: dict, target_data: dict, event_id: int | None = None) -> dict:
     """Compare source (backup) against target (current DB).
 
-    Identifies tickets and orders present in source but missing in target.
+    If event_id is specified, strictly restricts comparison to that event.
     """
     target_tickets_by_code = {
         (t["event_id"], str(t["public_code"]).zfill(4)): t
         for t in target_data["tickets"].values()
+        if event_id is None or t["event_id"] == event_id
     }
     target_orders_by_key = {
         (o["event_id"], o["phone"], o["names_json"]): o
         for o in target_data["orders"].values()
+        if event_id is None or o["event_id"] == event_id
     }
 
     missing_tickets = []
     for t in source_data["tickets"].values():
+        if event_id is not None and t["event_id"] != event_id:
+            continue
         code = str(t["public_code"]).zfill(4)
         if (t["event_id"], code) not in target_tickets_by_code:
             missing_tickets.append(t)
@@ -90,28 +100,36 @@ def find_differences(source_data: dict, target_data: dict) -> dict:
     missing_orders = []
     missing_order_ids = set()
     for o in source_data["orders"].values():
+        if event_id is not None and o["event_id"] != event_id:
+            continue
         key = (o["event_id"], o["phone"], o["names_json"])
         if key not in target_orders_by_key:
             missing_orders.append(o)
             missing_order_ids.add(o["id"])
 
-    # Collect receipts for missing orders
     missing_receipts = []
     for r in source_data["receipts"].values():
         if r["order_id"] in missing_order_ids:
             missing_receipts.append(r)
 
     return {
+        "event_id_filter": event_id,
         "missing_tickets": missing_tickets,
         "missing_orders": missing_orders,
         "missing_receipts": missing_receipts,
     }
 
 
-def format_report(diff: dict, source_name: str, target_name: str) -> str:
+def format_report(diff: dict, source_name: str, target_name: str, target_data: dict | None = None) -> str:
     lines = []
     lines.append("=" * 70)
     lines.append(f"RECONCILIATION REPORT: {source_name} vs {target_name}")
+    if diff.get("event_id_filter") is not None:
+        ev_id = diff["event_id_filter"]
+        ev_title = ""
+        if target_data and ev_id in target_data.get("events", {}):
+            ev_title = f" — {target_data['events'][ev_id].get('title')}"
+        lines.append(f"🔒 FILTERED STRICTLY TO EVENT ID: {ev_id}{ev_title}")
     lines.append("=" * 70)
     lines.append(f"Missing Tickets: {len(diff['missing_tickets'])}")
     lines.append(f"Missing Orders:  {len(diff['missing_orders'])}")
@@ -122,9 +140,9 @@ def format_report(diff: dict, source_name: str, target_name: str) -> str:
         lines.append("MISSING TICKETS DETAILS:")
         for t in diff["missing_tickets"]:
             lines.append(
-                f"  • Event {t['event_id']} | Serial: {t['public_code']} | "
-                f"Group: {t.get('group_name')} | Name: {t.get('holder_name')} | "
-                f"Phone: {t.get('phone')} | Status: {t.get('status')}"
+                f"  • [Event {t['event_id']}] Serial: {t['public_code']} | "
+                f"No: {t.get('display_number', '—')} | Group: {t.get('group_name')} | "
+                f"Name: {t.get('holder_name')} | Phone: {t.get('phone')} | Status: {t.get('status')}"
             )
         lines.append("-" * 70)
 
@@ -132,7 +150,7 @@ def format_report(diff: dict, source_name: str, target_name: str) -> str:
         lines.append("MISSING ORDERS DETAILS:")
         for o in diff["missing_orders"]:
             lines.append(
-                f"  • Order ID {o['id']} (Event {o['event_id']}) | Phone: {o.get('phone')} | "
+                f"  • [Event {o['event_id']}] Order ID {o['id']} | Phone: {o.get('phone')} | "
                 f"Names: {o.get('names_json')} | Status: {o.get('status')} | Date: {o.get('created_at')}"
             )
         lines.append("-" * 70)
@@ -146,8 +164,15 @@ def merge_missing_records(
     diff: dict,
     *,
     dry_run: bool = True,
+    event_id: int | None = None,
 ) -> dict:
     """Safely insert missing orders, receipts, and tickets into target database."""
+    if event_id is not None:
+        for t in diff["missing_tickets"]:
+            assert t["event_id"] == event_id, f"Ticket {t['public_code']} event_id {t['event_id']} != {event_id}"
+        for o in diff["missing_orders"]:
+            assert o["event_id"] == event_id, f"Order {o['id']} event_id {o['event_id']} != {event_id}"
+
     if dry_run:
         return {
             "status": "dry-run",
@@ -156,7 +181,7 @@ def merge_missing_records(
             "receipts_to_insert": len(diff["missing_receipts"]),
         }
 
-    # 1. Take a safety backup of target database first
+    # 1. Take safety backup of target database first
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     backup_copy = f"{target_db_path}.pre-merge-{ts}"
     shutil.copy2(target_db_path, backup_copy)
@@ -170,15 +195,11 @@ def merge_missing_records(
     inserted_tickets = 0
 
     try:
-        # Check existing max IDs to avoid collision
         max_order_id = cursor.execute("SELECT coalesce(max(id), 0) FROM orders").fetchone()["coalesce(max(id), 0)"]
         max_ticket_id = cursor.execute("SELECT coalesce(max(id), 0) FROM tickets").fetchone()["coalesce(max(id), 0)"]
         max_receipt_id = cursor.execute("SELECT coalesce(max(id), 0) FROM payment_receipts").fetchone()["coalesce(max(id), 0)"]
 
-        # Maps old_order_id -> new_order_id
         order_id_map: dict[int, int] = {}
-
-        # Check existing order IDs in target
         existing_order_ids = {row["id"] for row in cursor.execute("SELECT id FROM orders").fetchall()}
         next_order_id = max_order_id + 1
 
@@ -219,7 +240,6 @@ def merge_missing_records(
         for r in diff["missing_receipts"]:
             old_order_id = r["order_id"]
             target_order_id = order_id_map.get(old_order_id, old_order_id)
-            # Make sure order exists
             if target_order_id not in existing_order_ids:
                 continue
             if r["id"] not in existing_receipt_ids:
@@ -256,7 +276,6 @@ def merge_missing_records(
         for t in diff["missing_tickets"]:
             code = str(t["public_code"]).zfill(4)
             if (t["event_id"], code) in existing_codes:
-                # Code already exists in target; skip to avoid unique constraint clash
                 continue
 
             old_oid = t.get("order_id")
@@ -320,23 +339,39 @@ def merge_missing_records(
     }
 
 
-def cmd_scan_backups(backup_dir: str, target_db: str) -> None:
+def print_events_summary(target_data: dict) -> None:
+    print("=" * 70)
+    print("TARGET DATABASE EVENTS OVERVIEW:")
+    featured_id = target_data.get("featured_event_id")
+    events = target_data.get("events", {})
+    if not events:
+        print("  (No events found in target database)")
+    for eid, ev in sorted(events.items()):
+        feat_tag = " ⭐ [CURRENT FEATURED EVENT]" if (featured_id and eid == featured_id) else ""
+        t_count = sum(1 for t in target_data["tickets"].values() if t["event_id"] == eid)
+        o_count = sum(1 for o in target_data["orders"].values() if o["event_id"] == eid)
+        print(f"  • Event ID {eid}: {ev.get('title')} (Ep. {ev.get('episode_number')}) — Tickets: {t_count}, Orders: {o_count}{feat_tag}")
+    print("=" * 70)
+
+
+def cmd_scan_backups(backup_dir: str, target_db: str, event_id: int | None = None) -> None:
     if not os.path.exists(target_db):
         print(f"Error: Target database {target_db} not found!")
         sys.exit(1)
 
     target_data = inspect_db(target_db)
-    print(f"Active Target Database: {target_db}")
-    print(f"  • Existing tickets: {len(target_data['tickets'])}")
-    print(f"  • Existing orders:  {len(target_data['orders'])}")
-    print("-" * 70)
+    print_events_summary(target_data)
+    if event_id is not None:
+        ev_title = target_data.get("events", {}).get(event_id, {}).get("title", "Unknown")
+        print(f"🔒 SCAN FILTER APPLIED: ONLY EVENT ID {event_id} ({ev_title})")
+        print("-" * 70)
 
     archives = sorted(glob.glob(os.path.join(backup_dir, "*.tar.gz")), reverse=True)
     if not archives:
         print(f"No backup archives found under {backup_dir}")
         return
 
-    print(f"Found {len(archives)} backup archive(s). Scanning for missing records...")
+    print(f"Scanning {len(archives)} backup archive(s)...")
     all_reports = []
 
     for arc in archives:
@@ -344,16 +379,20 @@ def cmd_scan_backups(backup_dir: str, target_db: str) -> None:
             try:
                 extracted_db = _extract_db_from_archive(arc, tmp_dir)
                 source_data = inspect_db(extracted_db)
-                diff = find_differences(source_data, target_data)
+                diff = find_differences(source_data, target_data, event_id=event_id)
                 missing_t_count = len(diff["missing_tickets"])
                 missing_o_count = len(diff["missing_orders"])
                 status_icon = "⚠️  MISSING DATA FOUND" if (missing_t_count or missing_o_count) else "✅ ALL SYNCED"
+
+                src_ev_tickets = sum(1 for t in source_data["tickets"].values() if event_id is None or t["event_id"] == event_id)
+                src_ev_orders = sum(1 for o in source_data["orders"].values() if event_id is None or o["event_id"] == event_id)
+                scope_label = f"Event {event_id}" if event_id else "Total"
                 print(f"[{status_icon}] {os.path.basename(arc)}:")
-                print(f"       Backup holds: {len(source_data['tickets'])} tickets, {len(source_data['orders'])} orders")
+                print(f"       Backup holds ({scope_label}): {src_ev_tickets} tickets, {src_ev_orders} orders")
                 print(f"       Missing in target: {missing_t_count} tickets, {missing_o_count} orders")
 
                 if missing_t_count or missing_o_count:
-                    report_txt = format_report(diff, os.path.basename(arc), os.path.basename(target_db))
+                    report_txt = format_report(diff, os.path.basename(arc), os.path.basename(target_db), target_data)
                     all_reports.append((os.path.basename(arc), diff, report_txt))
             except Exception as e:
                 print(f"  [ERROR] {os.path.basename(arc)}: {e}")
@@ -374,23 +413,26 @@ def main():
     scan_p = subparsers.add_parser("scan", help="Scan backup archives and compare against target DB")
     scan_p.add_argument("--backup-dir", default="/var/backups/wewerehere", help="Path to backups directory")
     scan_p.add_argument("--target", default="/opt/wewerehere/data.sqlite", help="Path to target data.sqlite")
+    scan_p.add_argument("--event-id", type=int, help="Strictly restrict scan to a single event ID")
 
     # diff
     diff_p = subparsers.add_parser("diff", help="Diff a specific backup file vs target DB")
     diff_p.add_argument("--source", required=True, help="Path to .tar.gz or .sqlite backup file")
     diff_p.add_argument("--target", default="/opt/wewerehere/data.sqlite", help="Path to target data.sqlite")
+    diff_p.add_argument("--event-id", type=int, help="Strictly restrict diff to a single event ID")
     diff_p.add_argument("--out-json", help="Save diff output to JSON file")
 
     # merge
     merge_p = subparsers.add_parser("merge", help="Merge missing tickets/orders from backup into target DB")
     merge_p.add_argument("--source", required=True, help="Path to .tar.gz or .sqlite backup file")
     merge_p.add_argument("--target", default="/opt/wewerehere/data.sqlite", help="Path to target data.sqlite")
+    merge_p.add_argument("--event-id", type=int, help="Strictly restrict merge to a single event ID")
     merge_p.add_argument("--apply", action="store_true", help="Actually commit changes (default is dry-run)")
 
     args = parser.parse_args()
 
     if args.subcommand == "scan":
-        cmd_scan_backups(args.backup_dir, args.target)
+        cmd_scan_backups(args.backup_dir, args.target, event_id=args.event_id)
 
     elif args.subcommand == "diff":
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -399,8 +441,8 @@ def main():
                 src_path = _extract_db_from_archive(src_path, tmp_dir)
             source_data = inspect_db(src_path)
             target_data = inspect_db(args.target)
-            diff = find_differences(source_data, target_data)
-            print(format_report(diff, os.path.basename(args.source), os.path.basename(args.target)))
+            diff = find_differences(source_data, target_data, event_id=args.event_id)
+            print(format_report(diff, os.path.basename(args.source), os.path.basename(args.target), target_data))
             if args.out_json:
                 with open(args.out_json, "w", encoding="utf-8") as f:
                     json.dump(diff, f, ensure_ascii=False, indent=2, default=str)
@@ -413,19 +455,20 @@ def main():
                 src_path = _extract_db_from_archive(src_path, tmp_dir)
             source_data = inspect_db(src_path)
             target_data = inspect_db(args.target)
-            diff = find_differences(source_data, target_data)
+            diff = find_differences(source_data, target_data, event_id=args.event_id)
 
             if not diff["missing_tickets"] and not diff["missing_orders"]:
-                print("No missing tickets or orders found. Nothing to merge!")
+                print("No missing tickets or orders found for this scope. Nothing to merge!")
                 return
 
-            print(f"Found {len(diff['missing_tickets'])} tickets and {len(diff['missing_orders'])} orders to restore.")
+            scope_msg = f" for Event ID {args.event_id}" if args.event_id else " across all events"
+            print(f"Found {len(diff['missing_tickets'])} tickets and {len(diff['missing_orders'])} orders to restore{scope_msg}.")
             if not args.apply:
                 print("\n[DRY RUN] No changes made. Pass --apply to execute the merge.")
-                print(format_report(diff, os.path.basename(args.source), os.path.basename(args.target)))
+                print(format_report(diff, os.path.basename(args.source), os.path.basename(args.target), target_data))
                 return
 
-            res = merge_missing_records(src_path, args.target, diff, dry_run=False)
+            res = merge_missing_records(src_path, args.target, diff, dry_run=False, event_id=args.event_id)
             print("=" * 70)
             print("MERGE COMPLETED SUCCESSFULLY!")
             print(f"Safety pre-merge backup: {res['safety_backup']}")

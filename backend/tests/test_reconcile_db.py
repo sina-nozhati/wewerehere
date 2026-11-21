@@ -164,3 +164,97 @@ def test_reconcile_diff_and_merge():
         # Check tickets link to valid orders
         for t in tgt_after["tickets"].values():
             assert t["order_id"] in order_ids
+
+
+def test_reconcile_event_isolation():
+    """Verify that --event-id strictly isolates reconciliation and merge to that event."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        backup_db = os.path.join(tmp_dir, "backup.sqlite")
+        target_db = os.path.join(tmp_dir, "target.sqlite")
+
+        _create_sample_db(backup_db)
+        _create_sample_db(target_db)
+
+        # Backup DB has Event 1 (Order 1, Ticket 1001) AND Event 2 (Order 2, Ticket 2001)
+        b_con = sqlite3.connect(backup_db)
+        b_con.execute("INSERT INTO events (id, title, episode_number) VALUES (2, 'Episode 2', 2)")
+        b_con.execute(
+            "INSERT INTO orders (id, event_id, phone, names_json, status, created_at) "
+            "VALUES (1, 1, '09121111111', '[\"Ali\"]', 'approved', '2026-10-20 12:00:00')"
+        )
+        b_con.execute(
+            "INSERT INTO tickets (id, event_id, order_id, holder_name, phone, public_code, display_number, group_name, access_token_hash, status) "
+            "VALUES (1, 1, 1, 'Ali', '09121111111', '1001', 1, 'A', 'hash1', 'active')"
+        )
+        b_con.execute(
+            "INSERT INTO orders (id, event_id, phone, names_json, status, created_at) "
+            "VALUES (2, 2, '09122222222', '[\"Reza\"]', 'approved', '2026-11-20 12:00:00')"
+        )
+        b_con.execute(
+            "INSERT INTO tickets (id, event_id, order_id, holder_name, phone, public_code, display_number, group_name, access_token_hash, status) "
+            "VALUES (2, 2, 2, 'Reza', '09122222222', '2001', 1, 'A', 'hash2', 'active')"
+        )
+        b_con.commit()
+        b_con.close()
+
+        # Target DB has Event 1 already (Order 1, Ticket 1001), and a NEW order/ticket in Event 2 (Order 3, Ticket 2002)
+        t_con = sqlite3.connect(target_db)
+        t_con.execute("INSERT INTO events (id, title, episode_number) VALUES (2, 'Episode 2', 2)")
+        t_con.execute(
+            "INSERT INTO orders (id, event_id, phone, names_json, status, created_at) "
+            "VALUES (1, 1, '09121111111', '[\"Ali\"]', 'approved', '2026-10-20 12:00:00')"
+        )
+        t_con.execute(
+            "INSERT INTO tickets (id, event_id, order_id, holder_name, phone, public_code, display_number, group_name, access_token_hash, status) "
+            "VALUES (1, 1, 1, 'Ali', '09121111111', '1001', 1, 'A', 'hash1', 'active')"
+        )
+        t_con.execute(
+            "INSERT INTO orders (id, event_id, phone, names_json, status, created_at) "
+            "VALUES (3, 2, '09123333333', '[\"Sara\"]', 'approved', '2026-11-21 08:00:00')"
+        )
+        t_con.execute(
+            "INSERT INTO tickets (id, event_id, order_id, holder_name, phone, public_code, display_number, group_name, access_token_hash, status) "
+            "VALUES (3, 2, 3, 'Sara', '09123333333', '2002', 2, 'A', 'hash3', 'active')"
+        )
+        t_con.commit()
+        t_con.close()
+
+        src_data = inspect_db(backup_db)
+        tgt_data = inspect_db(target_db)
+
+        # 1. Scope strictly to Event 2:
+        diff_ev2 = find_differences(src_data, tgt_data, event_id=2)
+        assert len(diff_ev2["missing_tickets"]) == 1
+        assert diff_ev2["missing_tickets"][0]["public_code"] == "2001"
+        assert diff_ev2["missing_tickets"][0]["event_id"] == 2
+        assert len(diff_ev2["missing_orders"]) == 1
+        assert diff_ev2["missing_orders"][0]["phone"] == "09122222222"
+        assert diff_ev2["missing_orders"][0]["event_id"] == 2
+
+        # 2. Scope strictly to Event 1:
+        diff_ev1 = find_differences(src_data, tgt_data, event_id=1)
+        assert len(diff_ev1["missing_tickets"]) == 0
+        assert len(diff_ev1["missing_orders"]) == 0
+
+        # 3. Assert guard: passing diff with wrong event_id triggers AssertionError
+        with pytest.raises(AssertionError):
+            merge_missing_records(backup_db, target_db, diff_ev2, dry_run=False, event_id=1)
+
+        # 4. Perform merge for Event 2
+        res = merge_missing_records(backup_db, target_db, diff_ev2, dry_run=False, event_id=2)
+        assert res["status"] == "success"
+        assert res["inserted_tickets"] == 1
+        assert res["inserted_orders"] == 1
+
+        # 5. Verify target DB:
+        final_tgt = inspect_db(target_db)
+        # Event 1 unchanged: exactly 1 ticket
+        ev1_tickets = [t for t in final_tgt["tickets"].values() if t["event_id"] == 1]
+        assert len(ev1_tickets) == 1
+        assert ev1_tickets[0]["public_code"] == "1001"
+
+        # Event 2 has both 2001 (restored) and 2002 (newly created today)
+        ev2_tickets = [t for t in final_tgt["tickets"].values() if t["event_id"] == 2]
+        assert len(ev2_tickets) == 2
+        assert {t["public_code"] for t in ev2_tickets} == {"2001", "2002"}
+
