@@ -47,7 +47,7 @@ FIELD_ORDER = (
 
 # Visual tuning vs raw ref×scale (static artwork labels, rotate anchors).
 LAYOUT_TUNING: dict[str, dict[str, str]] = {
-    "date": {"x": "176.5", "y": "65"},
+    "date": {"x": "140", "y": "65"},
     "time": {
         "x": "112.5",
         "y": "77.25",
