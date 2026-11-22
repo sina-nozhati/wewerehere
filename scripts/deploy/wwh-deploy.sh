@@ -286,15 +286,16 @@ do_git_pull() {
   [[ -d "$APP_DIR/.git" ]] || die "not a git repo: $APP_DIR"
   PREV_COMMIT="$(git -C "$APP_DIR" rev-parse HEAD 2>/dev/null || echo "")"
   export PREV_COMMIT
-  # Discard any local modifications or chmod permission changes in scripts/deploy/
-  if ! git -C "$APP_DIR" diff --quiet HEAD -- scripts/deploy/ 2>/dev/null; then
-    log "discarding local edits or permission changes in scripts/deploy/"
-    run git -C "$APP_DIR" checkout -- scripts/deploy/
+  # Stash any local modifications (including chmod/permission changes in scripts/deploy/)
+  # so that git fetch+reset can always succeed without manual intervention.
+  local stash_out
+  stash_out="$(git -C "$APP_DIR" stash 2>&1 || true)"
+  if [[ "$stash_out" != *"No local changes"* ]]; then
+    log "stashed local changes before pull: $stash_out"
   fi
-  log "git fetch && pull $GIT_BRANCH"
+  log "git fetch && reset --hard origin/$GIT_BRANCH"
   run git -C "$APP_DIR" fetch origin
-  run git -C "$APP_DIR" checkout -f "$GIT_BRANCH"
-  run git -C "$APP_DIR" pull --ff-only origin "$GIT_BRANCH"
+  run git -C "$APP_DIR" reset --hard "origin/$GIT_BRANCH"
 }
 
 do_migrate() {
