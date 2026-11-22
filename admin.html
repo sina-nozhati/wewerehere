@@ -968,7 +968,14 @@
       <h2>رزروها</h2>
       <div class="toolbar">
         <button type="button" class="btn btn--ghost" id="refresh-tickets">تازه‌سازی</button>
-        <button type="button" class="btn btn--ghost" id="export-csv">خروجی CSV (لیست ورود)</button>
+        <div style="display:inline-flex;align-items:center;gap:6px;">
+          <select id="export-csv-sort" style="padding:7px 24px 7px 10px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.8rem;cursor:pointer;appearance:none;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a7a85' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 8px center;">
+            <option value="table">مرتب‌سازی: بر اساس میز و سفارش</option>
+            <option value="serial">مرتب‌سازی: بر اساس شماره سریال</option>
+            <option value="name">مرتب‌سازی: بر اساس نام مهمان</option>
+          </select>
+          <button type="button" class="btn btn--ghost" id="export-csv" title="خروجی CSV با تفکیک میزها جهت چک‌این ورودی">خروجی CSV (لیست ورود)</button>
+        </div>
         <div class="export-format-group" style="display:inline-flex;align-items:center;gap:8px;">
           <label for="export-format" class="muted" style="font-size:0.75rem;white-space:nowrap;">فرمت:</label>
           <select id="export-format" class="export-format-select" style="padding:8px 32px 8px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:0.8rem;cursor:pointer;appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a7a85' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 8px center;">
@@ -2304,9 +2311,12 @@
           var cardType = t.wantsPhysicalCard
             ? '<span class="badge" style="background:rgba(212,175,55,0.18);color:#d4af37;border:1px solid rgba(212,175,55,0.35);font-size:0.7rem;">کارت فیزیکی</span>'
             : '<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--muted);font-size:0.7rem;">فقط دیجیتال</span>';
+          var tableBadge = t.tableType
+            ? '<span class="badge" style="background:rgba(255,255,255,0.08);color:var(--text);font-size:0.7rem;margin-right:6px;" title="' + escapeHtml(t.tableLabel || '') + (t.guestPosition ? ' (' + escapeHtml(t.guestPosition) + ')' : '') + '">' + escapeHtml(t.tableType) + '</span>'
+            : '';
           return '<tr>' +
             '<td class="serial">' + t.serial + '</td>' +
-            '<td>' + escapeHtml(t.name) + '</td>' +
+            '<td>' + escapeHtml(t.name) + ' ' + tableBadge + '</td>' +
             '<td class="serial">' + escapeHtml(t.phone) + '</td>' +
             '<td><span class="group-badge">' + t.group_name + '</span></td>' +
             '<td>' + st + '</td>' +
@@ -2494,32 +2504,134 @@
         alert('رزروی برای خروجی نیست.');
         return;
       }
+      var btn = this;
       var physCheck = document.getElementById('export-physical-only');
       var physicalOnly = physCheck ? physCheck.checked : false;
-      var ticketsToExport = cachedTickets;
+      var sortSelect = document.getElementById('export-csv-sort');
+      var sortBy = sortSelect ? sortSelect.value : 'table';
+      var eid = currentEventId || '';
+
       if (physicalOnly) {
-        ticketsToExport = cachedTickets.filter(function (t) { return t.wantsPhysicalCard; });
-        if (!ticketsToExport.length) {
+        var hasPhysical = cachedTickets.some(function (t) { return t.wantsPhysicalCard; });
+        if (!hasPhysical) {
           alert('هیچ بلیتی با درخواست کارت فیزیکی برای خروجی یافت نشد.');
           return;
         }
       }
-      var rows = [['serial', 'name', 'phone', 'group', 'physical_card', 'created_at']];
-      ticketsToExport.forEach(function (t) {
-        rows.push([t.serial, t.name, t.phone, t.group_name, t.wantsPhysicalCard ? 'بله' : 'خیر', t.created_at]);
-      });
-      var csv = '\uFEFF' + rows.map(function (r) {
-        return r.map(function (cell) {
-          var v = String(cell == null ? '' : cell);
-          return '"' + v.replace(/"/g, '""') + '"';
-        }).join(',');
-      }).join('\r\n');
-      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'wewerehere-attendees.csv';
-      a.click();
-      URL.revokeObjectURL(a.href);
+
+      var originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'در حال دریافت...';
+
+      var url = '/api/admin/tickets/export-csv?sortBy=' + encodeURIComponent(sortBy) +
+        (physicalOnly ? '&physicalOnly=true' : '') +
+        (eid ? '&eventId=' + encodeURIComponent(eid) : '');
+
+      fetch(url, { headers: authHeaders() })
+        .then(function (r) {
+          if (!r.ok) {
+            return r.json().then(function (err) {
+              throw new Error(err.message || err.detail || 'خطا در دریافت خروجی');
+            }).catch(function () {
+              throw new Error('خطا در ارتباط با سرور (' + r.status + ')');
+            });
+          }
+          return r.blob();
+        })
+        .then(function (blob) {
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'wewerehere-event-' + (eid || 'active') + '-attendees.csv';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function () {
+            if (a.parentNode) document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+          }, 150);
+        })
+        .catch(function (err) {
+          // Client-side fallback if server endpoint fails
+          console.warn('Falling back to client-side CSV export:', err);
+          var ticketsToExport = cachedTickets;
+          if (physicalOnly) {
+            ticketsToExport = cachedTickets.filter(function (t) { return t.wantsPhysicalCard; });
+          }
+          if (sortBy === 'table') {
+            ticketsToExport = ticketsToExport.slice().sort(function (a, b) {
+              var aHasOrder = a.orderId != null ? 0 : 1;
+              var bHasOrder = b.orderId != null ? 0 : 1;
+              if (aHasOrder !== bHasOrder) return aHasOrder - bHasOrder;
+              if ((a.orderId || 0) !== (b.orderId || 0)) return (a.orderId || 0) - (b.orderId || 0);
+              return (a.id || 0) - (b.id || 0);
+            });
+          } else if (sortBy === 'serial') {
+            ticketsToExport = ticketsToExport.slice().sort(function (a, b) {
+              return String(a.serial || '').localeCompare(String(b.serial || ''));
+            });
+          } else if (sortBy === 'name') {
+            ticketsToExport = ticketsToExport.slice().sort(function (a, b) {
+              return String(a.name || '').localeCompare(String(b.name || ''), 'fa');
+            });
+          }
+
+          var rows = [[
+            'ردیف',
+            'شناسه سفارش / میز',
+            'نوع میز / رزرو',
+            'تعداد نفرات میز',
+            'موقعیت در میز',
+            'شماره سریال بلیت',
+            'شماره نوبت ورود',
+            'نام مهمان',
+            'شماره تماس خریدار',
+            'گروه سالن',
+            'کارت فیزیکی',
+            'وضعیت بلیت',
+            'تاریخ ثبت',
+            'توضیحات و امضای چک‌این'
+          ]];
+
+          ticketsToExport.forEach(function (t, idx) {
+            rows.push([
+              idx + 1,
+              t.tableLabel || (t.orderId ? 'میز #' + t.orderId : 'تکی (دستی)'),
+              t.tableType || 'تک‌نفره',
+              t.partySize || 1,
+              t.guestPosition || 'تک‌نفره',
+              t.serial,
+              t.displayNumber != null ? '#' + t.displayNumber : (t.issuanceNumber ? '#' + t.issuanceNumber : ''),
+              t.name,
+              t.phone,
+              t.group_name,
+              t.wantsPhysicalCard ? 'بله' : 'خیر',
+              t.status === 'active' ? 'فعال' : 'لغو شده',
+              fmtDate(t.created_at),
+              ''
+            ]);
+          });
+
+          var csv = '\uFEFF' + rows.map(function (r) {
+            return r.map(function (cell) {
+              var v = String(cell == null ? '' : cell);
+              return '"' + v.replace(/"/g, '""') + '"';
+            }).join(',');
+          }).join('\r\n');
+
+          var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'wewerehere-event-' + (eid || 'active') + '-attendees.csv';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function () {
+            if (a.parentNode) document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+          }, 150);
+        })
+        .finally(function () {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        });
     });
 
     // ---- orders (payment review) -------------------------------------------

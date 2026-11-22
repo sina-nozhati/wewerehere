@@ -4,10 +4,10 @@ import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, Header
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, Header, Response
 from pydantic import BaseModel
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.auth import check_rate_limit, create_session, require_admin, require_admin_token, revoke_session, verify_admin_password
 from app.config import settings
@@ -39,7 +39,7 @@ from app.services.phone import normalize_phone, valid_phone
 from app.services.event_display import ticket_venue_from_event
 from app.services.ticket_render import TicketRenderError, render_ticket_bytes
 from app.services.support_contacts import contact_display_name
-from app.services.tickets import active_rank_map, group_for_code, issue_ticket, public_number, unique_public_code
+from app.services.tickets import active_rank_map, group_for_code, issue_ticket, public_number, ticket_table_info, unique_public_code
 
 _ACTIVE_SUPPORT = frozenset({"open", "waiting_admin", "waiting_user"})
 
@@ -507,13 +507,19 @@ def admin_tickets(
     _: str = Depends(require_admin),
 ):
     eid = eventId or _default_event_id(db)
-    q = select(Ticket).where(Ticket.event_id == eid)
+    q = (
+        select(Ticket)
+        .options(selectinload(Ticket.order).selectinload(Order.tickets))
+        .where(Ticket.event_id == eid)
+    )
     if status != "all":
         q = q.where(Ticket.status == status)
     rows = db.scalars(q.order_by(Ticket.id.desc())).all()
     ranks = active_rank_map(db, eid)
-    return {
-        "tickets": [
+    tickets_out = []
+    for t in rows:
+        t_info = ticket_table_info(t)
+        tickets_out.append(
             {
                 "id": t.id,
                 "serial": t.public_code,
@@ -526,10 +532,14 @@ def admin_tickets(
                 "issuanceNumber": t.display_number,
                 "status": t.status,
                 "wantsPhysicalCard": bool(getattr(t, "wants_physical_card", False)),
+                "orderId": t_info["order_id"],
+                "partySize": t_info["party_size"],
+                "tableType": t_info["table_type"],
+                "guestPosition": t_info["guest_position"],
+                "tableLabel": t_info["table_label"],
             }
-            for t in rows
-        ]
-    }
+        )
+    return {"tickets": tickets_out}
 
 
 @router.post("/tickets")
@@ -732,6 +742,140 @@ html,body{{margin:0;padding:0;background:#0b0a0e;}}
   </div>
 </div>
 </body></html>"""
+
+
+@router.get("/tickets/export-csv")
+def admin_tickets_export_csv(
+    eventId: int | None = Query(None),
+    status: str = Query("active"),
+    physicalOnly: bool = Query(False),
+    physical_only: bool = Query(False),
+    sortBy: str = Query("table", pattern="^(table|serial|name)$"),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin_token),
+):
+    """Export attendees as CSV with table/group reservation metadata for venue check-in."""
+    import csv
+    import io
+
+    eid = eventId or _default_event_id(db)
+    filter_physical = physicalOnly or physical_only
+
+    q = (
+        select(Ticket)
+        .options(selectinload(Ticket.order).selectinload(Order.tickets))
+        .where(Ticket.event_id == eid)
+    )
+    if status != "all":
+        q = q.where(Ticket.status == status)
+    if filter_physical:
+        q = q.where(Ticket.wants_physical_card == True)
+
+    tickets = list(db.scalars(q).all())
+    if not tickets:
+        msg = "هیچ بلیتی با درخواست کارت فیزیکی برای این رویداد یافت نشد" if filter_physical else "هیچ بلیت/رزروی برای خروجی یافت نشد"
+        raise HTTPException(404, {"error": "no tickets found", "message": msg})
+
+    ranks = active_rank_map(db, eid)
+
+    enriched = []
+    for t in tickets:
+        t_info = ticket_table_info(t)
+        disp_no = public_number(t, ranks) if t.status == "active" else None
+        disp_str = f"#{disp_no}" if disp_no is not None else f"#{t.display_number}"
+
+        dt_str = ""
+        if t.issued_at:
+            dt = t.issued_at
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            try:
+                from zoneinfo import ZoneInfo
+                tehran_dt = dt.astimezone(ZoneInfo("Asia/Tehran"))
+            except Exception:
+                tehran_dt = dt.astimezone(timezone(timedelta(hours=3, minutes=30)))
+            dt_str = tehran_dt.strftime("%Y/%m/%d %H:%M")
+
+        enriched.append({
+            "ticket": t,
+            "order_id": t_info["order_id"],
+            "table_label": t_info["table_label"],
+            "table_type": t_info["table_type"],
+            "party_size": t_info["party_size"],
+            "guest_position": t_info["guest_position"],
+            "guest_index": t_info["guest_index"],
+            "serial": t.public_code,
+            "display_number": disp_str,
+            "holder_name": t.holder_name,
+            "phone": t.phone,
+            "group_name": t.group_name,
+            "physical_card": "بله" if t.wants_physical_card else "خیر",
+            "status_label": "فعال" if t.status == "active" else "لغو شده",
+            "created_at": dt_str,
+        })
+
+    if sortBy == "table":
+        enriched.sort(
+            key=lambda x: (
+                0 if x["order_id"] is not None else 1,
+                x["order_id"] or 0,
+                x["guest_index"],
+                x["ticket"].id,
+            )
+        )
+    elif sortBy == "serial":
+        enriched.sort(key=lambda x: x["serial"])
+    elif sortBy == "name":
+        enriched.sort(key=lambda x: x["holder_name"])
+
+    output = io.StringIO()
+    output.write("\ufeff")
+    writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow([
+        "ردیف",
+        "شناسه سفارش / میز",
+        "نوع میز / رزرو",
+        "تعداد نفرات میز",
+        "موقعیت در میز",
+        "شماره سریال بلیت",
+        "شماره نوبت ورود",
+        "نام مهمان",
+        "شماره تماس خریدار",
+        "گروه سالن",
+        "کارت فیزیکی",
+        "وضعیت بلیت",
+        "تاریخ ثبت",
+        "توضیحات و امضای چک‌این",
+    ])
+
+    for idx, item in enumerate(enriched, start=1):
+        writer.writerow([
+            idx,
+            item["table_label"],
+            item["table_type"],
+            item["party_size"],
+            item["guest_position"],
+            item["serial"],
+            item["display_number"],
+            item["holder_name"],
+            item["phone"],
+            item["group_name"],
+            item["physical_card"],
+            item["status_label"],
+            item["created_at"],
+            "",
+        ])
+
+    csv_data = output.getvalue().encode("utf-8")
+    filename = f"wewerehere-event-{eid}-attendees.csv"
+    return Response(
+        content=csv_data,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+        },
+    )
 
 
 @router.get("/tickets/export")

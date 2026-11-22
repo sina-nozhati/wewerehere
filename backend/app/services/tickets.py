@@ -119,3 +119,44 @@ def verify_ticket_access(db: Session, event_id: int, public_code: str, access_to
             Ticket.status == "active",
         )
     )
+
+
+_EN_TO_FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+
+
+def to_fa_digits(val: int | str) -> str:
+    return str(val).translate(_EN_TO_FA)
+
+
+def ticket_table_info(ticket: Ticket) -> dict:
+    """Computes party size, guest index in table, table type label and table ID for a ticket."""
+    order = ticket.order
+    if order and order.tickets:
+        order_tickets = sorted(order.tickets, key=lambda t: t.id)
+        party_size = len(order_tickets)
+        try:
+            guest_index = order_tickets.index(ticket) + 1
+        except ValueError:
+            guest_index = 1
+
+        table_type = "تک‌نفره" if party_size <= 1 else f"{to_fa_digits(party_size)} نفره"
+        guest_position = "تک‌نفره" if party_size <= 1 else f"نفر {to_fa_digits(guest_index)} از {to_fa_digits(party_size)}"
+        table_label = f"میز #{order.id}"
+        return {
+            "order_id": order.id,
+            "party_size": party_size,
+            "guest_index": guest_index,
+            "table_type": table_type,
+            "guest_position": guest_position,
+            "table_label": table_label,
+        }
+
+    return {
+        "order_id": None,
+        "party_size": 1,
+        "guest_index": 1,
+        "table_type": "تک‌نفره",
+        "guest_position": "تک‌نفره",
+        "table_label": "تکی (دستی)",
+    }
+
