@@ -286,10 +286,10 @@ do_git_pull() {
   [[ -d "$APP_DIR/.git" ]] || die "not a git repo: $APP_DIR"
   PREV_COMMIT="$(git -C "$APP_DIR" rev-parse HEAD 2>/dev/null || echo "")"
   export PREV_COMMIT
-  local deploy_script="scripts/deploy/wwh-deploy.sh"
-  if ! git -C "$APP_DIR" diff --quiet HEAD -- "$deploy_script" 2>/dev/null; then
-    log "discarding local edits to $deploy_script (use /etc/wewerehere/deploy.conf for overrides)"
-    run git -C "$APP_DIR" checkout -- "$deploy_script"
+  # Discard any local modifications or chmod permission changes in scripts/deploy/
+  if ! git -C "$APP_DIR" diff --quiet HEAD -- scripts/deploy/ 2>/dev/null; then
+    log "discarding local edits or permission changes in scripts/deploy/"
+    run git -C "$APP_DIR" checkout -- scripts/deploy/
   fi
   log "git fetch && pull $GIT_BRANCH"
   run git -C "$APP_DIR" fetch origin
