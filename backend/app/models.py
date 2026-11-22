@@ -35,6 +35,7 @@ class Event(Base):
     payment_instructions: Mapped[str] = mapped_column(Text, default="", nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="draft", nullable=False)
     sales_status: Mapped[str] = mapped_column(String(32), default="closed", nullable=False)
+    physical_tickets_sold_out: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     setlist_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     artists_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     poster_path: Mapped[str] = mapped_column(String(500), default="", nullable=False)

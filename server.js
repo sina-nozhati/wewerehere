@@ -632,14 +632,49 @@ function handleAdminOrderReject(req, res, url) {
 // ---------------------------------------------------------------------------
 // Static files
 // ---------------------------------------------------------------------------
+const PUBLIC_PAGES = {
+  '/': '/index.html',
+  '/index': '/index.html',
+  '/index.html': '/index.html',
+  '/admin': '/admin.html',
+  '/admin.html': '/admin.html',
+  '/track': '/track.html',
+  '/track.html': '/track.html',
+  '/support': '/support.html',
+  '/support.html': '/support.html',
+  '/episodes': '/episodes.html',
+  '/episodes.html': '/episodes.html',
+  '/memories': '/memories.html',
+  '/memories.html': '/memories.html',
+};
+const PUBLIC_ROOT_FILES = new Set([
+  '/tickets.js',
+  '/ticket-a.svg',
+  '/ticket-b.svg',
+  '/mahi.svg',
+  '/apple-touch-icon.jpg',
+  '/wwh-favicon.jpg',
+]);
+
 function serveStatic(req, res, pathname) {
   let rel = decodeURIComponent(pathname);
-  if (rel === '/' || rel === '/index') rel = '/index.html';
-  if (rel === '/admin') rel = '/admin.html';
-  if (rel === '/track') rel = '/track.html';
+  if (rel.includes('..') || rel.includes('\0') || rel.split('/').some(p => p.startsWith('.'))) {
+    return send(res, 404, { error: 'not found' });
+  }
 
-  const filePath = path.normalize(path.join(ROOT, rel));
-  if (filePath !== ROOT && !filePath.startsWith(ROOT + path.sep)) {
+  let targetRel = null;
+  if (PUBLIC_PAGES[rel]) {
+    targetRel = PUBLIC_PAGES[rel];
+  } else if (PUBLIC_ROOT_FILES.has(rel)) {
+    targetRel = rel;
+  } else if (rel.startsWith('/assets/')) {
+    targetRel = rel;
+  } else {
+    return send(res, 404, { error: 'not found' });
+  }
+
+  const filePath = path.normalize(path.join(ROOT, targetRel));
+  if (!filePath.startsWith(ROOT + path.sep)) {
     return send(res, 403, { error: 'forbidden' });
   }
   if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
@@ -647,9 +682,14 @@ function serveStatic(req, res, pathname) {
   }
 
   const ext = path.extname(filePath).toLowerCase();
+  if (['.sqlite', '.env', '.py', '.json', '.log'].includes(ext)) {
+    return send(res, 404, { error: 'not found' });
+  }
   res.writeHead(200, {
     'Content-Type': MIME[ext] || 'application/octet-stream',
-    'Cache-Control': 'no-cache'
+    'Cache-Control': 'no-cache',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'SAMEORIGIN'
   });
   fs.createReadStream(filePath).pipe(res);
 }

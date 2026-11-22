@@ -598,10 +598,15 @@ def memories_gallery(
     likes = _like_counts(db, ids)
     liked = _liked_set(db, ids, ticket_id)
     comments = _comment_counts(db, ids)
+    from app.services.song_service import get_event_memory_winner
+    ev_winner = get_event_memory_winner(db, ev.id)
+    winner_item_id = ev_winner["memory"]["id"] if ev_winner else None
+
     return {
         "event": event_public_card(ev),
         "count": len(rows),
         "winnerSong": get_event_winner_song(db, ev.id),
+        "winnerMemoryId": winner_item_id,
         "items": [
             {
                 "id": m.id,
@@ -615,6 +620,7 @@ def memories_gallery(
                 "likeCount": likes.get(m.id, 0),
                 "commentCount": comments.get(m.id, 0),
                 "likedByMe": m.id in liked,
+                "isContestWinner": (m.id == winner_item_id and likes.get(m.id, 0) > 0),
             }
             for m in rows
         ],
@@ -672,6 +678,12 @@ def memories_mine(
         .order_by(MemoryItem.id.desc())
         .limit(100)
     ).all()
+    ids = [m.id for m in rows]
+    likes = _like_counts(db, ids)
+    from app.services.song_service import get_event_memory_winner
+    ev_winner = get_event_memory_winner(db, ev.id)
+    winner_item_id = ev_winner["memory"]["id"] if ev_winner else None
+
     return {
         "event": event_public_card(ev),
         "count": len(rows),
@@ -686,6 +698,8 @@ def memories_mine(
                 "thumbUrl": f"/api/memories/file/{m.id}/thumb",
                 "thumb_url": f"/api/memories/file/{m.id}/thumb",
                 "createdAt": _iso(m.created_at),
+                "likeCount": likes.get(m.id, 0),
+                "isContestWinner": (m.id == winner_item_id and likes.get(m.id, 0) > 0),
             }
             for m in rows
         ],

@@ -770,6 +770,7 @@
       <div class="session-bar__who">
         <span class="session-bar__name" id="ticket-name"></span>
         <code class="session-bar__serial" id="ticket-serial"></code>
+        <span class="wwh-winner-chip" id="session-winner-chip" hidden role="button" tabindex="0" title="مشاهده و انتخاب قطعه موسیقی اجرای زنده">🏆 برنده مسابقه خاطرات</span>
       </div>
       <div class="session-bar__actions">
         <div class="session-bar__quota" id="session-quota" title="سقف آپلود باقی‌مانده این رزرو ورود">
@@ -800,13 +801,13 @@
     <section class="view" id="view-gallery" hidden>
       <p class="gate-banner" id="gallery-gate-banner">برای لایک و نظر، سریال رزرو ورود را وارد کن.</p>
 
-      <!-- Exclusive Winner Song Selection Form (Visible ONLY to the winner of previous event) -->
+      <!-- Exclusive Winner Song Selection Form (Visible ONLY to the contest winner) -->
       <div class="wwh-winner-form-card" id="winner-form-card" hidden>
         <div class="wwh-winner-form-title">
           <span aria-hidden="true">🎉</span>
-          <span>تبریک! شما برنده برترین خاطره رویداد قبل شدید.</span>
+          <span id="winner-form-title-text">تبریک! شما برنده برترین خاطره رویداد شدید.</span>
         </div>
-        <p class="wwh-winner-form-desc">قطعه موسیقی مورد علاقه خود را انتخاب کنید تا حتماً در اجرای این شب نواخته شود:</p>
+        <p class="wwh-winner-form-desc" id="winner-form-desc-text">قطعه موسیقی مورد علاقه خود را انتخاب کنید تا حتماً در اجرای این شب نواخته شود:</p>
         <form id="winner-song-form" class="wwh-winner-form-fields">
           <div>
             <label for="winner-song-title-input">نام آهنگ *</label>
@@ -993,7 +994,13 @@
 
   function slugFromPath() {
     var m = (location.pathname || '').match(/\/events\/([^/]+)\/memories\/?$/);
-    return m ? decodeURIComponent(m[1]) : '';
+    if (m) return decodeURIComponent(m[1]);
+    try {
+      var qs = new URLSearchParams(location.search || '');
+      var qSlug = qs.get('event') || qs.get('slug');
+      if (qSlug) return decodeURIComponent(qSlug);
+    } catch (e) {}
+    return '';
   }
 
   function qsSerial() {
@@ -1029,8 +1036,22 @@
   var sessionBar = document.getElementById('session-bar');
 
   if (!slug) {
-    document.getElementById('event-sub').textContent = 'لینک ناقص است.';
-    gatePanel.hidden = true;
+    // Try resolving active/featured event if opened without slug
+    fetch('/api/landing')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data && data.event && data.event.slug) {
+          var target = '/events/' + encodeURIComponent(data.event.slug) + '/memories' + location.search + location.hash;
+          location.replace(target);
+        } else {
+          document.getElementById('event-sub').textContent = 'لینک ناقص است.';
+          gatePanel.hidden = true;
+        }
+      })
+      .catch(function () {
+        document.getElementById('event-sub').textContent = 'لینک ناقص است.';
+        gatePanel.hidden = true;
+      });
     return;
   }
 
@@ -1525,8 +1546,35 @@
 
     apiJson(url, { headers: authHeaders() })
       .then(function (res) {
+        var winnerChip = document.getElementById('session-winner-chip');
         if (res && res.isWinnerEligible) {
           winnerCard.hidden = false;
+          if (winnerChip) {
+            winnerChip.hidden = false;
+            winnerChip.onclick = function () {
+              switchTab('gallery');
+              winnerCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              var tIn = document.getElementById('winner-song-title-input');
+              if (tIn) tIn.focus();
+            };
+          }
+
+          var titleText = document.getElementById('winner-form-title-text');
+          var descText = document.getElementById('winner-form-desc-text');
+          var winnerName = res.winnerName ? (res.winnerName + ' عزیز! ') : '';
+
+          if (res.winnerScope === 'current_event') {
+            if (titleText) titleText.textContent = '🎉 تبریک ' + winnerName + 'شما برنده برترین خاطره این رویداد شدید!';
+            if (descText) {
+              var likesTxt = res.likesCount ? (' با ' + toFa(res.likesCount) + ' رأی ') : ' ';
+              descText.textContent = 'خاطره ارسالی شما' + likesTxt + 'برترین خاطره این شب شد! قطعه موسیقی مورد علاقه خود را انتخاب کنید تا حتماً توسط گروه در اجرای زنده نواخته شود:';
+            }
+          } else {
+            var evTitle = (res.winnerEvent && res.winnerEvent.title) || (res.previousEvent && res.previousEvent.title) || 'رویداد قبل';
+            if (titleText) titleText.textContent = '🎉 تبریک ' + winnerName + 'شما برنده برترین خاطره ' + evTitle + ' شدید!';
+            if (descText) descText.textContent = 'به عنوان برنده مسابقه خاطرات، قطعه موسیقی مورد علاقه خود را انتخاب کنید تا حتماً در اجرای این رویداد نواخته شود:';
+          }
+
           var titleIn = document.getElementById('winner-song-title-input');
           var artistIn = document.getElementById('winner-song-artist-input');
           var noteIn = document.getElementById('winner-song-note-input');
@@ -1541,6 +1589,7 @@
           }
         } else {
           winnerCard.hidden = true;
+          if (winnerChip) winnerChip.hidden = true;
         }
 
         if (res && res.winnerSong) {
@@ -1549,6 +1598,8 @@
       })
       .catch(function () {
         winnerCard.hidden = true;
+        var winnerChip = document.getElementById('session-winner-chip');
+        if (winnerChip) winnerChip.hidden = true;
       });
   }
 
@@ -1828,6 +1879,14 @@
 
         card.appendChild(mediaEl(item, false, openItem));
 
+        if (item.isContestWinner) {
+          card.classList.add('wwh-card--winner');
+          var winBadge = document.createElement('div');
+          winBadge.className = 'wwh-card-winner-badge';
+          winBadge.innerHTML = '<span>🏆 برترین خاطره</span>';
+          card.appendChild(winBadge);
+        }
+
         var body = document.createElement('div');
         body.className = 'mem-card__body';
         var title = document.createElement('div');
@@ -1988,11 +2047,45 @@
       headers: authHeaders()
     }).then(function (data) {
       grid.innerHTML = '';
+      var celebrationEl = document.getElementById('mine-winner-celebration');
       if (!data.items || !data.items.length) {
+        if (celebrationEl) celebrationEl.hidden = true;
         empty.hidden = false;
         return;
       }
       empty.hidden = true;
+
+      var hasWinnerItem = data.items.some(function (it) { return it.isContestWinner; });
+      if (hasWinnerItem) {
+        if (!celebrationEl) {
+          celebrationEl = document.createElement('div');
+          celebrationEl.id = 'mine-winner-celebration';
+          celebrationEl.className = 'wwh-my-winner-banner';
+          celebrationEl.innerHTML =
+            '<div class="wwh-my-winner-banner__text">' +
+              '<strong>🌟 تبریک!</strong> عکس شما برنده مسابقه خاطرات شده است.' +
+            '</div>' +
+            '<button type="button" class="mem-btn mem-btn--sm" id="mine-go-pick-btn">انتخاب قطعه برای اجرا</button>';
+          if (grid.parentNode) grid.parentNode.insertBefore(celebrationEl, grid);
+          var goBtn = document.getElementById('mine-go-pick-btn');
+          if (goBtn) {
+            goBtn.addEventListener('click', function () {
+              switchTab('gallery');
+              var wCard = document.getElementById('winner-form-card');
+              if (wCard) {
+                wCard.hidden = false;
+                wCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                var tIn = document.getElementById('winner-song-title-input');
+                if (tIn) tIn.focus();
+              }
+            });
+          }
+        }
+        celebrationEl.hidden = false;
+      } else if (celebrationEl) {
+        celebrationEl.hidden = true;
+      }
+
       mineItemsCache = data.items.map(function (item) {
         var lb = toLightboxItem(item);
         if (item.status !== 'approved') lb._auth = true;
@@ -2007,12 +2100,28 @@
         function openItem() { openMediaLightbox(mineItemsCache, idx); }
         var needAuth = item.status !== 'approved';
         card.appendChild(mediaEl(item, needAuth, openItem));
+
+        if (item.isContestWinner) {
+          card.classList.add('wwh-card--winner');
+          var myWinBadge = document.createElement('div');
+          myWinBadge.className = 'wwh-card-winner-badge';
+          myWinBadge.innerHTML = '<span>🏆 برترین خاطره</span>';
+          card.appendChild(myWinBadge);
+        }
+
         var body = document.createElement('div');
         body.className = 'mem-card__body';
         var chip = document.createElement('span');
         chip.className = 'chip chip--' + (item.status || 'pending');
         chip.textContent = statusLabel(item.status);
         body.appendChild(chip);
+        if (typeof item.likeCount === 'number' && item.likeCount > 0) {
+          var likesSpan = document.createElement('span');
+          likesSpan.className = 'chip';
+          likesSpan.style.marginRight = '6px';
+          likesSpan.textContent = '♥ ' + toFa(item.likeCount);
+          body.appendChild(likesSpan);
+        }
         if (item.title) {
           var title = document.createElement('div');
           title.className = 'mem-card__title';
@@ -2669,6 +2778,8 @@
     if (grid) grid.innerHTML = '';
     var winnerCard = document.getElementById('winner-form-card');
     if (winnerCard) winnerCard.hidden = true;
+    var winnerChip = document.getElementById('session-winner-chip');
+    if (winnerChip) winnerChip.hidden = true;
     showProfileShell(false);
     activeTab = 'gallery';
   }

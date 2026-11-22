@@ -492,3 +492,101 @@ def test_song_suggestions_and_voting_flow(client):
     assert unvote_res.status_code == 200
     assert unvote_res.json()["voted"] is False
     assert unvote_res.json()["voteCount"] == 0
+
+
+def test_current_event_memory_winner_eligibility(client):
+    """When the contest takes place in the current event itself, its winner is fully recognized."""
+    ev2_id = client._ev2_id
+    ev2_slug = client._ev2_slug
+    t3_id = client._t3_id
+
+    with client._TestingSession() as db:
+        # Give t3 an approved memory in event 2 with 3 likes
+        m = MemoryItem(
+            event_id=ev2_id,
+            ticket_id=t3_id,
+            status="approved",
+            source="guest",
+            media_kind="image",
+            stored_name="photo_current.jpg",
+            mime="image/jpeg",
+            size_bytes=1000,
+            title="عکس برنده رویداد جاری",
+        )
+        db.add(m)
+        db.commit()
+        m_id = m.id
+
+        dummy, _ = issue_ticket(
+            db, event_id=ev2_id, order_id=None, holder_name="Voter 1", phone="09120000001", public_code="7771", group_name="A"
+        )
+        db.add(MemoryLike(item_id=m_id, ticket_id=dummy.id))
+        db.commit()
+
+        # Check eligibility for t3 with code 3003
+        res = check_winner_eligibility(db, current_event_id=ev2_id, ticket_public_code="3003", ticket_id=t3_id)
+        assert res["isWinnerEligible"] is True
+        assert res["isWinner"] is True
+        assert res["winnerScope"] == "current_event"
+        assert res["winnerName"] == "مریم کاظمی"
+        assert res["winnerCode"] == "3003"
+        assert res["likesCount"] == 1
+
+    # Call API status
+    status_resp = client.get(f"/api/events/{ev2_slug}/songs/status?code=3003")
+    assert status_resp.status_code == 200
+    data = status_resp.json()
+    assert data["isWinnerEligible"] is True
+    assert data["winnerScope"] == "current_event"
+    assert data["winnerName"] == "مریم کاظمی"
+
+    # Gallery item has isContestWinner flag
+    gal_resp = client.get(f"/api/events/{ev2_slug}/memories/gallery")
+    assert gal_resp.status_code == 200
+    gal_data = gal_resp.json()
+    winner_items = [it for it in gal_data["items"] if it.get("isContestWinner")]
+    assert len(winner_items) == 1
+    assert winner_items[0]["id"] == m_id
+
+
+def test_previous_winner_gate_access(client):
+    """Winner of previous event can enter current event gate with their winning ticket code."""
+    ev1_id = client._ev1_id
+    ev2_slug = client._ev2_slug
+    t2_id = client._t2_id
+
+    with client._TestingSession() as db:
+        # t2 (code 2002) is winner of event 1
+        m = MemoryItem(
+            event_id=ev1_id,
+            ticket_id=t2_id,
+            status="approved",
+            source="guest",
+            media_kind="image",
+            stored_name="prev_win.jpg",
+            mime="image/jpeg",
+            size_bytes=1000,
+            title="برنده رویداد یک",
+        )
+        db.add(m)
+        db.commit()
+        db.add(MemoryLike(item_id=m.id, ticket_id=t2_id))
+        db.commit()
+
+    # Gate on event 2 with code 2002 (from event 1)
+    gate_resp = client.post(f"/api/events/{ev2_slug}/memories/gate", json={"serial": "2002"})
+    assert gate_resp.status_code == 200
+    gate_data = gate_resp.json()
+    assert "sessionToken" in gate_data
+    token = gate_data["sessionToken"]
+
+    # Status check with sessionToken
+    st_resp = client.get(
+        f"/api/events/{ev2_slug}/songs/status",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert st_resp.status_code == 200
+    st_data = st_resp.json()
+    assert st_data["isWinnerEligible"] is True
+    assert st_data["winnerScope"] == "previous_event"
+    assert st_data["winnerName"] == "علی رضایی"

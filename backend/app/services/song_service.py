@@ -113,6 +113,8 @@ def get_event_memory_winner(db: Session, event_id: int) -> dict[str, Any] | None
                     "id": ticket.id,
                     "public_code": ticket.public_code,
                     "holder_name": ticket.holder_name,
+                    "phone": ticket.phone,
+                    "event_id": ticket.event_id,
                 },
                 "memory": {
                     "id": top_item.id,
@@ -143,9 +145,13 @@ def get_event_winner_song(db: Session, event_id: int) -> dict[str, Any] | None:
 
     winner_event_title = ""
     if item.winner_event_id:
-        prev_ev = db.get(Event, item.winner_event_id)
-        if prev_ev:
-            winner_event_title = prev_ev.title
+        target_ev = db.get(Event, item.winner_event_id)
+        if target_ev:
+            winner_event_title = target_ev.title
+    elif item.event_id:
+        target_ev = db.get(Event, item.event_id)
+        if target_ev:
+            winner_event_title = target_ev.title
 
     return _song_to_dict(item, winner_event_title)
 
@@ -156,75 +162,135 @@ def check_winner_eligibility(
     ticket_public_code: str | None = None,
     ticket_id: int | None = None,
 ) -> dict[str, Any]:
-    """Check if the given ticket / code belongs to the winner of the previous event."""
+    """Check if the given ticket / code belongs to the winner of the memory contest.
+
+    Supports:
+    1. Winner of the previous event (redeeming prize in current event).
+    2. Winner of the current event (winner of current event's contest).
+    3. Cross-event matching by ticket_id, public_code, or attendee phone number.
+    """
     prev_event = get_previous_event(db, current_event_id)
+    curr_event = db.get(Event, current_event_id)
     current_pick = get_event_winner_song(db, current_event_id)
 
-    if not prev_event:
-        return {
-            "isWinnerEligible": False,
-            "isWinner": False,
-            "winnerTicketId": None,
-            "winnerCode": None,
-            "winnerName": None,
-            "previousEvent": None,
-            "alreadyPicked": current_pick is not None,
-            "currentPick": current_pick,
-            "reason": "no_previous_event",
-        }
+    prev_winner = get_event_memory_winner(db, prev_event.id) if prev_event else None
+    curr_winner = get_event_memory_winner(db, current_event_id) if curr_event else None
 
-    winner = get_event_memory_winner(db, prev_event.id)
-    prev_info = {"id": prev_event.id, "title": prev_event.title, "slug": prev_event.slug}
+    # Resolve caller's ticket details
+    caller_ticket = None
+    if ticket_id:
+        caller_ticket = db.get(Ticket, ticket_id)
+    if not caller_ticket and ticket_public_code:
+        clean_code = re.sub(r"\D", "", ticket_public_code).zfill(4)[-4:]
+        caller_ticket = db.scalars(
+            select(Ticket).where(
+                Ticket.event_id == current_event_id,
+                Ticket.public_code == clean_code,
+                Ticket.status == "active",
+            )
+        ).first()
+        if not caller_ticket and prev_event:
+            caller_ticket = db.scalars(
+                select(Ticket).where(
+                    Ticket.event_id == prev_event.id,
+                    Ticket.public_code == clean_code,
+                    Ticket.status == "active",
+                )
+            ).first()
+        if not caller_ticket:
+            caller_ticket = db.scalars(
+                select(Ticket).where(
+                    Ticket.public_code == clean_code,
+                    Ticket.status == "active",
+                )
+            ).first()
 
-    if not winner:
-        return {
-            "isWinnerEligible": False,
-            "isWinner": False,
-            "winnerTicketId": None,
-            "winnerCode": None,
-            "winnerName": None,
-            "previousEvent": prev_info,
-            "alreadyPicked": current_pick is not None,
-            "currentPick": current_pick,
-            "reason": "no_winner_in_previous_event",
-        }
+    caller_ticket_id = caller_ticket.id if caller_ticket else ticket_id
+    raw_code = ticket_public_code.strip() if ticket_public_code else ""
+    caller_clean_code = caller_ticket.public_code if caller_ticket else (re.sub(r"\D", "", raw_code).zfill(4)[-4:] if raw_code else None)
+    caller_phone = caller_ticket.phone if caller_ticket else None
 
-    winner_ticket = winner["ticket"]
-    is_match = False
+    def _matches(w: dict[str, Any]) -> bool:
+        wt = w.get("ticket", {})
+        if caller_ticket_id and caller_ticket_id == wt.get("id"):
+            return True
+        wt_code = wt.get("public_code")
+        if wt_code and (raw_code == wt_code or caller_clean_code == wt_code or caller_clean_code == wt_code.zfill(4)[-4:]):
+            return True
+        wt_phone = wt.get("phone")
+        if caller_phone and wt_phone and caller_phone.strip() == wt_phone.strip():
+            return True
+        return False
 
-    if ticket_id and ticket_id == winner_ticket["id"]:
-        is_match = True
+    prev_info = {"id": prev_event.id, "title": prev_event.title, "slug": prev_event.slug} if prev_event else None
+    curr_info = {"id": curr_event.id, "title": curr_event.title, "slug": curr_event.slug} if curr_event else None
 
-    if ticket_public_code:
-        raw_code = ticket_public_code.strip()
-        clean_code = re.sub(r"\D", "", raw_code).zfill(4)[-4:]
-        if raw_code == winner_ticket["public_code"] or clean_code == winner_ticket["public_code"]:
-            is_match = True
-
-    if is_match:
+    # 1. Check match with previous event winner
+    if prev_winner and _matches(prev_winner):
         return {
             "isWinnerEligible": True,
             "isWinner": True,
-            "winnerTicketId": winner_ticket["id"],
-            "winnerCode": winner_ticket["public_code"],
-            "winnerName": winner_ticket["holder_name"],
+            "winnerScope": "previous_event",
+            "winnerTicketId": prev_winner["ticket"]["id"],
+            "winnerCode": prev_winner["ticket"]["public_code"],
+            "winnerName": prev_winner["ticket"]["holder_name"],
+            "winnerEvent": prev_info,
             "previousEvent": prev_info,
-            "likesCount": winner["likes_count"],
-            "winningMemory": winner["memory"],
+            "likesCount": prev_winner["likes_count"],
+            "winningMemory": prev_winner["memory"],
             "alreadyPicked": current_pick is not None,
             "currentPick": current_pick,
+        }
+
+    # 2. Check match with current event winner
+    if curr_winner and _matches(curr_winner):
+        return {
+            "isWinnerEligible": True,
+            "isWinner": True,
+            "winnerScope": "current_event",
+            "winnerTicketId": curr_winner["ticket"]["id"],
+            "winnerCode": curr_winner["ticket"]["public_code"],
+            "winnerName": curr_winner["ticket"]["holder_name"],
+            "winnerEvent": curr_info,
+            "previousEvent": prev_info,
+            "likesCount": curr_winner["likes_count"],
+            "winningMemory": curr_winner["memory"],
+            "alreadyPicked": current_pick is not None,
+            "currentPick": current_pick,
+        }
+
+    # Neither matched
+    active_winner = prev_winner or curr_winner
+    active_ev_info = prev_info if prev_winner else curr_info
+    if active_winner:
+        return {
+            "isWinnerEligible": False,
+            "isWinner": False,
+            "winnerScope": None,
+            "winnerTicketId": None,
+            "winnerCode": None,
+            "winnerName": active_winner["ticket"]["holder_name"],
+            "winnerEvent": active_ev_info,
+            "previousEvent": prev_info,
+            "likesCount": active_winner["likes_count"],
+            "winningMemory": active_winner["memory"],
+            "alreadyPicked": current_pick is not None,
+            "currentPick": current_pick,
+            "reason": "code_does_not_match_winner",
         }
 
     return {
         "isWinnerEligible": False,
         "isWinner": False,
+        "winnerScope": None,
         "winnerTicketId": None,
         "winnerCode": None,
         "winnerName": None,
+        "winnerEvent": None,
         "previousEvent": prev_info,
         "alreadyPicked": current_pick is not None,
         "currentPick": current_pick,
-        "reason": "code_does_not_match_winner",
+        "reason": "no_winner_in_previous_event" if prev_event and not curr_winner else "no_winner_found",
     }
 
 
@@ -235,6 +301,7 @@ def set_winner_song_pick(
     title: str,
     artist: str,
     note: str = "",
+    winner_event_id: int | None = None,
 ) -> dict[str, Any]:
     """Create or update the winner's chosen song for current_event_id."""
     clean_title = (title or "").strip()
@@ -249,9 +316,15 @@ def set_winner_song_pick(
     ticket = db.get(Ticket, ticket_id)
     holder_name = ticket.holder_name if ticket else "برنده مسابقه خاطرات"
 
-    prev_event = get_previous_event(db, current_event_id)
-    prev_id = prev_event.id if prev_event else None
-    prev_title = prev_event.title if prev_event else ""
+    target_winner_ev_id = winner_event_id
+    if not target_winner_ev_id and ticket and ticket.event_id:
+        target_winner_ev_id = ticket.event_id
+    if not target_winner_ev_id:
+        prev_event = get_previous_event(db, current_event_id)
+        target_winner_ev_id = prev_event.id if prev_event else current_event_id
+
+    target_winner_ev = db.get(Event, target_winner_ev_id) if target_winner_ev_id else None
+    winner_title = target_winner_ev.title if target_winner_ev else ""
 
     existing = db.scalars(
         select(SongSuggestion)
@@ -267,12 +340,12 @@ def set_winner_song_pick(
         existing.title = clean_title[:200]
         existing.artist = clean_artist[:200]
         existing.note = clean_note[:500]
-        existing.winner_event_id = prev_id
+        existing.winner_event_id = target_winner_ev_id
         existing.status = "active"
         existing.updated_at = utcnow()
         db.commit()
         db.refresh(existing)
-        return _song_to_dict(existing, prev_title)
+        return _song_to_dict(existing, winner_title)
 
     item = SongSuggestion(
         event_id=current_event_id,
@@ -282,13 +355,13 @@ def set_winner_song_pick(
         artist=clean_artist[:200],
         note=clean_note[:500],
         is_winner_pick=True,
-        winner_event_id=prev_id,
+        winner_event_id=target_winner_ev_id,
         status="active",
     )
     db.add(item)
     db.commit()
     db.refresh(item)
-    return _song_to_dict(item, prev_title)
+    return _song_to_dict(item, winner_title)
 
 
 def add_song_suggestion(

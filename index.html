@@ -862,8 +862,168 @@
     }
 
     /* ============================================
-       POST-EVENT ACCESS + GALLERY
+       POST-EVENT ACCESS + MEMORIES HUB
        ============================================ */
+    .memories-hub {
+      max-width: 580px;
+      margin: 0 auto;
+    }
+    .memories-hub__card {
+      background: var(--color-surface, #141416);
+      border: 1px solid var(--color-border, #2a2a2e);
+      border-radius: var(--radius-lg, 16px);
+      padding: 24px 26px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(12px);
+      transition: border-color 0.25s ease;
+    }
+    .memories-hub__card:hover {
+      border-color: var(--color-border-light, #3a3a3f);
+    }
+    .memories-hub__label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--color-text, #fafafa);
+      margin-bottom: 14px;
+    }
+    .memories-hub__label-icon {
+      font-size: 1.15rem;
+    }
+    .memories-hub__controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .memories-hub__select-wrap {
+      position: relative;
+      width: 100%;
+    }
+    .memories-hub__select {
+      width: 100%;
+      height: 52px;
+      background: var(--color-surface-light, #1e1e22);
+      border: 1px solid var(--color-border, #2a2a2e);
+      border-radius: var(--radius-md, 8px);
+      padding: 0 42px 0 16px;
+      color: #fff;
+      font-family: var(--font, 'Vazirmatn');
+      font-size: 0.95rem;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .memories-hub__select:focus-visible {
+      border-color: var(--color-accent, #d43f5a);
+      box-shadow: 0 0 0 2px var(--color-accent-soft, rgba(212,63,90,0.35));
+    }
+    .memories-hub__select-arrow {
+      position: absolute;
+      top: 50%;
+      left: 14px;
+      transform: translateY(-50%);
+      color: var(--color-muted, #7a7a85);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+    }
+    .memories-hub__btn {
+      width: 100%;
+      min-height: 52px;
+      font-size: 1rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .memories-hub__meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.82rem;
+      color: var(--color-secondary, #b8b8c0);
+      flex-wrap: wrap;
+    }
+    .memories-hub__meta-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(212, 63, 90, 0.15);
+      border: 1px solid rgba(212, 63, 90, 0.35);
+      color: #ff6b81;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .memories-hub__meta-desc {
+      font-size: 0.82rem;
+      color: var(--color-muted, #7a7a85);
+    }
+    .memories-hub__forgot-card {
+      margin-top: 16px;
+      padding: 16px 20px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: var(--radius-md, 8px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+    .memories-hub__forgot-card:hover {
+      border-color: rgba(212, 175, 55, 0.3);
+      background: rgba(212, 175, 55, 0.035);
+    }
+    .memories-hub__forgot-icon {
+      color: #f0d078;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .memories-hub__forgot-body {
+      flex: 1;
+      min-width: 200px;
+    }
+    .memories-hub__forgot-title {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .memories-hub__forgot-sub {
+      margin: 3px 0 0 0;
+      font-size: 0.78rem;
+      color: var(--color-muted, #8a8a93);
+      line-height: 1.5;
+    }
+    .memories-hub__forgot-btn {
+      white-space: nowrap;
+      text-decoration: none;
+      font-size: 0.82rem;
+      padding: 8px 16px;
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    @media (max-width: 520px) {
+      .memories-hub__card { padding: 18px 16px; }
+      .memories-hub__forgot-card { flex-direction: column; align-items: stretch; }
+      .memories-hub__forgot-btn { width: 100%; justify-content: center; }
+    }
+
     .access-form { max-width: 420px; margin: 0 auto; }
     .access-form__input-group { display: flex; }
 
@@ -1764,29 +1924,60 @@
   <div class="divider"></div>
 
   <!-- ============================================
-       POST-EVENT ACCESS + GALLERY
+       POST-EVENT ACCESS + MEMORIES HUB
        ============================================ -->
   <section class="post-event" id="access">
     <div class="container">
       <p class="section-label reveal">بعد از اجرا</p>
       <h2 class="section-title reveal">خاطره‌ات اینجاست</h2>
-      <p class="section-subtitle reveal">شماره سریالتو وارد کن</p>
+      <p class="section-subtitle reveal">اجرایی که در آن حضور داشتی را انتخاب کن و وارد تالار خاطرات همان شب شو</p>
       <div class="ornament reveal" aria-hidden="true">
         <span class="ornament__line"></span>
         <svg class="ornament__glyph" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2v20M4 6l8 4 8-4M4 18l8-4 8 4"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
         <span class="ornament__line"></span>
       </div>
 
-      <form class="access-form reveal" id="access-form" novalidate>
-        <div class="access-form__input-group">
-          <input class="access-form__input" type="text" id="access-serial" placeholder="شماره سریال" required inputmode="numeric" maxlength="4" dir="ltr" aria-label="سریال ۴رقمی رزرو ورود">
-          <button type="submit" class="access-form__btn">ورود</button>
-        </div>
-      </form>
+      <div class="memories-hub reveal" id="memories-hub">
+        <div class="memories-hub__card">
+          <label for="memories-event-select" class="memories-hub__label">
+            <span class="memories-hub__label-icon" aria-hidden="true">🎬</span>
+            <span>انتخاب شب اجرا:</span>
+          </label>
+          <div class="memories-hub__controls">
+            <div class="memories-hub__select-wrap">
+              <select id="memories-event-select" class="memories-hub__select" aria-label="انتخاب شب اجرای رویداد">
+                <option value="">در حال بارگذاری فهرست شب‌های اجرا…</option>
+              </select>
+              <span class="memories-hub__select-arrow" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </div>
+            <button type="button" class="btn btn--accent btn--shine memories-hub__btn" id="memories-go-btn">
+              <span>ورود به خاطرات این شب</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+          </div>
 
-      <div class="access-result" id="access-result">
-        <p class="access-result__message" id="access-result-message"></p>
-        <div class="gallery" id="gallery"></div>
+          <div class="memories-hub__meta" id="memories-event-meta" aria-live="polite">
+            <span class="memories-hub__meta-badge" id="memories-meta-badge">رویداد</span>
+            <span class="memories-hub__meta-desc" id="memories-meta-desc">تالار خاطرات، ثبت عکس و رأی به آهنگ‌ها</span>
+          </div>
+        </div>
+
+        <!-- Forgotten Code Helper Card -->
+        <div class="memories-hub__forgot-card">
+          <div class="memories-hub__forgot-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-1.5 1.5L16 7l-1.5-1.5M15 8l-2 2m-1.5 1.5L10 13l-1.5-1.5M9 14l-2 2m-1.5 1.5L4 19l-1.5-1.5"></path><circle cx="7.5" cy="16.5" r="3.5"></circle></svg>
+          </div>
+          <div class="memories-hub__forgot-body">
+            <div class="memories-hub__forgot-title">کد ۴ رقمی ورود به خاطرات رو فراموش کردی؟</div>
+            <p class="memories-hub__forgot-sub">شماره موبایلت رو توی پیگیری بزن؛ کارت بلیتت رو ببین و با ۱ کلیک مستقیماً وارد خاطرات شو.</p>
+          </div>
+          <a href="/track" id="memories-forgot-link" class="btn btn--outline btn--small memories-hub__forgot-btn">
+            <span>پیگیری رزرو و ورود خودکار</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </a>
+        </div>
       </div>
     </div>
   </section>
@@ -2268,263 +2459,107 @@
 
 
 
-    // ---- Post-event access + gallery ----------------------------------------
+    // ---- Post-event memories hub --------------------------------------------
     (function initAccess() {
-      var form = document.getElementById('access-form');
-      var input = document.getElementById('access-serial');
-      var result = document.getElementById('access-result');
-      var message = document.getElementById('access-result-message');
-      var gallery = document.getElementById('gallery');
+      var selectEl = document.getElementById('memories-event-select');
+      var goBtn = document.getElementById('memories-go-btn');
+      var metaBadge = document.getElementById('memories-meta-badge');
+      var metaDesc = document.getElementById('memories-meta-desc');
+      var forgotLink = document.getElementById('memories-forgot-link');
+      var eventsCache = [];
 
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        var raw = normalizeDigits(input.value).replace(/\s/g, '');
-        if (!/^\d{1,4}$/.test(raw)) {
-          result.classList.add('visible');
-          gallery.innerHTML = '';
-          message.textContent = 'سریال معتبر نیست. عدد ۴ رقمی روی رزرو ورود را وارد کن.';
-          return;
+      function updateSelectedEvent(slug) {
+        if (!slug || !eventsCache.length) return;
+        var ev = eventsCache.find(function (e) { return e.slug === slug; });
+        if (!ev) return;
+        if (metaBadge) {
+          metaBadge.textContent = ev.isFeatured ? '★ اجرای کنونی' : (ev.episodeNumber ? 'اپیزود ' + toPersian(ev.episodeNumber) : 'رویداد');
+          metaBadge.style.background = ev.isFeatured ? 'rgba(212, 63, 90, 0.15)' : 'rgba(255, 255, 255, 0.08)';
+          metaBadge.style.borderColor = ev.isFeatured ? 'rgba(212, 63, 90, 0.35)' : 'rgba(255, 255, 255, 0.15)';
+          metaBadge.style.color = ev.isFeatured ? '#ff6b81' : '#b8b8c0';
         }
+        if (metaDesc) {
+          var details = [];
+          if (ev.city) details.push(ev.city);
+          if (ev.venue) details.push(ev.venue);
+          metaDesc.textContent = details.join(' — ') || 'تالار خاطرات اختصاصی این شب';
+        }
+        if (forgotLink && ev.id) {
+          forgotLink.href = '/track?eventId=' + encodeURIComponent(ev.id);
+        }
+      }
 
-        var serial = String(raw).padStart(4, '0');
-        message.textContent = 'در حال بررسی…';
-        gallery.innerHTML = '';
-        result.classList.add('visible');
-
-        fetch('/api/ticket?serial=' + encodeURIComponent(serial))
+      function loadEvents() {
+        if (!selectEl) return;
+        return fetch('/api/events')
           .then(function (r) { return r.json(); })
-          .then(function (res) {
-            if (!res.found) {
-              message.textContent = 'شماره سریال ' + toPersian(serial) + ' ثبت نشده.';
+          .then(function (data) {
+            eventsCache = data.events || [];
+            if (!eventsCache.length) {
+              if (window.__wwhEvent) eventsCache = [window.__wwhEvent];
+            }
+            if (!eventsCache.length) {
+              selectEl.innerHTML = '<option value="">رویدادی ثبت نشده است</option>';
               return;
             }
-            var slug = (res.eventSlug || (window.__wwhEvent && window.__wwhEvent.slug) || '').trim();
-            var go = function (finalSlug) {
-              finalSlug = (finalSlug || '').trim();
-              if (!finalSlug) {
-                message.textContent = 'رویداد این رزرو ورود مشخص نیست. کمی بعد دوباره تلاش کن یا از لینک خاطرات رویداد وارد شو.';
-                return;
-              }
-              message.textContent = 'خوش اومدی' + (res.ticket && res.ticket.name ? '، ' + res.ticket.name : '') + '. در حال ورود به گالری شب…';
-              location.href = '/events/' + encodeURIComponent(finalSlug) + '/memories?serial=' + encodeURIComponent(serial);
-            };
-            if (slug) {
-              go(slug);
-              return;
-            }
-            // Race: landing payload not ready yet — ask /api/landing once
-            return fetch('/api/landing')
-              .then(function (r) { return r.json(); })
-              .then(function (landing) {
-                go((landing.event && landing.event.slug) || '');
-              })
-              .catch(function () { go(''); });
+            selectEl.innerHTML = eventsCache.map(function (ev) {
+              var label = ev.title + (ev.episodeNumber ? ' — اپیزود ' + toPersian(ev.episodeNumber) : '');
+              if (ev.isFeatured) label += ' ★ (اجرای کنونی)';
+              return '<option value="' + escapeHtml(ev.slug) + '">' + escapeHtml(label) + '</option>';
+            }).join('');
+
+            var featured = eventsCache.find(function (e) { return e.isFeatured; });
+            var defaultSlug = featured ? featured.slug : eventsCache[0].slug;
+            selectEl.value = defaultSlug;
+            updateSelectedEvent(defaultSlug);
           })
           .catch(function () {
-            message.textContent = 'خطا در ارتباط با سرور. دوباره تلاش کن.';
+            if (window.__wwhEvent) {
+              eventsCache = [window.__wwhEvent];
+              selectEl.innerHTML = '<option value="' + escapeHtml(window.__wwhEvent.slug) + '">' + escapeHtml(window.__wwhEvent.title) + '</option>';
+              updateSelectedEvent(window.__wwhEvent.slug);
+            }
           });
-      });
+      }
 
-      // ---- protected gallery ------------------------------------------------
-      // Photos render into <canvas> instead of <img>: right-click, drag and
-      // long-press offer nothing to save. Videos stay a normal player, but
-      // downloads and shortcuts (Ctrl/Cmd+S, PrintScreen, …) are blocked while
-      // media is on screen. All of this is best-effort — nothing on the open
-      // web can fully prevent recording/screenshots.
-      var PROTECTION_ON = false;
-      var photoById = {};        // url -> { bitmap, w, h } (shared with the lightbox)
-      var photoItems = [];       // photos in page order: { url, caption, canvas }
-      var lb = null;
-      var lbOpen = false;
-      var lbIdx = 0;
+      loadEvents();
 
-      document.addEventListener('keydown', function (e) {
-        if (lbOpen) {
-          if (e.key === 'Escape') { closeLb(); return; }
-          if (e.key === 'ArrowLeft') { showLb(lbIdx + 1); return; }   // next in RTL
-          if (e.key === 'ArrowRight') { showLb(lbIdx - 1); return; }  // prev in RTL
-        }
-        if (!PROTECTION_ON) return;
-        if (e.key === 'PrintScreen') { e.preventDefault(); return; }
-        if (!e.ctrlKey && !e.metaKey) return;
-        var c = String(e.key || '').toLowerCase();
-        if (c === 's' || c === 'p') { e.preventDefault(); return; }        // save / print
-        if (e.shiftKey && (c === 's' || c === '3' || c === '4')) e.preventDefault(); // screen shots
-      });
-
-      gallery.addEventListener('contextmenu', function (e) {
-        if (PROTECTION_ON) e.preventDefault();
-      });
-      document.addEventListener('dragstart', function (e) {
-        if (PROTECTION_ON && e.target.closest && e.target.closest('.gallery, .lightbox')) e.preventDefault();
-      });
-
-      function makeBitmap(blob) {
-        if (window.createImageBitmap) {
-          return createImageBitmap(blob).then(function (bmp) {
-            return { bitmap: bmp, w: bmp.width, h: bmp.height };
-          });
-        }
-        return new Promise(function (resolve, reject) {
-          var img = new Image();
-          img.onload = function () { resolve({ bitmap: img, w: img.naturalWidth, h: img.naturalHeight }); };
-          img.onerror = reject;
-          img.src = URL.createObjectURL(blob);
+      if (selectEl) {
+        selectEl.addEventListener('change', function () {
+          updateSelectedEvent(this.value);
         });
       }
 
-      function getLb() {
-        if (lb) return lb;
-        lb = document.createElement('div');
-        lb.className = 'lightbox';
-        lb.setAttribute('role', 'dialog');
-        lb.setAttribute('aria-modal', 'true');
-        lb.innerHTML =
-          '<button class="lightbox__btn lightbox__close" data-act="close" aria-label="بستن">✕</button>' +
-          '<button class="lightbox__btn lightbox__prev" data-act="prev" aria-label="عکس قبلی">‹</button>' +
-          '<div class="lightbox__stage"><canvas></canvas><p class="lightbox__caption"></p></div>' +
-          '<button class="lightbox__btn lightbox__next" data-act="next" aria-label="عکس بعدی">›</button>' +
-          '<span class="lightbox__count"></span>';
-        lb.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-        lb.addEventListener('click', function (e) {
-          if (e.target === lb) { closeLb(); return; }
-          var btn = e.target.closest('[data-act]');
-          if (!btn) return;
-          if (btn.getAttribute('data-act') === 'prev') showLb(lbIdx - 1);
-          else if (btn.getAttribute('data-act') === 'next') showLb(lbIdx + 1);
-          else closeLb();
-        });
-        document.body.appendChild(lb);
-        return lb;
-      }
-
-      function openLb(i) {
-        if (!photoItems.length) return;
-        getLb();
-        showLb(i);
-        lbOpen = true;
-        document.documentElement.style.overflow = 'hidden';
-      }
-
-      function showLb(i) {
-        lbIdx = (i + photoItems.length) % photoItems.length;
-        paintLb();
-        lb.classList.add('open');
-      }
-
-      function closeLb() {
-        lbOpen = false;
-        lb.classList.remove('open');
-        document.documentElement.style.overflow = '';
-      }
-
-      function paintLb() {
-        var p = photoItems[lbIdx];
-        var en = photoById[p.url];
-        var stage = getLb().querySelector('.lightbox__stage');
-        var canvas = stage.querySelector('canvas');
-        canvas.style.display = en ? 'block' : 'none';
-        if (en) {
-          canvas.width = en.w;
-          canvas.height = en.h;
-          var ctx = canvas.getContext('2d');
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(en.bitmap, 0, 0);
-        }
-        stage.querySelector('.lightbox__caption').textContent = p.caption;
-        lb.querySelector('.lightbox__count').textContent = toPersian(lbIdx + 1) + ' / ' + toPersian(photoItems.length);
-      }
-
-      function renderGallery(media) {
-        // release previously loaded bitmaps
-        Object.keys(photoById).forEach(function (k) {
-          var en = photoById[k];
-          if (en.bitmap && en.bitmap.close) en.bitmap.close();
-          delete photoById[k];
-        });
-        photoItems.length = 0;
-        PROTECTION_ON = false;
-        gallery.innerHTML = '';
-
-        if (!media || !media.length) {
-          var p = document.createElement('p');
-          p.className = 'access-result__message';
-          p.textContent = 'هنوز عکس یا ویدیویی آپلود نشده. بعد از اجرا اینجا برگرد.';
-          gallery.appendChild(p);
-          return;
-        }
-        PROTECTION_ON = true;
-
-        media.forEach(function (m) {
-          var item = document.createElement('div');
-          item.className = 'gallery__item';
-
-          if (m.mime.indexOf('video/') === 0) {
-            // normal player, but without a download button / picture-in-picture
-            var video = document.createElement('video');
-            video.src = m.url;
-            video.controls = true;
-            video.preload = 'metadata';
-            video.setAttribute('controlslist', 'nodownload');
-            video.setAttribute('disablepictureinpicture', 'true');
-            video.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-            item.appendChild(video);
-          } else {
-            item.classList.add('gallery__item--photo');
-            item.setAttribute('role', 'button');
-            item.setAttribute('tabindex', '0');
-            item.setAttribute('aria-label', 'باز کردن عکس: ' + (m.caption || m.original_name));
-            var canvas = document.createElement('canvas');
-            var entry = { id: m.url, url: m.url, caption: m.caption || m.original_name, canvas: canvas };
-            photoItems.push(entry);
-            item.appendChild(canvas);
-            (function (entryRef) {
-              item.addEventListener('click', function () { openLb(photoItems.indexOf(entryRef)); });
-              item.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  openLb(photoItems.indexOf(entryRef));
-                }
-              });
-            })(entry);
+      if (goBtn) {
+        goBtn.addEventListener('click', function () {
+          var slug = (selectEl && selectEl.value ? selectEl.value : '').trim();
+          if (!slug && window.__wwhEvent && window.__wwhEvent.slug) {
+            slug = window.__wwhEvent.slug;
           }
-
-          var cap = document.createElement('span');
-          cap.className = 'gallery__caption';
-          cap.textContent = m.caption || m.original_name;
-          item.appendChild(cap);
-          gallery.appendChild(item);
-        });
-
-        photoItems.forEach(function (enRef) {
-          fetch(enRef.url)
-            .then(function (r) { if (!r.ok) throw new Error('load'); return r.blob(); })
-            .then(makeBitmap)
-            .then(function (entry) {
-              if (!gallery.contains(enRef.canvas)) {
-                if (entry.bitmap && entry.bitmap.close) entry.bitmap.close();
-                return;
-              }
-              photoById[enRef.id] = entry;
-              enRef.canvas.width = entry.w;
-              enRef.canvas.height = entry.h;
-              enRef.canvas.getContext('2d').drawImage(entry.bitmap, 0, 0);
-              if (lbOpen && photoItems[lbIdx] === enRef) paintLb();
-            })
-            .catch(function () {
-              enRef.canvas.parentNode.classList.remove('gallery__item--photo');
-            });
+          if (!slug) {
+            alert('لطفاً یک اجرا را انتخاب کنید.');
+            return;
+          }
+          goBtn.disabled = true;
+          goBtn.innerHTML = '<span>در حال ورود به خاطرات…</span>';
+          location.href = '/events/' + encodeURIComponent(slug) + '/memories';
         });
       }
     })();
 
     // ---- Scroll reveal ---------------------------------------------------------
     (function initScrollReveal() {
+      var reveals = document.querySelectorAll('.reveal');
+      function makeAllVisible() {
+        reveals.forEach(function (el) { el.classList.add('visible'); });
+      }
+
       var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (prefersReduced) {
-        document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('visible'); });
+      if (prefersReduced || !('IntersectionObserver' in window)) {
+        makeAllVisible();
         return;
       }
+
       var observer = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
           if (entry.isIntersecting) {
@@ -2532,8 +2567,19 @@
             observer.unobserve(entry.target);
           }
         });
-      }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
-      document.querySelectorAll('.reveal').forEach(function (el) { observer.observe(el); });
+      }, { threshold: 0.01, rootMargin: '100px 0px 100px 0px' });
+
+      reveals.forEach(function (el) {
+        var r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight + 100 && r.bottom > -100) {
+          el.classList.add('visible');
+        } else {
+          observer.observe(el);
+        }
+      });
+
+      // Safety fallback: ensure nothing is ever left invisible
+      setTimeout(makeAllVisible, 1500);
     })();
   </script>
 

@@ -5,11 +5,12 @@
   "description": "WE WERE HERE — multi-event tickets + Python backend",
   "scripts": {
     "predev": "python -m pip install -r backend/requirements.txt",
-    "dev": "python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 5173",
-    "start": "python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 5173",
+    "dev": "python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 5173 --reload",
+    "start": "python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 5173 --reload",
     "dev:node": "node --disable-warning=ExperimentalWarning server.js",
     "test": "cd backend && python -m pytest -q",
     "check:png": "python backend/scripts/check_ticket_png.py",
+    "seed:reservations": "python -c \"import sys; sys.path.insert(0, 'backend'); from scripts.seed_all_reservation_states import run_seed; run_seed()\"",
     "migrate": "python backend/scripts/migrate_legacy.py"
   }
 }

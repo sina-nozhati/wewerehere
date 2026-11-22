@@ -94,6 +94,7 @@ def list_events(db: Session = Depends(get_db)):
                 "city": ev.city,
                 "venue": ev.venue,
                 "status": ev.status,
+                "physicalTicketsSoldOut": bool(getattr(ev, "physical_tickets_sold_out", False)),
                 "isFeatured": featured_id is not None and ev.id == featured_id,
                 "posterUrl": f"/storage/public/{ev.poster_path}" if ev.poster_path else "",
             }
@@ -150,6 +151,9 @@ def orders_legacy(body: OrderCreateBody, db: Session = Depends(get_db)):
         ev = db.get(Event, body.eventId)
         if not ev:
             raise HTTPException(404, "event not found")
+    wants_phys = bool(body.wantsPhysicalCard or body.wants_physical_card)
+    if bool(getattr(ev, "physical_tickets_sold_out", False)) and wants_phys:
+        raise HTTPException(400, {"error": "امکان درخواست کارت رزرو فیزیکی (چاپی) برای این رویداد به پایان رسیده است"})
     try:
         order = create_order(
             db,
@@ -173,6 +177,9 @@ def orders_for_event(event_id: int, body: OrderCreateBody, db: Session = Depends
     ev = db.get(Event, event_id)
     if not ev or ev.sales_status != "open":
         raise HTTPException(409, {"error": "رزرو برای این رویداد فعلاً باز نیست"})
+    wants_phys = bool(body.wantsPhysicalCard or body.wants_physical_card)
+    if bool(getattr(ev, "physical_tickets_sold_out", False)) and wants_phys:
+        raise HTTPException(400, {"error": "امکان درخواست کارت رزرو فیزیکی (چاپی) برای این رویداد به پایان رسیده است"})
     try:
         order = create_order(
             db,
@@ -207,6 +214,7 @@ def _ticket_track_payload(t: Ticket, ev: Event | None, rank_map: dict[int, int])
         "name": t.holder_name,
         "group": t.group_name,
         "eventId": t.event_id,
+        "eventSlug": (ev.slug if ev else "") or "",
         "printUrl": f"/api/tickets/{t.id}/download",
         "date": sched.tagline,
         "time": sched.time_hm,
@@ -234,6 +242,7 @@ def _event_track_summary(
 ) -> dict:
     out = {
         "id": ev.id,
+        "slug": ev.slug,
         "title": ev.title,
         "episodeNumber": ev.episode_number,
         "isFeatured": featured_id is not None and ev.id == featured_id,

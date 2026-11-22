@@ -98,6 +98,29 @@
 html {
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, .hero__title, .wwh-winner-song-heading {
+  text-wrap: balance;
+}
+
+p, .wwh-winner-form-desc, .wwh-winner-song-meta, .wwh-song-card__artist {
+  text-wrap: pretty;
+}
+
+/* Tabular digits for numbers, counters, timestamps, and prices to eliminate layout jitter */
+.session-bar__serial,
+.session-bar__quota-num,
+.like-btn,
+.wwh-song-vote-btn,
+.chip,
+[data-wwh-phone],
+.wwh-timer,
+.mem-card__actions {
+  font-variant-numeric: tabular-nums;
 }
 
 input,
@@ -935,6 +958,81 @@ a.btn,
   color: #FFFFFF;
   box-shadow: 0 0 12px rgba(212, 63, 90, 0.3);
 }
+
+/* --- Winner Recognition & Visual Polish --- */
+.wwh-winner-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full, 999px);
+  background: linear-gradient(135deg, rgba(224, 180, 90, 0.25) 0%, rgba(201, 150, 52, 0.15) 100%);
+  border: 1px solid #E0B45A;
+  color: #FFE699;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 160ms ease;
+  animation: wwh-gold-pulse 3s infinite alternate ease-in-out;
+}
+
+.wwh-winner-chip:hover {
+  background: linear-gradient(135deg, rgba(224, 180, 90, 0.4) 0%, rgba(201, 150, 52, 0.25) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(224, 180, 90, 0.3);
+}
+
+.mem-card.wwh-card--winner {
+  border: 1.5px solid #E0B45A !important;
+  box-shadow: 0 6px 20px rgba(224, 180, 90, 0.25), 0 0 16px rgba(224, 180, 90, 0.15);
+  position: relative;
+}
+
+.wwh-card-winner-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full, 999px);
+  background: rgba(18, 16, 18, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid #E0B45A;
+  color: #FFE699;
+  font-size: 0.75rem;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 10px rgba(224, 180, 90, 0.3);
+}
+
+.wwh-my-winner-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md, 12px);
+  background: linear-gradient(135deg, rgba(224, 180, 90, 0.18) 0%, rgba(30, 24, 20, 0.95) 100%);
+  border: 1.5px solid #E0B45A;
+  color: #FFE699;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(224, 180, 90, 0.2);
+}
+
+.wwh-my-winner-banner .mem-btn {
+  margin: 0;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #E0B45A 0%, #C99634 100%);
+  color: #121012;
+  font-weight: 800;
+  border: none;
+}
+
 
 
 

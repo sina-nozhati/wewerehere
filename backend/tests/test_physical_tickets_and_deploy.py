@@ -174,3 +174,65 @@ def test_order_and_ticket_physical_card_option(client: TestClient):
     with zipfile.ZipFile(io.BytesIO(export_all.content)) as zf:
         names = zf.namelist()
         assert len(names) == 2
+
+
+def test_physical_tickets_sold_out_toggle_and_rejection(client: TestClient):
+    ev = _create_event(client)
+    admin_headers = _admin_auth(client)
+
+    # 1. Initially physical tickets are NOT sold out
+    landing = client.get(f"/api/events/{ev.slug}").json()
+    assert landing.get("physicalTicketsSoldOut") is False
+
+    # 2. Admin toggles physical tickets to sold out
+    tog_res = client.post(f"/api/admin/events/{ev.id}/toggle-physical-tickets", headers=admin_headers)
+    assert tog_res.status_code == 200
+    assert tog_res.json()["physicalTicketsSoldOut"] is True
+
+    # Check via landing payload
+    landing2 = client.get(f"/api/events/{ev.slug}").json()
+    assert landing2.get("physicalTicketsSoldOut") is True
+
+    # 3. Customer tries to order with physical ticket requested -> 400 rejection
+    order_fail = client.post(
+        f"/api/events/{ev.id}/orders",
+        json={
+            "phone": "09129998877",
+            "names": ["متقاضی بلیت فیزیکی"],
+            "receiptText": "رسید واریز ۱۲۳",
+            "wantsPhysicalCard": True,
+        },
+    )
+    assert order_fail.status_code == 400
+    assert "کارت فیزیکی" in order_fail.json()["detail"]["error"] or "کارت" in order_fail.json()["detail"]["error"]
+
+    # 4. Customer orders digital ticket (wantsPhysicalCard: False) -> succeeds
+    order_ok = client.post(
+        f"/api/events/{ev.id}/orders",
+        json={
+            "phone": "09129998877",
+            "names": ["متقاضی بلیت دیجیتال"],
+            "receiptText": "رسید واریز ۱۲۳",
+            "wantsPhysicalCard": False,
+        },
+    )
+    assert order_ok.status_code == 200
+    assert order_ok.json()["status"] == "pending"
+
+    # 5. Admin opens physical tickets again
+    open_res = client.post(f"/api/admin/events/{ev.id}/open-physical-tickets", headers=admin_headers)
+    assert open_res.status_code == 200
+    assert open_res.json()["physicalTicketsSoldOut"] is False
+
+    # 6. Customer can now order with physical ticket requested
+    order_retry = client.post(
+        f"/api/events/{ev.id}/orders",
+        json={
+            "phone": "09128887766",
+            "names": ["متقاضی جدید فیزیکی"],
+            "receiptText": "رسید واریز ۴۵۶",
+            "wantsPhysicalCard": True,
+        },
+    )
+    assert order_retry.status_code == 200
+    assert order_retry.json()["status"] == "pending"

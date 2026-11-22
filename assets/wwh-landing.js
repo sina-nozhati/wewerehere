@@ -298,6 +298,42 @@
     }
   };
 
+  function applyPhysicalTicketsState(soldOut) {
+    var opt = document.querySelector('.physical-card-option');
+    var input = document.getElementById('wants-physical-card');
+    if (!opt || !input) return;
+    if (soldOut) {
+      input.checked = false;
+      input.disabled = true;
+      input.style.cursor = 'not-allowed';
+      opt.style.opacity = '0.85';
+      opt.style.borderColor = 'rgba(212, 63, 90, 0.35)';
+      opt.style.background = 'rgba(212, 63, 90, 0.06)';
+      var titleEl = opt.querySelector('span');
+      if (titleEl) {
+        titleEl.innerHTML = 'کارت رزرو فیزیکی (چاپی) <span class="badge-soldout" style="display:inline-block;margin-right:6px;padding:2px 8px;font-size:0.75rem;font-weight:700;color:#ff6b81;background:rgba(212,63,90,0.2);border:1px solid rgba(212,63,90,0.4);border-radius:4px;">ظرفیت تکمیل شد</span>';
+      }
+      var subEl = opt.querySelectorAll('span')[1];
+      if (subEl) {
+        subEl.textContent = 'امکان صدور کارت فیزیکی برای این رویداد به پایان رسیده است؛ بلیت دیجیتال شما با تمام دسترسی‌ها صادر می‌شود.';
+      }
+    } else {
+      input.disabled = false;
+      input.style.cursor = 'pointer';
+      opt.style.opacity = '1';
+      opt.style.borderColor = '';
+      opt.style.background = '';
+      var titleEl = opt.querySelector('span');
+      if (titleEl) {
+        titleEl.textContent = 'کارت رزرو فیزیکی (چاپی) می‌خواهم';
+      }
+      var subEl = opt.querySelectorAll('span')[1];
+      if (subEl) {
+        subEl.textContent = 'در صورت انتخاب، کارت فیزیکی اختصاصی در شب اجرا به شما تحویل داده می‌شود (بلیت دیجیتال شما در هر صورت صادر خواهد شد).';
+      }
+    }
+  }
+
   function applyEventToDom(ev, cap) {
     window.__wwhEvent = ev;
     window.__wwhEventId = ev.id;
@@ -322,6 +358,7 @@
 
     renderSetlist(ev.setlist || []);
     applySalesState(ev.salesStatus === 'open');
+    applyPhysicalTicketsState(!!ev.physicalTicketsSoldOut);
     if (cap && typeof cap === 'object') {
       window.applyCapacity(cap);
     }

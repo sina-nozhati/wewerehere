@@ -69,6 +69,18 @@ def _resolve_caller_ticket(
 
     if code_or_serial:
         clean_code = re.sub(r"\D", "", str(code_or_serial)).zfill(4)[-4:]
+        # Prioritize matching ticket in this event first
+        ticket = db.scalars(
+            select(Ticket).where(
+                Ticket.event_id == event_id,
+                Ticket.public_code == clean_code,
+                Ticket.status == "active",
+            )
+        ).first()
+        if ticket:
+            return ticket
+
+        # Fall back to matching active ticket in any event (e.g. previous event)
         ticket = db.scalars(
             select(Ticket).where(
                 Ticket.public_code == clean_code,
@@ -143,8 +155,10 @@ def get_winner_status(
         "event": {"id": ev.id, "slug": ev.slug, "title": ev.title},
         "isWinnerEligible": eligibility["isWinnerEligible"],
         "isWinner": eligibility["isWinner"],
+        "winnerScope": eligibility.get("winnerScope"),
         "winnerName": eligibility.get("winnerName"),
         "winnerCode": eligibility.get("winnerCode"),
+        "winnerEvent": eligibility.get("winnerEvent"),
         "previousEvent": eligibility.get("previousEvent"),
         "likesCount": eligibility.get("likesCount"),
         "winningMemory": eligibility.get("winningMemory"),
@@ -165,7 +179,7 @@ def set_winner_pick(
     creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,
     authorization: Annotated[str | None, Header()] = None,
 ):
-    """Submit the winner's chosen song. Only the previous event's winner can call this."""
+    """Submit the winner's chosen song. Only the contest winner can call this."""
     ev = resolve_event_by_slug(db, slug)
     session_token = _bearer_token(creds) or token
     if not session_token and authorization and authorization.lower().startswith("bearer "):
@@ -188,11 +202,13 @@ def set_winner_pick(
             403,
             detail={
                 "error": "not_winner",
-                "message": "تنها برنده مسابقه خاطرات رویداد قبل مجاز به انتخاب قطعه است.",
+                "message": "تنها برنده مسابقه خاطرات مجاز به انتخاب قطعه است.",
             },
         )
 
     try:
+        winner_ev_info = eligibility.get("winnerEvent") or eligibility.get("previousEvent")
+        target_winner_ev_id = winner_ev_info.get("id") if winner_ev_info else None
         song = set_winner_song_pick(
             db,
             current_event_id=ev.id,
@@ -200,6 +216,7 @@ def set_winner_pick(
             title=body.title,
             artist=body.artist,
             note=body.note,
+            winner_event_id=target_winner_ev_id,
         )
         return {
             "ok": True,

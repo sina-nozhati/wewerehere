@@ -71,6 +71,7 @@ def event_to_landing_dict(ev: Event) -> dict:
         },
         "status": ev.status,
         "salesStatus": ev.sales_status,
+        "physicalTicketsSoldOut": bool(getattr(ev, "physical_tickets_sold_out", False)),
         "setlist": setlist,
         "artists": artists,
         "posterUrl": f"/storage/public/{ev.poster_path}" if ev.poster_path else "",

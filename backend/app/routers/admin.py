@@ -128,6 +128,7 @@ class EventBody(BaseModel):
     paymentInstructions: str = ""
     status: str = "draft"
     salesStatus: str = "closed"
+    physicalTicketsSoldOut: bool | None = None
     setlistJson: str = "[]"
     artistsJson: str = "[]"
 
@@ -192,6 +193,7 @@ def _admin_event_row(e: Event, featured: int | None) -> dict:
         "locationPublished": bool(e.location_published),
         "status": e.status,
         "salesStatus": e.sales_status,
+        "physicalTicketsSoldOut": bool(getattr(e, "physical_tickets_sold_out", False)),
         "capacity": e.capacity,
         "ticketPrice": e.ticket_price,
         "paymentCardNumber": e.payment_card_number or "",
@@ -381,6 +383,7 @@ def admin_create_event(body: EventBody, db: Session = Depends(get_db), _: str = 
         payment_instructions=body.paymentInstructions or "",
         status=body.status or "draft",
         sales_status=body.salesStatus or "closed",
+        physical_tickets_sold_out=bool(body.physicalTicketsSoldOut) if body.physicalTicketsSoldOut is not None else False,
         setlist_json=body.setlistJson or "[]",
         artists_json=body.artistsJson or "[]",
     )
@@ -443,6 +446,8 @@ def admin_update_event(event_id: int, body: EventBody, db: Session = Depends(get
     ev.payment_instructions = body.paymentInstructions or ""
     ev.status = body.status or "draft"
     ev.sales_status = body.salesStatus or "closed"
+    if body.physicalTicketsSoldOut is not None:
+        ev.physical_tickets_sold_out = bool(body.physicalTicketsSoldOut)
     ev.setlist_json = body.setlistJson or "[]"
     ev.artists_json = body.artistsJson or "[]"
     ev.updated_at = datetime.now(timezone.utc)
@@ -497,6 +502,36 @@ def admin_open_sales(event_id: int, db: Session = Depends(get_db), _: str = Depe
         ev.status = "sales_open"
     db.commit()
     return {"ok": True}
+
+
+@router.post("/events/{event_id}/toggle-physical-tickets")
+def admin_toggle_physical_tickets(event_id: int, db: Session = Depends(get_db), _: str = Depends(require_admin)):
+    ev = db.get(Event, event_id)
+    if not ev:
+        raise HTTPException(404, "not found")
+    ev.physical_tickets_sold_out = not bool(getattr(ev, "physical_tickets_sold_out", False))
+    db.commit()
+    return {"ok": True, "physicalTicketsSoldOut": ev.physical_tickets_sold_out}
+
+
+@router.post("/events/{event_id}/close-physical-tickets")
+def admin_close_physical_tickets(event_id: int, db: Session = Depends(get_db), _: str = Depends(require_admin)):
+    ev = db.get(Event, event_id)
+    if not ev:
+        raise HTTPException(404, "not found")
+    ev.physical_tickets_sold_out = True
+    db.commit()
+    return {"ok": True, "physicalTicketsSoldOut": True}
+
+
+@router.post("/events/{event_id}/open-physical-tickets")
+def admin_open_physical_tickets(event_id: int, db: Session = Depends(get_db), _: str = Depends(require_admin)):
+    ev = db.get(Event, event_id)
+    if not ev:
+        raise HTTPException(404, "not found")
+    ev.physical_tickets_sold_out = False
+    db.commit()
+    return {"ok": True, "physicalTicketsSoldOut": False}
 
 
 @router.get("/tickets")

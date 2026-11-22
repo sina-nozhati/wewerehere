@@ -91,8 +91,18 @@ def require_memory_session(db: Session, token: str | None, event: Event) -> Memo
     if not sess or sess.event_id != event.id:
         raise HTTPException(401, {"error": "session_required"})
     ticket = db.get(Ticket, sess.ticket_id)
-    if not ticket or ticket.status != "active" or ticket.event_id != event.id:
+    if not ticket or ticket.status != "active":
         raise HTTPException(403, {"error": "ticket_inactive"})
+    if ticket.event_id != event.id:
+        from app.services.song_service import get_event_memory_winner, get_previous_event
+        prev_ev = get_previous_event(db, event.id)
+        is_prev_winner = False
+        if prev_ev:
+            prev_winner = get_event_memory_winner(db, prev_ev.id)
+            if prev_winner and prev_winner.get("ticket", {}).get("id") == ticket.id:
+                is_prev_winner = True
+        if not is_prev_winner:
+            raise HTTPException(403, {"error": "ticket_inactive"})
     return sess
 
 
@@ -124,6 +134,14 @@ def gate_with_serial(
             Ticket.status == "active",
         )
     )
+    if not ticket:
+        from app.services.song_service import get_event_memory_winner, get_previous_event
+        prev_ev = get_previous_event(db, event.id)
+        if prev_ev:
+            prev_winner = get_event_memory_winner(db, prev_ev.id)
+            if prev_winner and prev_winner.get("ticket", {}).get("public_code") == serial:
+                ticket = db.get(Ticket, prev_winner["ticket"]["id"])
+
     if not ticket:
         # Same error shape for wrong event / revoked / unknown — no leakage
         raise HTTPException(403, {"error": "code_rejected"})

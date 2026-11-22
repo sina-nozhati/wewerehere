@@ -3,7 +3,7 @@ import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -138,6 +138,7 @@ def _migrate_sqlite_columns():
             ("location_lng", "FLOAT"),
             ("location_label", "VARCHAR(280) NOT NULL DEFAULT ''"),
             ("location_published", "BOOLEAN NOT NULL DEFAULT 0"),
+            ("physical_tickets_sold_out", "BOOLEAN NOT NULL DEFAULT 0"),
         ],
         "memory_items": [
             ("title", "VARCHAR(200) NOT NULL DEFAULT ''"),
@@ -366,6 +367,17 @@ else:
         allow_headers=["Content-Type", "Authorization"],
     )
 
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    if request.url.path.startswith("/assets/") or request.url.path.startswith("/vids/"):
+        response.headers.setdefault("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
+    return response
+
+
 app.include_router(public.router)
 app.include_router(admin.router)
 app.include_router(support.router)
@@ -376,23 +388,71 @@ app.include_router(storage_admin.router)
 if settings.public_media_dir.exists():
     app.mount("/storage/public", StaticFiles(directory=str(settings.public_media_dir)), name="public-storage")
 
+assets_dir = ROOT / "assets"
+if assets_dir.is_dir():
+    app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
-def _safe_static_path(rel: str) -> Path:
-    rel = rel.lstrip("/")
-    if rel in ("", "index", "index.html"):
-        rel = "index.html"
-    elif rel == "admin":
-        rel = "admin.html"
-    elif rel == "track":
-        rel = "track.html"
-    elif rel == "support":
-        rel = "support.html"
-    elif rel == "episodes":
-        rel = "episodes.html"
-    file_path = (ROOT / rel).resolve()
-    if not str(file_path).startswith(str(ROOT.resolve())):
-        raise HTTPException(403, "forbidden")
-    return file_path
+vids_dir = ROOT / "vids"
+if vids_dir.is_dir():
+    app.mount("/vids", StaticFiles(directory=str(vids_dir)), name="vids")
+
+PUBLIC_PAGES = {
+    "": "index.html",
+    "index": "index.html",
+    "index.html": "index.html",
+    "admin": "admin.html",
+    "admin.html": "admin.html",
+    "track": "track.html",
+    "track.html": "track.html",
+    "support": "support.html",
+    "support.html": "support.html",
+    "episodes": "episodes.html",
+    "episodes.html": "episodes.html",
+    "memories": "memories.html",
+    "memories.html": "memories.html",
+}
+
+PUBLIC_ROOT_FILES = {
+    "tickets.js": "tickets.js",
+    "ticket-a.svg": "ticket-a.svg",
+    "ticket-b.svg": "ticket-b.svg",
+    "mahi.svg": "mahi.svg",
+    "favicon.ico": "assets/wwh-favicon.jpg",
+    "apple-touch-icon.jpg": "assets/apple-touch-icon.jpg",
+    "wwh-favicon.jpg": "assets/wwh-favicon.jpg",
+}
+
+BLOCKED_SEGMENTS = {
+    "backend", "storage", "data", "uploads", "docs",
+    "scripts", "node_modules", ".agent", ".agents", ".cursor",
+    ".deploy-test-backups", ".freebuff", ".git", ".opencode",
+    ".pytest_cache", ".ua", "__pycache__"
+}
+
+
+def _safe_static_path(rel: str) -> Path | None:
+    rel = rel.lstrip("/").strip()
+    if not rel:
+        target = ROOT / "index.html"
+        return target if target.is_file() else None
+
+    # Block any hidden file, dot segments, or forbidden directories
+    parts = Path(rel).parts
+    for part in parts:
+        if part in (".", "..", "") or part.startswith("."):
+            return None
+        if part.lower() in BLOCKED_SEGMENTS:
+            return None
+
+    if rel in PUBLIC_PAGES:
+        target = ROOT / PUBLIC_PAGES[rel]
+        return target if target.is_file() else None
+
+    if rel in PUBLIC_ROOT_FILES:
+        target = ROOT / PUBLIC_ROOT_FILES[rel]
+        return target if target.is_file() else None
+
+    return None
 
 
 @app.get("/events/{slug}/memories")
@@ -401,16 +461,28 @@ def memories_page(slug: str):
     fp = (ROOT / "memories.html").resolve()
     if not fp.is_file():
         raise HTTPException(404)
-    return FileResponse(fp)
+    return FileResponse(
+        fp,
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "SAMEORIGIN",
+        },
+    )
 
 
 @app.get("/{full_path:path}")
 def spa_static(full_path: str):
-    if full_path.startswith("api/"):
+    if full_path.startswith("api/") or full_path.startswith("storage/public"):
         raise HTTPException(404)
     fp = _safe_static_path(full_path)
-    if fp.is_file():
-        return FileResponse(fp)
+    if fp and fp.is_file():
+        headers = {
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "SAMEORIGIN",
+        }
+        if fp.suffix.lower() == ".html":
+            headers["Cache-Control"] = "no-cache"
+        return FileResponse(fp, headers=headers)
     raise HTTPException(404)
 
 

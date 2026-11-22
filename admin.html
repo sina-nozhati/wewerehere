@@ -875,6 +875,7 @@
           <button type="button" class="btn btn--ghost" id="publish-event-btn">انتشار</button>
           <button type="button" class="btn btn--ghost" id="open-sales-btn">باز کردن رزرو</button>
           <button type="button" class="btn btn--ghost" id="close-sales-btn">بستن رزرو</button>
+          <button type="button" class="btn btn--ghost" id="toggle-physical-btn">بستن/باز کردن بلیت فیزیکی</button>
         </div>
         <div class="status-badges" id="event-live-status"></div>
         <div id="event-form-alert" class="form-banner" hidden></div>
@@ -899,6 +900,7 @@
             <div><label for="ev-loc-label">نام مکان روی نقشه</label><input id="ev-loc-label" maxlength="280" placeholder="مثلاً مجموعه رستوران و اقامتی گیلانشاه"></div>
             <div><label for="ev-loc-paste">چسباندن لینک نشان / گوگل‌مپ</label><input id="ev-loc-paste" dir="ltr" placeholder="https://neshan.org/maps/places/…#c37.492-49.405-16z" autocomplete="off"></div>
             <label class="loc-toggle"><input type="checkbox" id="ev-loc-published"> انتشار مکان روی صفحه پیگیری</label>
+            <label class="loc-toggle" style="margin-top:8px;"><input type="checkbox" id="ev-physical-sold-out"> اتمام ظرفیت بلیت فیزیکی (عدم امکان درخواست کارت چاپی)</label>
             <div id="ev-map-picker" role="application" aria-label="انتخاب مکان روی نقشه"></div>
           </div>
           <div><label for="ev-card">شماره کارت پرداخت (اختیاری)</label><input id="ev-card" dir="ltr" inputmode="numeric"></div>
@@ -1777,6 +1779,7 @@
       el.innerHTML =
         statusBadge('وضعیت: ' + st, stCls) +
         statusBadge('رزرو: ' + (e.salesStatus || 'closed'), salesCls) +
+        (e.physicalTicketsSoldOut ? statusBadge('کارت فیزیکی: تمام شد', 'badge--pending') : statusBadge('کارت فیزیکی: فعال', 'badge--published')) +
         (e.isFeatured ? statusBadge('★ رویداد لندینگ', 'badge--featured') : statusBadge('لندینگ: خیر', 'badge--draft'));
     }
 
@@ -1931,6 +1934,7 @@
       document.getElementById('ev-lng').value = e.locationLng != null ? e.locationLng : '';
       document.getElementById('ev-loc-label').value = e.locationLabel || '';
       document.getElementById('ev-loc-published').checked = !!e.locationPublished;
+      document.getElementById('ev-physical-sold-out').checked = !!e.physicalTicketsSoldOut;
       if (eventAtPicker && e.eventAt) {
         var local = utcIsoToPickerDate(e.eventAt);
         if (local) eventAtPicker.setDate(local, false);
@@ -1981,6 +1985,7 @@
       document.getElementById('ev-loc-label').value = '';
       document.getElementById('ev-loc-paste').value = '';
       document.getElementById('ev-loc-published').checked = false;
+      document.getElementById('ev-physical-sold-out').checked = false;
       if (adminMapMarker.current) {
         try { adminMapMarker.current.remove(); } catch (err) { /* ignore */ }
         adminMapMarker.current = null;
@@ -2091,6 +2096,7 @@
         locationLng: (window.WwhMap ? WwhMap.parseCoord(document.getElementById('ev-lng').value) : null),
         locationLabel: document.getElementById('ev-loc-label').value.trim(),
         locationPublished: !!document.getElementById('ev-loc-published').checked,
+        physicalTicketsSoldOut: !!document.getElementById('ev-physical-sold-out').checked,
         capacity: capacity,
         ticketPrice: Number(String(document.getElementById('ev-price').value).replace(/\D/g, '')) || 0,
         paymentCardNumber: document.getElementById('ev-card').value.trim(),
@@ -2181,6 +2187,18 @@
         .then(function () {
           editingEventSalesStatus = 'closed';
           loadEvents();
+        });
+    });
+    document.getElementById('toggle-physical-btn').addEventListener('click', function () {
+      if (!editingEventId) return;
+      api('/api/admin/events/' + editingEventId + '/toggle-physical-tickets', { method: 'POST', headers: authHeaders() })
+        .then(function (res) {
+          document.getElementById('ev-physical-sold-out').checked = !!res.physicalTicketsSoldOut;
+          loadEvents();
+          alert(res.physicalTicketsSoldOut ? 'ظرفیت بلیت فیزیکی این رویداد بسته شد (به عنوان «تمام شد» نمایش داده می‌شود).' : 'امکان درخواست بلیت فیزیکی برای این رویداد باز شد.');
+        })
+        .catch(function (e2) {
+          alert('خطا در تغییر وضعیت بلیت فیزیکی: ' + (e2.message || 'خطا'));
         });
     });
 
