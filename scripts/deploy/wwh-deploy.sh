@@ -482,8 +482,32 @@ rollback_deployment() {
     fi
   fi
 
-  # 2. Preserve live transactional data (never blindly overwrite data.sqlite on code deploy failures)
-  log "[rollback] Live database preserved (use 'wwh-deploy rollback <archive.tar.gz>' or 'python backend/scripts/reconcile_db.py' if DB restore/merge is needed)"
+  # 2. Restore database and storage from pre-deploy backup taken right before changes
+  local backup_file="${LATEST_BACKUP:-}"
+  if [[ -z "$backup_file" || ! -f "$backup_file" ]]; then
+    local newest_backup
+    newest_backup="$(ls -1t "${BACKUP_DIR}"/wewerehere-*.tar.gz 2>/dev/null | head -1 || echo "")"
+    if [[ -n "$newest_backup" && -f "$newest_backup" ]]; then
+      backup_file="$newest_backup"
+    fi
+  fi
+
+  if [[ -n "$backup_file" && -f "$backup_file" && "$backup_file" == *.tar.gz ]]; then
+    log "[rollback] Restoring database and storage from pre-deploy backup: $backup_file"
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      run tar -xzf "$backup_file" -C "$APP_DIR"
+    else
+      if [[ -f "$APP_DIR/data.sqlite" ]]; then
+        local pre_restore_ts
+        pre_restore_ts="$(date -u +%Y%m%dT%H%M%SZ)"
+        cp -a "$APP_DIR/data.sqlite" "$APP_DIR/data.sqlite.failed-deploy-${pre_restore_ts}" 2>/dev/null || true
+      fi
+      tar -xzf "$backup_file" -C "$APP_DIR" 2>/dev/null || true
+    fi
+    rolled_back=1
+  else
+    log "[rollback] Live database preserved (no pre-deploy backup archive found)"
+  fi
 
   if [[ "$rolled_back" -eq 1 ]]; then
     log "[rollback] Re-installing dependencies and fixing permissions..."
@@ -590,7 +614,9 @@ cmd_update() {
   fi
   ensure_data_dirs
   install_ticket_font
-  do_migrate || true
+  if ! do_migrate; then
+    rollback_deployment "database migration failed"
+  fi
   fix_permissions
   if ! restart_service; then
     rollback_deployment "systemctl restart $SERVICE failed"
