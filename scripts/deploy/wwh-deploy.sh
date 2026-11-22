@@ -293,7 +293,7 @@ do_git_pull() {
   fi
   log "git fetch && pull $GIT_BRANCH"
   run git -C "$APP_DIR" fetch origin
-  run git -C "$APP_DIR" checkout "$GIT_BRANCH"
+  run git -C "$APP_DIR" checkout -f "$GIT_BRANCH"
   run git -C "$APP_DIR" pull --ff-only origin "$GIT_BRANCH"
 }
 
