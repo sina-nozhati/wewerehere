@@ -782,8 +782,9 @@
     </div>
 
     <nav class="nav-scroll" id="night-nav" role="tablist" aria-label="بخش‌های صفحه شب" hidden>
+      <button type="button" data-tab="gallery" role="tab" aria-selected="true" class="is-on">گالری شب</button>
       <button type="button" data-tab="upload" role="tab" aria-selected="false">آپلود</button>
-      <button type="button" data-tab="gallery" role="tab" aria-selected="false">گالری شب</button>
+      <button type="button" data-tab="songs" role="tab" aria-selected="false">پیشنهاد آهنگ</button>
       <button type="button" data-tab="archive" role="tab" aria-selected="false">آرشیو اجرا</button>
       <button type="button" data-tab="mine" role="tab" aria-selected="false">مال من</button>
     </nav>
@@ -800,7 +801,27 @@
 
     <section class="view" id="view-gallery" hidden>
       <p class="gate-banner" id="gallery-gate-banner">برای لایک و نظر، سریال رزرو ورود را وارد کن.</p>
+      <div class="leaderboard" id="leaderboard" hidden>
+        <p class="leaderboard__title">رتبه لایک این شب</p>
+        <p class="muted" style="text-align:center;font-size:0.78rem;margin-bottom:10px;">سه نفر اول می‌تونن برای اجرای بعد آهنگ انتخاب کنن.</p>
+        <div class="leaderboard__row" id="leaderboard-row"></div>
+      </div>
+      <p class="muted" style="text-align:center;margin-bottom:14px;" id="gallery-hint">خاطرات تأییدشده مهمان‌ها</p>
+      <div class="grid-2" id="gallery-grid"></div>
+      <p class="empty-state" id="gallery-empty" hidden><strong>هنوز خاطره‌ای منتشر نشده.</strong><br>بعد از تأیید ادمین اینجا می‌آید.</p>
+      <div class="wwh-gallery-error" id="gallery-error" role="alert" hidden>
+        <div class="wwh-gallery-error__icon" aria-hidden="true">†</div>
+        <h3 class="wwh-gallery-error__title">ارتباط با گالری برقرار نشد</h3>
+        <p class="wwh-gallery-error__msg" id="gallery-error-msg">در دریافت خاطرات مشکلی پیش آمد. اتصال اینترنت را بررسی کنید.</p>
+        <button type="button" class="wwh-gallery-error__retry" id="gallery-retry-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg>
+          تلاش مجدد
+        </button>
+      </div>
+    </section>
 
+    <!-- Dedicated Songs View: Winner Stage Pick & Band Rehearsal Suggestions -->
+    <section class="view" id="view-songs" hidden>
       <!-- Exclusive Winner Song Selection Form (Visible ONLY to the contest winner) -->
       <div class="wwh-winner-form-card" id="winner-form-card" hidden>
         <div class="wwh-winner-form-title">
@@ -894,7 +915,7 @@
         </div>
       </div>
 
-      <!-- General Song Suggestions & Practice List (Distinct Container) -->
+      <!-- Dedicated Band Rehearsal Song Suggestions Box -->
       <div class="wwh-suggestions-container" id="suggestions-container">
         <div class="wwh-suggestions-header">
           <div class="wwh-suggestions-title-group">
@@ -907,17 +928,12 @@
           <span class="wwh-suggestions-badge">آزاد برای همه</span>
         </div>
 
-        <button type="button" class="wwh-suggestions-toggle" id="suggestions-toggle" aria-expanded="false">
-          <span style="display:inline-flex;align-items:center;gap:8px;">
-            <span>➕</span>
-            <span>ثبت پیشنهاد آهنگ جدید</span>
-          </span>
-          <span class="wwh-suggestions-toggle__chevron" aria-hidden="true">▼</span>
-        </button>
-
-        <div class="wwh-suggestions-panel" id="suggestions-panel" hidden>
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
-            <span style="font-size:0.88rem;font-weight:700;color:#F0F0F2;">فرم ارسال پیشنهاد موسیقی</span>
+        <div class="wwh-suggestions-box-card">
+          <div class="wwh-suggestions-box-card__header">
+            <span class="wwh-suggestions-box-card__title">
+              <span aria-hidden="true">🎶</span>
+              ثبت پیشنهاد آهنگ جدید برای تمرین
+            </span>
             <span class="chip" id="suggestions-count">۰ پیشنهاد</span>
           </div>
           <form id="suggest-song-form" class="wwh-suggestions-form">
@@ -941,33 +957,18 @@
                 <input type="text" id="suggest-note-input" placeholder="مثلاً: خیلی حس و حال خوبی داره" maxlength="200" autocomplete="off">
               </div>
             </div>
-            <button type="submit" class="mem-btn mem-btn--soft" id="suggest-submit-btn" style="margin-top:4px;">ثبت در لیست تمرین گروه</button>
+            <button type="submit" class="mem-btn mem-btn--soft" id="suggest-submit-btn" style="margin-top:6px;">ثبت در لیست تمرین گروه</button>
             <p class="err" id="suggest-form-err" role="alert" hidden></p>
             <p class="ok" id="suggest-form-ok" role="status" hidden></p>
           </form>
         </div>
 
+        <div class="wwh-suggestions-list-header">
+          <h4 style="margin:16px 0 8px;font-size:0.9rem;font-weight:700;color:#DDD;">لیست آهنگ‌های پیشنهادی همراهان</h4>
+        </div>
         <div class="wwh-suggestions-list" id="suggestions-list">
           <p class="empty-state" id="suggestions-empty"><strong>هنوز آهنگی پیشنهاد نشده.</strong><br>اولین نفری باش که قطعه مورد علاقه‌اش را پیشنهاد می‌دهد!</p>
         </div>
-      </div>
-
-      <div class="leaderboard" id="leaderboard" hidden>
-        <p class="leaderboard__title">رتبه لایک این شب</p>
-        <p class="muted" style="text-align:center;font-size:0.78rem;margin-bottom:10px;">سه نفر اول می‌تونن برای اجرای بعد آهنگ انتخاب کنن.</p>
-        <div class="leaderboard__row" id="leaderboard-row"></div>
-      </div>
-      <p class="muted" style="text-align:center;margin-bottom:14px;" id="gallery-hint">خاطرات تأییدشده مهمان‌ها</p>
-      <div class="grid-2" id="gallery-grid"></div>
-      <p class="empty-state" id="gallery-empty" hidden><strong>هنوز خاطره‌ای منتشر نشده.</strong><br>بعد از تأیید ادمین اینجا می‌آید.</p>
-      <div class="wwh-gallery-error" id="gallery-error" role="alert" hidden>
-        <div class="wwh-gallery-error__icon" aria-hidden="true">†</div>
-        <h3 class="wwh-gallery-error__title">ارتباط با گالری برقرار نشد</h3>
-        <p class="wwh-gallery-error__msg" id="gallery-error-msg">در دریافت خاطرات مشکلی پیش آمد. اتصال اینترنت را بررسی کنید.</p>
-        <button type="button" class="wwh-gallery-error__retry" id="gallery-retry-btn">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg>
-          تلاش مجدد
-        </button>
       </div>
     </section>
 
@@ -1235,8 +1236,9 @@
     if (on) nightNav.classList.add('is-on');
     else nightNav.classList.remove('is-on');
     if (!on) {
-      ['gallery', 'archive', 'mine', 'upload'].forEach(function (t) {
-        document.getElementById('view-' + t).hidden = true;
+      ['gallery', 'archive', 'mine', 'upload', 'songs'].forEach(function (t) {
+        var el = document.getElementById('view-' + t);
+        if (el) el.hidden = true;
       });
       setTicketChip(null);
       setUploadsRemaining(null);
@@ -1250,12 +1252,18 @@
       btn.classList.toggle('is-on', on);
       btn.setAttribute('aria-selected', on ? 'true' : 'false');
     });
-    ['gallery', 'archive', 'mine', 'upload'].forEach(function (t) {
-      document.getElementById('view-' + t).hidden = t !== tab;
+    ['gallery', 'archive', 'mine', 'upload', 'songs'].forEach(function (t) {
+      var el = document.getElementById('view-' + t);
+      if (el) el.hidden = t !== tab;
     });
     if (tab === 'gallery') loadGallery();
     if (tab === 'archive') renderArchive();
     if (tab === 'mine') loadMine();
+    if (tab === 'songs') {
+      fetchWinnerSong();
+      checkWinnerStatus();
+      loadSongSuggestions();
+    }
   }
 
   var galleryItemsCache = [];
@@ -1635,7 +1643,7 @@
           if (winnerChip) {
             winnerChip.hidden = false;
             winnerChip.onclick = function () {
-              switchTab('gallery');
+              switchTab('songs');
               winnerCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
               var tIn = document.getElementById('winner-song-title-input');
               if (tIn) tIn.focus();
@@ -2153,7 +2161,7 @@
           var goBtn = document.getElementById('mine-go-pick-btn');
           if (goBtn) {
             goBtn.addEventListener('click', function () {
-              switchTab('gallery');
+              switchTab('songs');
               var wCard = document.getElementById('winner-form-card');
               if (wCard) {
                 wCard.hidden = false;

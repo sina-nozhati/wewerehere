@@ -1091,6 +1091,41 @@ a.btn,
   transform: rotate(180deg);
 }
 
+/* Dedicated Suggestion Box Card inside Songs Tab */
+.wwh-suggestions-box-card {
+  margin: 14px 0 16px;
+  padding: 16px;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid rgba(232, 107, 130, 0.28);
+  background: rgba(14, 13, 16, 0.85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.wwh-suggestions-box-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wwh-suggestions-box-card__title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #FFF;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wwh-suggestions-list-header {
+  margin-top: 18px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .wwh-suggestions-panel {
   display: flex;
   flex-direction: column;
