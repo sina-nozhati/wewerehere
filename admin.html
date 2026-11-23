@@ -1344,6 +1344,10 @@
     function showPanel(id, opts) {
       opts = opts || {};
       if (ADMIN_PANELS.indexOf(id) < 0) id = 'dashboard';
+      if (currentPanel !== id) {
+        if (typeof revokeMemBlobs === 'function') revokeMemBlobs();
+        if (typeof revokeReceiptObjectUrls === 'function') revokeReceiptObjectUrls();
+      }
       currentPanel = id;
       document.querySelectorAll('.admin-panel').forEach(function (el) {
         el.hidden = el.getAttribute('data-panel') !== id;
@@ -2681,17 +2685,44 @@
     }
 
     var _receiptObjectUrls = [];
+    var _receiptAbortController = null;
+    var _receiptObserver = null;
+
     function revokeReceiptObjectUrls() {
+      if (_receiptAbortController) {
+        try { _receiptAbortController.abort(); } catch (e) {}
+        _receiptAbortController = null;
+      }
+      if (_receiptObserver) {
+        try { _receiptObserver.disconnect(); } catch (e) {}
+        _receiptObserver = null;
+      }
       _receiptObjectUrls.forEach(function (u) {
         try { URL.revokeObjectURL(u); } catch (e) { /* ignore */ }
       });
       _receiptObjectUrls = [];
     }
+
     function hydrateReceiptImages(container) {
       if (!TOKEN) return;
-      container.querySelectorAll('img[data-receipt-order]').forEach(function (img) {
+      if (_receiptAbortController) {
+        try { _receiptAbortController.abort(); } catch (e) {}
+      }
+      _receiptAbortController = new AbortController();
+      var signal = _receiptAbortController.signal;
+
+      if (_receiptObserver) {
+        try { _receiptObserver.disconnect(); } catch (e) {}
+        _receiptObserver = null;
+      }
+
+      var imgs = container.querySelectorAll('img[data-receipt-order]');
+      if (!imgs.length) return;
+
+      function loadSingleReceipt(img) {
         var oid = img.getAttribute('data-receipt-order');
-        fetch('/api/admin/receipts/' + oid, { headers: { Authorization: 'Bearer ' + TOKEN } })
+        if (!oid) return;
+        fetch('/api/admin/receipts/' + oid, { headers: { Authorization: 'Bearer ' + TOKEN }, signal: signal })
           .then(function (r) {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.blob();
@@ -2701,11 +2732,29 @@
             _receiptObjectUrls.push(url);
             img.src = url;
           })
-          .catch(function () {
+          .catch(function (err) {
+            if (err && err.name === 'AbortError') return;
             img.alt = 'خطا در بارگذاری تصویر رسید';
             img.classList.add('receipt-img--error');
           });
-      });
+      }
+
+      if ('IntersectionObserver' in window) {
+        _receiptObserver = new IntersectionObserver(function (entries, observer) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              observer.unobserve(entry.target);
+              loadSingleReceipt(entry.target);
+            }
+          });
+        }, { rootMargin: '200px 0px' });
+
+        imgs.forEach(function (img) {
+          _receiptObserver.observe(img);
+        });
+      } else {
+        imgs.forEach(loadSingleReceipt);
+      }
     }
 
     function loadOrders() {
@@ -2948,13 +2997,24 @@
       } catch (err) { /* ignore */ }
     }
 
+    var _memAbortController = null;
+    var _memObserver = null;
+
     function revokeMemBlobs() {
+      if (_memAbortController) {
+        try { _memAbortController.abort(); } catch (e) {}
+        _memAbortController = null;
+      }
+      if (_memObserver) {
+        try { _memObserver.disconnect(); } catch (e) {}
+        _memObserver = null;
+      }
       memBlobUrls.forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) {} });
       memBlobUrls = [];
     }
 
-    function memAuthFetch(url) {
-      return fetch(url, { headers: { Authorization: 'Bearer ' + TOKEN } }).then(function (r) {
+    function memAuthFetch(url, signal) {
+      return fetch(url, { headers: { Authorization: 'Bearer ' + TOKEN }, signal: signal }).then(function (r) {
         if (r.status === 401) throw new Error('unauthorized');
         if (!r.ok) throw new Error('fetch failed');
         return r.blob();
@@ -3011,6 +3071,10 @@
     }
 
     function loadMemories() {
+      revokeMemBlobs();
+      _memAbortController = new AbortController();
+      var signal = _memAbortController.signal;
+
       updateMemoriesLink();
       loadMemoryAudit();
       renderMemoriesSkeleton();
@@ -3025,7 +3089,6 @@
             ' · رد ' + toFa(counts.rejected || 0);
         }
         var list = document.getElementById('mem-list');
-        revokeMemBlobs();
         if (!res.items || !res.items.length) {
           list.innerHTML = '<p class="muted">موردی نیست.</p>';
           syncMemBulkBtns();
@@ -3043,8 +3106,12 @@
           var timeLine = 'آپلود ' + escapeHtml(fmtMemTime(m.uploadedAt || m.createdAt)) +
             (m.reviewedAt ? (' · بررسی ' + escapeHtml(fmtMemTime(m.reviewedAt))) : '');
           var socialLine = '♥ ' + toFa(m.likeCount || 0) + ' · نظر ' + toFa(m.commentCount || 0);
+          var thumbUrl = m.thumbUrl || m.thumb_url || m.url;
+          var fullUrl = m.url;
           return '<div class="media-card" data-mem-id="' + m.id + '">' +
-            '<div class="mem-preview" data-src="' + escapeHtml(m.url) + '" data-kind="' + escapeHtml(m.mediaKind) + '" data-mime="' + escapeHtml(m.mime || '') + '" style="height:120px;background:#111;display:flex;align-items:center;justify-content:center;color:#666;font-size:0.75rem;">…</div>' +
+            '<div class="mem-preview" data-src="' + escapeHtml(thumbUrl) + '" data-full="' + escapeHtml(fullUrl) + '" data-kind="' + escapeHtml(m.mediaKind) + '" data-mime="' + escapeHtml(m.mime || '') + '" style="height:120px;background:#111;position:relative;display:flex;align-items:center;justify-content:center;color:#666;font-size:0.75rem;cursor:pointer;overflow:hidden;" title="کلیک برای مشاهده کامل">' +
+              '<span class="mem-preview-loading" style="color:#555;">…</span>' +
+            '</div>' +
             '<div class="meta">' +
             '<label style="display:flex;align-items:center;gap:8px;font-size:0.78rem;">' +
             '<input type="checkbox" class="mem-check" value="' + m.id + '"> #' + toFa(m.id) + ' · ' + kind + ' · ' + st +
@@ -3063,21 +3130,60 @@
             '</div></div></div>';
         }).join('');
         syncMemBulkBtns();
-        list.querySelectorAll('.mem-preview').forEach(function (box) {
+
+        var previewBoxes = list.querySelectorAll('.mem-preview');
+        function hydrateMemBox(box) {
           var src = box.getAttribute('data-src');
+          var fullSrc = box.getAttribute('data-full');
           var kind = box.getAttribute('data-kind');
-          memAuthFetch(src).then(function (blob) {
+          memAuthFetch(src, signal).then(function (blob) {
             var u = URL.createObjectURL(blob);
             memBlobUrls.push(u);
             if (kind === 'video') {
-              box.innerHTML = '<video src="' + u + '" controls preload="metadata" style="width:100%;height:120px;object-fit:cover;display:block;"></video>';
+              box.innerHTML = '<div style="position:relative;width:100%;height:100%;">' +
+                '<img src="' + u + '" alt="" loading="lazy" style="width:100%;height:120px;object-fit:cover;display:block;">' +
+                '<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.38);font-size:1.6rem;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.8);">▶</span>' +
+                '</div>';
             } else {
               box.innerHTML = '<img src="' + u + '" alt="" loading="lazy" style="width:100%;height:120px;object-fit:cover;display:block;">';
             }
-          }).catch(function () {
+          }).catch(function (err) {
+            if (err && err.name === 'AbortError') return;
             box.textContent = 'پیش‌نمایش در دسترس نیست';
           });
-        });
+
+          box.onclick = function () {
+            if (kind === 'video') {
+              box.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:120px;background:#000;color:#aaa;font-size:0.75rem;">در حال بارگذاری ویدیو…</div>';
+              memAuthFetch(fullSrc, null).then(function (fullBlob) {
+                var fullU = URL.createObjectURL(fullBlob);
+                memBlobUrls.push(fullU);
+                box.innerHTML = '<video src="' + fullU + '" controls autoplay style="width:100%;height:120px;object-fit:cover;display:block;"></video>';
+              }).catch(function () {
+                window.open(fullSrc, '_blank');
+              });
+            } else {
+              window.open(fullSrc, '_blank');
+            }
+          };
+        }
+
+        if ('IntersectionObserver' in window) {
+          _memObserver = new IntersectionObserver(function (entries, observer) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                observer.unobserve(entry.target);
+                hydrateMemBox(entry.target);
+              }
+            });
+          }, { rootMargin: '250px 0px' });
+
+          previewBoxes.forEach(function (box) {
+            _memObserver.observe(box);
+          });
+        } else {
+          previewBoxes.forEach(hydrateMemBox);
+        }
       }).catch(function (e) { if (e.message === 'unauthorized') showLogin(); });
     }
 

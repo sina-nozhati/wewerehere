@@ -867,7 +867,7 @@ async def memories_file(
 
 @router.get("/api/memories/file/{item_id}/thumb")
 @router.get("/api/memories/thumb/{item_id}")
-async def memories_thumb(
+def memories_thumb(
     item_id: int,
     db: Session = Depends(get_db),
     creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)] = None,

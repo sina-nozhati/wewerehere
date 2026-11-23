@@ -832,7 +832,11 @@
         <div class="wwh-winner-song-header">
           <div class="wwh-winner-song-title-group">
             <span class="wwh-winner-song-icon" aria-hidden="true">🎷</span>
-            <h3 class="wwh-winner-song-heading" id="winner-banner-heading">قطعه منتخب برنده خاطرات</h3>
+            <h3 class="wwh-winner-song-heading" id="winner-banner-heading">قطعه اختصاصی اجرای زنده (منتخب برنده)</h3>
+            <button type="button" class="wwh-info-trigger" id="winner-rule-trigger" aria-label="راهنمای ماجرای انتخاب قطعه توسط برنده" title="ماجرای انتخاب قطعه چیه؟">
+              <span class="wwh-info-trigger__icon" aria-hidden="true">؟</span>
+              <span class="wwh-info-trigger__label">داستان چیه؟</span>
+            </button>
           </div>
           <span class="wwh-winner-song-badge" id="winner-banner-badge">اجرای قطعی در این رویداد</span>
         </div>
@@ -844,50 +848,104 @@
         </div>
       </div>
 
-      <!-- General Song Suggestions & Practice List (Expandable Panel) -->
-      <button type="button" class="wwh-suggestions-toggle" id="suggestions-toggle" aria-expanded="false">
-        <span style="display:inline-flex;align-items:center;gap:8px;">
-          <span>🎵</span>
-          <span>پیشنهاد آهنگ برای لیست تمرین گروه</span>
-        </span>
-        <span class="wwh-suggestions-toggle__chevron" aria-hidden="true">▼</span>
-      </button>
-
-      <div class="wwh-suggestions-panel" id="suggestions-panel" hidden>
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-          <h3 class="wwh-suggestions-heading">
-            <span aria-hidden="true">🎸</span>
-            <span>لیست قطعات پیشنهادی مخاطبان</span>
-          </h3>
-          <span class="chip" id="suggestions-count">۰ پیشنهاد</span>
+      <!-- Winner Song Rule Modal -->
+      <div class="wwh-modal-overlay" id="winner-rule-modal" hidden role="dialog" aria-modal="true" aria-labelledby="winner-modal-title">
+        <div class="wwh-modal-card">
+          <div class="wwh-modal-header">
+            <div class="wwh-modal-title-wrap">
+              <span class="wwh-modal-icon" aria-hidden="true">🏆</span>
+              <h3 class="wwh-modal-title" id="winner-modal-title">ماجرای قطعه انتخابی برنده چیه؟</h3>
+            </div>
+            <button type="button" class="wwh-modal-close" id="winner-rule-close-btn" aria-label="بستن پنجره">×</button>
+          </div>
+          <div class="wwh-modal-content">
+            <div class="wwh-rule-step">
+              <span class="wwh-rule-num">۱</span>
+              <div class="wwh-rule-text">
+                <strong>ثبت خاطره در شب رویداد:</strong>
+                <p>هر کسی که در رویداد حضور داشته، می‌تونه عکس‌ها و ویدیوهای قشنگ اون شب رو در بخش خاطرات آپلود کنه.</p>
+              </div>
+            </div>
+            <div class="wwh-rule-step">
+              <span class="wwh-rule-num">۲</span>
+              <div class="wwh-rule-text">
+                <strong>لایک مهمانان تا شب اجرای بعد:</strong>
+                <p>همه همراهان به خاطره‌ها لایک می‌دن و هر عکسی که تا شب اجرای بعدی بیشترین لایک رو نگه داره، رتبه اول مسابقه می‌شه!</p>
+              </div>
+            </div>
+            <div class="wwh-rule-step">
+              <span class="wwh-rule-num">۳</span>
+              <div class="wwh-rule-text">
+                <strong>جایزه طلایی روی استیج:</strong>
+                <p>اگر رتبه اول شدی، افتخار انتخاب یکی از ترک‌های اجرای بعدی با شماست! ما متعهدیم که اون آهنگ رو اختصاصی روی صحنه بنوازیم.</p>
+              </div>
+            </div>
+            <div class="wwh-rule-step wwh-rule-step--challenge">
+              <span class="wwh-rule-num">⚡</span>
+              <div class="wwh-rule-text">
+                <strong>چالش بند و قانون یک هفته قبل:</strong>
+                <p>هر چقدر هم آهنگ عجیب یا سخت باشه ما مجبوریم بزنیمش و این یه چالش جذاب برای ماست! فقط اگه قطعه‌ات سخته، لطفاً <em>حداقل یک هفته قبل از اجرا</em> بهمون بگو تا بچه‌ها بتونن با بالاترین کیفیت تمرینش کنن.</p>
+              </div>
+            </div>
+          </div>
+          <div class="wwh-modal-footer">
+            <button type="button" class="mem-btn mem-btn--sm" id="winner-rule-ok-btn">متوجه شدم، بزن بریم!</button>
+          </div>
         </div>
-        <p class="muted" style="font-size:0.82rem;margin-top:2px;">آهنگ مورد علاقه‌ات را برای تمرین و اجرای گروه پیشنهاد بده یا به قطعات دیگران رأی بده:</p>
+      </div>
 
-        <form id="suggest-song-form" class="wwh-suggestions-form">
-          <div class="wwh-suggestions-form-row">
+      <!-- General Song Suggestions & Practice List (Distinct Container) -->
+      <div class="wwh-suggestions-container" id="suggestions-container">
+        <div class="wwh-suggestions-header">
+          <div class="wwh-suggestions-title-group">
+            <span class="wwh-suggestions-icon" aria-hidden="true">🎸</span>
             <div>
-              <label for="suggest-title-input">نام قطعه / آهنگ *</label>
-              <input type="text" id="suggest-title-input" required placeholder="مثلاً: Bohemian Rhapsody" autocomplete="off">
-            </div>
-            <div>
-              <label for="suggest-artist-input">نام خواننده یا بند *</label>
-              <input type="text" id="suggest-artist-input" required placeholder="مثلاً: Queen" autocomplete="off">
-            </div>
-          </div>
-          <div class="wwh-suggestions-form-row">
-            <div>
-              <label for="suggest-name-input">نام شما (پیشنهاد دهنده) *</label>
-              <input type="text" id="suggest-name-input" required placeholder="مثلاً: علی" autocomplete="off">
-            </div>
-            <div>
-              <label for="suggest-note-input">توضیح کوتاه (اختیاری)</label>
-              <input type="text" id="suggest-note-input" placeholder="مثلاً: انرژی خیلی خوبی داره" maxlength="200" autocomplete="off">
+              <h3 class="wwh-suggestions-title">صندوق پیشنهادات آهنگ برای تمرین گروه</h3>
+              <p class="wwh-suggestions-subtitle">هر آهنگی که دوست داری گروه ما توی تمرین‌ها بنوازه یا گوش بده رو اینجا بنویس؛ ما همه رو بررسی می‌کنیم!</p>
             </div>
           </div>
-          <button type="submit" class="mem-btn mem-btn--soft" id="suggest-submit-btn" style="margin-top:4px;">ثبت پیشنهاد آهنگ</button>
-          <p class="err" id="suggest-form-err" role="alert" hidden></p>
-          <p class="ok" id="suggest-form-ok" role="status" hidden></p>
-        </form>
+          <span class="wwh-suggestions-badge">آزاد برای همه</span>
+        </div>
+
+        <button type="button" class="wwh-suggestions-toggle" id="suggestions-toggle" aria-expanded="false">
+          <span style="display:inline-flex;align-items:center;gap:8px;">
+            <span>➕</span>
+            <span>ثبت پیشنهاد آهنگ جدید</span>
+          </span>
+          <span class="wwh-suggestions-toggle__chevron" aria-hidden="true">▼</span>
+        </button>
+
+        <div class="wwh-suggestions-panel" id="suggestions-panel" hidden>
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+            <span style="font-size:0.88rem;font-weight:700;color:#F0F0F2;">فرم ارسال پیشنهاد موسیقی</span>
+            <span class="chip" id="suggestions-count">۰ پیشنهاد</span>
+          </div>
+          <form id="suggest-song-form" class="wwh-suggestions-form">
+            <div class="wwh-suggestions-form-row">
+              <div>
+                <label for="suggest-title-input">نام قطعه / آهنگ *</label>
+                <input type="text" id="suggest-title-input" required placeholder="مثلاً: Wish You Were Here" autocomplete="off">
+              </div>
+              <div>
+                <label for="suggest-artist-input">نام خواننده یا بند *</label>
+                <input type="text" id="suggest-artist-input" required placeholder="مثلاً: Pink Floyd" autocomplete="off">
+              </div>
+            </div>
+            <div class="wwh-suggestions-form-row">
+              <div>
+                <label for="suggest-name-input">نام شما (پیشنهاد دهنده) *</label>
+                <input type="text" id="suggest-name-input" required placeholder="مثلاً: علی" autocomplete="off">
+              </div>
+              <div>
+                <label for="suggest-note-input">توضیح کوتاه (اختیاری)</label>
+                <input type="text" id="suggest-note-input" placeholder="مثلاً: خیلی حس و حال خوبی داره" maxlength="200" autocomplete="off">
+              </div>
+            </div>
+            <button type="submit" class="mem-btn mem-btn--soft" id="suggest-submit-btn" style="margin-top:4px;">ثبت در لیست تمرین گروه</button>
+            <p class="err" id="suggest-form-err" role="alert" hidden></p>
+            <p class="ok" id="suggest-form-ok" role="status" hidden></p>
+          </form>
+        </div>
 
         <div class="wwh-suggestions-list" id="suggestions-list">
           <p class="empty-state" id="suggestions-empty"><strong>هنوز آهنگی پیشنهاد نشده.</strong><br>اولین نفری باش که قطعه مورد علاقه‌اش را پیشنهاد می‌دهد!</p>
@@ -1481,11 +1539,11 @@
       if (bodyEl) bodyEl.hidden = false;
       if (headingEl) {
         var prevEvent = song.winnerEventTitle || (song.previousEvent && song.previousEvent.title) || '';
-        headingEl.textContent = prevEvent ? ('قطعه منتخب برنده خاطرات ' + prevEvent) : 'قطعه منتخب برنده خاطرات رویداد قبل';
+        headingEl.textContent = prevEvent ? ('قطعه اختصاصی رویداد (' + prevEvent + ')') : 'قطعه اختصاصی اجرای زنده (منتخب برنده)';
       }
       if (badgeEl) {
         badgeEl.hidden = false;
-        badgeEl.textContent = 'اجرای قطعی در این رویداد';
+        badgeEl.textContent = '🎷 اجرای قطعی روی استیج';
       }
       if (titleEl) titleEl.textContent = '🎷 ' + (song.title || 'قطعه منتخب');
       if (artistEl) artistEl.textContent = song.artist ? ('اثر ' + song.artist) : '';
@@ -1509,19 +1567,44 @@
       // Pending state: No song picked yet
       banner.classList.add('wwh-winner-song-banner--pending');
       banner.hidden = false;
-      if (headingEl) headingEl.textContent = 'در انتظار انتخاب قطعه توسط برنده';
+      if (headingEl) headingEl.textContent = 'قطعه اختصاصی اجرای زنده (منتخب برنده)';
       if (badgeEl) {
         badgeEl.hidden = false;
-        badgeEl.textContent = 'اجرای قطعی در این رویداد';
+        badgeEl.textContent = '🎷 اجرای قطعی روی استیج';
       }
-      if (titleEl) titleEl.textContent = 'در انتظار انتخاب آهنگ توسط برنده مسابقه خاطرات رویداد قبل';
+      if (titleEl) titleEl.textContent = 'در انتظار انتخاب قطعه توسط برنده مسابقه خاطرات';
       if (artistEl) artistEl.textContent = '';
-      if (metaEl) metaEl.textContent = 'به محض ثبت انتخاب توسط برنده مسابقه خاطرات، نام قطعه در اینجا نمایش داده می‌شود.';
+      if (metaEl) metaEl.textContent = 'برنده بیشترین لایک رویداد قبل در حال انتخاب آهنگ است. به محض ثبت، نام قطعه در این کادر قرار می‌گیرد.';
       if (noteEl) {
         noteEl.hidden = true;
         noteEl.textContent = '';
       }
     }
+  }
+
+  // Winner Rule Info Modal
+  var winnerRuleModal = document.getElementById('winner-rule-modal');
+  var winnerRuleTrigger = document.getElementById('winner-rule-trigger');
+  var winnerRuleCloseBtn = document.getElementById('winner-rule-close-btn');
+  var winnerRuleOkBtn = document.getElementById('winner-rule-ok-btn');
+
+  function openWinnerRuleModal() {
+    if (winnerRuleModal) winnerRuleModal.hidden = false;
+  }
+  function closeWinnerRuleModal() {
+    if (winnerRuleModal) winnerRuleModal.hidden = true;
+  }
+
+  if (winnerRuleTrigger) winnerRuleTrigger.addEventListener('click', openWinnerRuleModal);
+  if (winnerRuleCloseBtn) winnerRuleCloseBtn.addEventListener('click', closeWinnerRuleModal);
+  if (winnerRuleOkBtn) winnerRuleOkBtn.addEventListener('click', closeWinnerRuleModal);
+  if (winnerRuleModal) {
+    winnerRuleModal.addEventListener('click', function (e) {
+      if (e.target === winnerRuleModal) closeWinnerRuleModal();
+    });
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !winnerRuleModal.hidden) closeWinnerRuleModal();
+    });
   }
 
   function fetchWinnerSong() {

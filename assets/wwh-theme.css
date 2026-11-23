@@ -635,6 +635,46 @@ a.btn,
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wwh-info-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(224, 180, 90, 0.4);
+  background: rgba(224, 180, 90, 0.08);
+  color: #F8D98C;
+  font-family: inherit;
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 160ms ease;
+}
+
+.wwh-info-trigger:hover,
+.wwh-info-trigger:focus-visible {
+  border-color: #E0B45A;
+  background: rgba(224, 180, 90, 0.22);
+  color: #FFFFFF;
+  box-shadow: 0 0 12px rgba(224, 180, 90, 0.35);
+}
+
+.wwh-info-trigger__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #E0B45A;
+  color: #100F12;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .wwh-winner-song-icon {
@@ -708,17 +748,184 @@ a.btn,
   line-height: 1.55;
 }
 
-/* Pending banner state (waiting for winner to pick) */
+/* Pending banner state (solid gothic framed card) */
 .wwh-winner-song-banner--pending {
-  border: 1px dashed rgba(224, 180, 90, 0.35);
-  background: rgba(20, 18, 16, 0.6);
-  text-align: center;
-  box-shadow: none;
+  border: 1px solid rgba(224, 180, 90, 0.5);
+  background:
+    radial-gradient(ellipse 110% 70% at 50% 0%, rgba(224, 180, 90, 0.12) 0%, transparent 70%),
+    linear-gradient(180deg, #181514 0%, #100f12 100%);
+  text-align: right;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(224, 180, 90, 0.08);
+}
+
+.wwh-winner-song-banner--pending .wwh-winner-song-card-body {
+  background: rgba(12, 11, 14, 0.7);
+  border: 1px solid rgba(224, 180, 90, 0.15);
 }
 
 .wwh-winner-song-banner--pending .wwh-winner-song-meta {
-  font-size: 0.86rem;
+  font-size: 0.85rem;
   color: #C8BFAC;
+  line-height: 1.6;
+}
+
+/* Modal: Winner Song Rule */
+.wwh-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: wwh-skeleton-fade-in 180ms ease forwards;
+}
+
+.wwh-modal-overlay[hidden] {
+  display: none !important;
+}
+
+.wwh-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: var(--radius-lg, 16px);
+  border: 1px solid rgba(224, 180, 90, 0.5);
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -20%, rgba(224, 180, 90, 0.16) 0%, transparent 70%),
+    linear-gradient(180deg, #181516 0%, #0F0E10 100%);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 32px rgba(224, 180, 90, 0.2);
+  padding: 22px 20px;
+}
+
+.wwh-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wwh-modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wwh-modal-icon {
+  font-size: 1.3rem;
+}
+
+.wwh-modal-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #FFE699;
+}
+
+.wwh-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #FFF;
+  font-size: 1.2rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 160ms ease;
+}
+
+.wwh-modal-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #E0B45A;
+}
+
+.wwh-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wwh-rule-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 8px);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.wwh-rule-step--challenge {
+  background: rgba(224, 180, 90, 0.07);
+  border-color: rgba(224, 180, 90, 0.3);
+}
+
+.wwh-rule-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(224, 180, 90, 0.2);
+  border: 1px solid rgba(224, 180, 90, 0.4);
+  color: #F8D98C;
+  font-size: 0.82rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.wwh-rule-step--challenge .wwh-rule-num {
+  background: #E0B45A;
+  color: #111;
+}
+
+.wwh-rule-text {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #E2DFD8;
+}
+
+.wwh-rule-text strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #FFF;
+  margin-bottom: 2px;
+}
+
+.wwh-rule-text p {
+  margin: 0;
+  color: #BBB4A6;
+}
+
+.wwh-rule-text em {
+  font-style: normal;
+  color: #F8D98C;
+  font-weight: 700;
+}
+
+.wwh-modal-footer {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wwh-modal-footer .mem-btn {
+  width: 100%;
 }
 
 /* --- Exclusive Winner Song Selection Form --- */
@@ -781,29 +988,97 @@ a.btn,
   box-shadow: 0 6px 24px rgba(224, 180, 90, 0.55);
 }
 
-/* --- General Song Suggestions & Practice List --- */
+/* --- General Song Suggestions & Practice List (Distinct Container) --- */
+.wwh-suggestions-container {
+  position: relative;
+  margin: 22px 0 20px;
+  padding: 18px 18px;
+  border-radius: var(--radius-lg, 16px);
+  border: 1px solid rgba(232, 107, 130, 0.35);
+  background:
+    radial-gradient(ellipse 110% 70% at 50% -20%, rgba(232, 107, 130, 0.08) 0%, transparent 65%),
+    linear-gradient(180deg, #161517 0%, #101012 100%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(232, 107, 130, 0.06);
+}
+
+.wwh-suggestions-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.wwh-suggestions-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 220px;
+}
+
+.wwh-suggestions-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  padding: 6px;
+  border-radius: var(--radius-md, 8px);
+  background: rgba(232, 107, 130, 0.12);
+  border: 1px solid rgba(232, 107, 130, 0.25);
+  color: #E86B82;
+}
+
+.wwh-suggestions-title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #FFF;
+  line-height: 1.35;
+}
+
+.wwh-suggestions-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: #9D9DA8;
+  line-height: 1.5;
+}
+
+.wwh-suggestions-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(232, 107, 130, 0.14);
+  border: 1px solid rgba(232, 107, 130, 0.4);
+  color: #FFA6B5;
+  letter-spacing: 0.01em;
+}
+
 .wwh-suggestions-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  margin: 16px 0 10px;
-  padding: 12px 16px;
+  margin: 6px 0 12px;
+  padding: 10px 14px;
   border-radius: var(--radius-md, 8px);
-  border: 1px solid var(--color-border, #2A2A2E);
-  background: rgba(20, 20, 22, 0.85);
-  color: var(--color-text, #FAFAFA);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #FFF;
   font-family: var(--font, 'Vazirmatn', sans-serif);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 600;
   cursor: pointer;
   touch-action: manipulation;
-  transition: border-color 160ms ease, background 160ms ease;
+  transition: all 160ms ease;
 }
 
 .wwh-suggestions-toggle:hover {
-  border-color: var(--color-accent-soft, #E86B82);
-  background: rgba(28, 28, 32, 0.95);
+  border-color: rgba(232, 107, 130, 0.45);
+  background: rgba(232, 107, 130, 0.1);
+  color: #FFA6B5;
 }
 
 .wwh-suggestions-toggle__chevron {
@@ -820,11 +1095,11 @@ a.btn,
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin: 0 0 20px;
-  padding: 16px;
-  border-radius: var(--radius-lg, 16px);
-  border: 1px solid var(--color-border, #2A2A2E);
-  background: rgba(16, 16, 18, 0.9);
+  margin: 0 0 16px;
+  padding: 14px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(12, 12, 14, 0.7);
   animation: wwh-skeleton-fade-in 0.24s var(--ease-out, ease) forwards;
 }
 

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, Header, Response
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
@@ -1060,7 +1061,12 @@ def admin_orders(
     _: str = Depends(require_admin),
 ):
     eid = eventId or _default_event_id(db)
-    q = select(Order).where(Order.event_id == eid).order_by(Order.id.desc())
+    q = (
+        select(Order)
+        .options(selectinload(Order.receipt), selectinload(Order.tickets))
+        .where(Order.event_id == eid)
+        .order_by(Order.id.desc())
+    )
     if status != "all":
         st = status
         if status == "pending":
@@ -1512,10 +1518,10 @@ def admin_memories_list(
 
     # Counts for current event filter (or global)
     def _count(s: str) -> int:
-        cq = select(MemoryItem).where(MemoryItem.status == s)
+        cq = select(func.count(MemoryItem.id)).where(MemoryItem.status == s)
         if eventId is not None:
             cq = cq.where(MemoryItem.event_id == int(eventId))
-        return len(db.scalars(cq).all())
+        return db.scalar(cq) or 0
 
     return {
         "counts": {
@@ -1589,7 +1595,7 @@ async def admin_memories_file(
 
 @router.get("/memories/file/{item_id}/thumb")
 @router.get("/memories/thumb/{item_id}")
-async def admin_memories_thumb(
+def admin_memories_thumb(
     item_id: int,
     db: Session = Depends(get_db),
     _: str = Depends(require_admin),
